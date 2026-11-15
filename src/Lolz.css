@@ -1,0 +1,593 @@
+
+.lolz-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 28px 24px 70px;
+  color: #f7f5ff;
+  min-height: 100%;
+}
+
+.lolz-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 26px;
+}
+
+.lolz-kicker {
+  color: #a78bfa;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.lolz-header h1 {
+  margin: 7px 0 4px;
+  font-size: 43px;
+  font-weight: 900;
+  letter-spacing: -2px;
+}
+
+.lolz-header h1 span {
+  color: #a855f7;
+  margin-left: 5px;
+}
+
+.lolz-header p {
+  color: #aaa4bd;
+  margin: 0;
+  font-size: 14px;
+}
+
+.lolz-create-button,
+.lolz-upload-trigger,
+.lolz-publish-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 0;
+  border-radius: 13px;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, #9333ea, #6d28d9);
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.lolz-create-button:hover,
+.lolz-upload-trigger:hover,
+.lolz-publish-button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.12);
+}
+
+.lolz-upload-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 20px;
+  margin-bottom: 35px;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 19px;
+  background: linear-gradient(120deg, #171322, #111019);
+}
+
+.lolz-upload-icon {
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.14);
+  border-radius: 15px;
+}
+
+.lolz-upload-copy {
+  flex: 1;
+  min-width: 180px;
+}
+
+.lolz-upload-copy h3 {
+  margin: 0 0 5px;
+  font-size: 15px;
+}
+
+.lolz-upload-copy p {
+  margin: 0;
+  color: #9690a8;
+  font-size: 12px;
+}
+
+.lolz-upload-form {
+  width: 100%;
+  display: grid;
+  gap: 12px;
+}
+
+.lolz-selected-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: 11px;
+  background: #211a30;
+  color: #d8c5fa;
+  min-width: 0;
+}
+
+.lolz-selected-file span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.lolz-selected-file button,
+.lolz-notice button {
+  display: grid;
+  place-items: center;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.lolz-upload-form textarea,
+.lolz-comment-form input {
+  width: 100%;
+  padding: 13px 15px;
+  border: 1px solid #332744;
+  border-radius: 12px;
+  outline: none;
+  color: white;
+  background: #100e17;
+  font: inherit;
+}
+
+.lolz-upload-form textarea:focus,
+.lolz-comment-form input:focus {
+  border-color: #9333ea;
+}
+
+.lolz-publish-button {
+  justify-self: start;
+}
+
+.lolz-publish-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.lolz-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  margin: 15px 0;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 12px;
+  color: #e9d5ff;
+  background: rgba(126, 34, 206, 0.12);
+  font-size: 13px;
+}
+
+.lolz-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 15px;
+  margin: 30px 0 20px;
+}
+
+.lolz-section-heading h2 {
+  margin: 6px 0 0;
+  font-size: 23px;
+  font-weight: 850;
+}
+
+.lolz-video-count {
+  color: #aaa2bb;
+  font-size: 12px;
+}
+
+.lolz-feed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+.lolz-video-card {
+  width: 100%;
+  max-width: 760px;
+  overflow: hidden;
+  border: 1px solid rgba(168, 85, 247, 0.18);
+  border-radius: 21px;
+  background: #111019;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.28);
+  scroll-snap-align: start;
+}
+
+.lolz-video-stage {
+  position: relative;
+  width: 100%;
+  height: min(76vh, 760px);
+  min-height: 480px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 50% 30%, #302044 0%, #100e17 65%);
+}
+
+.lolz-video-element {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #08070b;
+}
+
+.lolz-video-top {
+  position: absolute;
+  z-index: 3;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.lolz-label {
+  padding: 7px 12px;
+  border: 1px solid rgba(216, 180, 254, 0.2);
+  border-radius: 30px;
+  color: #f3e8ff;
+  background: rgba(20, 12, 31, 0.72);
+  backdrop-filter: blur(12px);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.lolz-sound-button {
+  width: 39px;
+  height: 39px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: white;
+  background: rgba(15, 12, 22, 0.65);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.lolz-video-overlay {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 75px 85px 25px 20px;
+  color: white;
+  background: linear-gradient(
+    to top,
+    rgba(5, 4, 8, 0.94),
+    rgba(5, 4, 8, 0.55) 55%,
+    transparent
+  );
+  pointer-events: none;
+}
+
+.lolz-video-user {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.lolz-video-user img,
+.lolz-avatar-fallback {
+  width: 43px;
+  height: 43px;
+  flex-shrink: 0;
+  border: 2px solid #c084fc;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.lolz-avatar-fallback {
+  display: grid;
+  place-items: center;
+  color: white;
+  background: linear-gradient(135deg, #9333ea, #4c1d95);
+  font-weight: 900;
+}
+
+.lolz-video-user strong {
+  display: block;
+  font-size: 14px;
+}
+
+.lolz-video-user span {
+  display: block;
+  margin-top: 3px;
+  color: #c5bdcf;
+  font-size: 11px;
+}
+
+.lolz-caption {
+  margin: 12px 0 0;
+  color: #f4effb;
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.lolz-video-actions {
+  position: absolute;
+  z-index: 4;
+  right: 15px;
+  bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 19px;
+}
+
+.lolz-video-actions button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  color: white;
+  background: transparent;
+  cursor: pointer;
+  text-shadow: 0 2px 8px #000;
+  transition: transform 0.2s ease;
+}
+
+.lolz-video-actions button:hover {
+  transform: scale(1.12);
+}
+
+.lolz-video-actions button span {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.lolz-video-actions button.is-liked {
+  color: #fb4c91;
+}
+
+.lolz-video-actions button.is-active {
+  color: #c084fc;
+}
+
+.lolz-comments {
+  padding: 18px;
+  border-top: 1px solid #292034;
+  background: #15121d;
+}
+
+.lolz-comments-list {
+  display: grid;
+  gap: 13px;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.lolz-comment {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.lolz-comment img,
+.lolz-comment-avatar {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.lolz-comment-avatar {
+  display: grid;
+  place-items: center;
+  color: white;
+  background: #6d28d9;
+  font-weight: 800;
+}
+
+.lolz-comment strong {
+  font-size: 12px;
+}
+
+.lolz-comment p {
+  margin: 3px 0 0;
+  color: #c4bdcf;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.lolz-no-comments {
+  color: #aaa2bb;
+  font-size: 13px;
+}
+
+.lolz-comment-form {
+  display: flex;
+  gap: 9px;
+  margin-top: 15px;
+}
+
+.lolz-comment-form input {
+  flex: 1;
+  min-width: 0;
+}
+
+.lolz-comment-form button {
+  width: 45px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  color: white;
+  background: #7e22ce;
+  cursor: pointer;
+}
+
+.lolz-empty {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 30px;
+  border: 1px dashed #49335f;
+  border-radius: 20px;
+  color: #aaa2bb;
+  text-align: center;
+  background: #13101b;
+}
+
+.lolz-empty h3 {
+  margin: 0;
+  color: white;
+}
+
+.lolz-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.lolz-empty-icon {
+  width: 65px;
+  height: 65px;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.15);
+}
+
+.lolz-empty button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 11px 16px;
+  border: 0;
+  border-radius: 12px;
+  color: white;
+  background: #7e22ce;
+  cursor: pointer;
+}
+
+.lolz-spin {
+  animation: lolz-spin 1s linear infinite;
+}
+
+@keyframes lolz-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 650px) {
+  .lolz-page {
+    padding: 18px 10px 85px;
+  }
+
+  .lolz-header {
+    margin-bottom: 20px;
+  }
+
+  .lolz-header h1 {
+    font-size: 35px;
+  }
+
+  .lolz-header p {
+    font-size: 12px;
+  }
+
+  .lolz-create-button {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .lolz-upload-card {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .lolz-upload-copy h3 {
+    font-size: 13px;
+  }
+
+  .lolz-upload-copy p {
+    font-size: 11px;
+  }
+
+  .lolz-upload-trigger {
+    width: 100%;
+  }
+
+  .lolz-section-heading h2 {
+    font-size: 19px;
+  }
+
+  .lolz-feed {
+    gap: 20px;
+  }
+
+  .lolz-video-card {
+    border-radius: 15px;
+  }
+
+  .lolz-video-stage {
+    height: min(74svh, 720px);
+    min-height: 420px;
+  }
+
+  .lolz-video-overlay {
+    padding: 65px 72px 20px 14px;
+  }
+
+  .lolz-video-actions {
+    right: 11px;
+    bottom: 22px;
+    gap: 17px;
+  }
+
+  .lolz-video-actions button svg {
+    width: 23px;
+    height: 23px;
+  }
+
+  .lolz-video-user img,
+  .lolz-avatar-fallback {
+    width: 38px;
+    height: 38px;
+  }
+
+  .lolz-caption {
+    font-size: 12px;
+  }
+}

@@ -1,0 +1,229 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+.auth-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+  background:
+    radial-gradient(ellipse at 15% 20%, rgba(113, 55, 255, .20), transparent 40%),
+    radial-gradient(ellipse at 85% 85%, rgba(45, 80, 180, .14), transparent 40%),
+    #08080d;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-page::before {
+  content: "";
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border: 1px solid rgba(155, 117, 255, .10);
+  border-radius: 50%;
+  box-shadow: 0 0 100px rgba(112, 62, 255, .08);
+  pointer-events: none;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 48px 42px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
+  background: rgba(19, 18, 29, .88);
+  border: 1px solid rgba(174, 147, 255, .17);
+  border-radius: 25px;
+  box-shadow: 0 30px 100px rgba(0, 0, 0, .55);
+  backdrop-filter: blur(24px);
+}
+
+.auth-card h1 {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  margin: 0 0 12px;
+  background: linear-gradient(110deg, #fff 20%, #b69aff 65%, #8060ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.auth-card > p {
+  color: #9692a8;
+  font-size: 14px;
+  margin-bottom: 34px;
+}
+
+.auth-card input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px 17px;
+  margin-bottom: 15px;
+  border: 1px solid #302c40;
+  border-radius: 12px;
+  outline: none;
+  background: #111019;
+  color: white;
+  font-size: 14px;
+  transition: .25s ease;
+}
+
+.auth-card input::placeholder {
+  color: #777286;
+}
+
+.auth-card input:focus {
+  border-color: #956bff;
+  box-shadow: 0 0 0 3px rgba(149, 107, 255, .12);
+}
+
+.auth-card button[type="submit"] {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 10px;
+  background: linear-gradient(110deg, #7950ed, #a16bff);
+  color: white;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: .25s ease;
+}
+
+.auth-card button[type="submit"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(126, 79, 255, .35);
+}
+
+.auth-card button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+.auth-card .auth-switch {
+  display: block;
+  margin: 23px auto 0;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: #b69aff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.auth-card .auth-switch:hover {
+  color: white;
+}
+
+@media (max-width: 500px) {
+  .auth-page {
+    padding: 18px;
+  }
+
+  .auth-card {
+    padding: 36px 24px;
+  }
+
+  .auth-card h1 {
+    font-size: 27px;
+  }
+}
+
+.auth-brand {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.auth-brand-mark {
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+  background: linear-gradient(135deg, #7950ed, #b18aff);
+  color: white;
+  font-size: 27px;
+  font-weight: 900;
+  margin-bottom: 15px;
+}
+
+.auth-subtitle {
+  text-align: center;
+  line-height: 1.7;
+}
+
+.auth-field {
+  margin-bottom: 17px;
+}
+
+.auth-field label {
+  display: block;
+  color: #c9c4d8;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.auth-field input {
+  margin-bottom: 0;
+}
+
+.auth-submit {
+  width: 100%;
+}
+
+.auth-message {
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.auth-message.success {
+  background: rgba(60, 190, 130, .12);
+  color: #7ce5b0;
+}
+
+.auth-message.error {
+  background: rgba(255, 80, 100, .12);
+  color: #ff9aa8;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #777286;
+  font-size: 11px;
+  margin: 25px 0 18px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: #302c40;
+}
+
+.auth-footer,
+.auth-legal {
+  text-align: center;
+  color: #9692a8;
+  font-size: 12px;
+}
+
+.auth-legal {
+  font-size: 10px;
+  line-height: 1.6;
+  margin-top: 25px;
+}
