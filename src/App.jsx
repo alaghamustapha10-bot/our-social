@@ -983,9 +983,9 @@ export default function App() {
   // ----------------------------------
   // MESSAGING: LOAD MESSAGES
   // ----------------------------------
-
-  async function loadMessages(conversationId) {
+ async function loadMessages(conversationId) {
     if (!conversationId) return;
+ 
 
     setMessagesLoading(true);
 
@@ -1005,7 +1005,41 @@ export default function App() {
 
     setMessagesLoading(false);
   }
+  // ----------------------------------
+  // REALTIME: INSTANT MESSAGES
+  // ----------------------------------
 
+  useEffect(() => {
+    if (!user || !activeConversation?.id) return;
+
+    const channel = supabase
+      .channel(`messages-${activeConversation.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${activeConversation.id}`,
+        },
+        (payload) => {
+          const newMessage = payload.new;
+
+          setConversationMessages((current) =>
+            current.some((message) => message.id === newMessage.id)
+              ? current
+              : [...current, newMessage]
+          );
+
+          loadConversations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeConversation?.id, user?.id]);
   // ----------------------------------
   // MESSAGING: OPEN CONVERSATION
   // ----------------------------------
