@@ -219,3 +219,52 @@
     background: #9333ea20;
   }
 }
+
+/* =====================================
+   OUR SOCIAL — BLACK & WHITE NAVIGATION
+===================================== */
+
+.sidebar,
+.mobile-nav {
+  background: var(--panel) !important;
+  border-color: var(--border) !important;
+}
+
+.brand,
+.brand-mark {
+  color: var(--bg) !important;
+  background: var(--text) !important;
+  border-color: var(--text) !important;
+}
+
+.nav-item {
+  color: var(--muted) !important;
+  border-color: transparent !important;
+}
+
+.nav-item:hover,
+.nav-item.active {
+  background: var(--panel-2) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+.nav-item.active {
+  box-shadow: none !important;
+}
+
+.mobile-nav button,
+.mobile-nav a {
+  color: var(--muted) !important;
+}
+
+.mobile-nav button.active,
+.mobile-nav a.active {
+  color: var(--text) !important;
+  background: var(--panel-2) !important;
+}
+
+.sidebar *,
+.mobile-nav * {
+  text-shadow: none !important;
+}

@@ -1,6 +1,8 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import Auth from "./Auth";
+import { PreferencesProvider } from "./PreferencesProvider";
 
 export default function AuthGate({ children }) {
   const [session, setSession] = useState(null);
@@ -37,5 +39,9 @@ export default function AuthGate({ children }) {
     return <Auth />;
   }
 
-  return children;
+  return (
+    <PreferencesProvider userId={session.user.id}>
+      {children}
+    </PreferencesProvider>
+  );
 }

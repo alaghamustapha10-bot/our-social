@@ -11,7 +11,8 @@ import {
   PlusSquare,
   LogOut,
   Menu,
-  X
+  X,
+  Settings,
 } from "lucide-react";
 import "./Navigation.css";
 
@@ -23,6 +24,7 @@ const navigationItems = [
   { id: "messages", label: "Messages", icon: MessageCircle },
   { id: "activity", label: "Notifications", icon: Bell },
   { id: "profile", label: "Profile", icon: UserRound },
+  { id: "settings", label: "Settings", icon: Settings },
 ];
 
 export default function Navigation({
@@ -30,7 +32,7 @@ export default function Navigation({
   setPage,
   onCreate,
   onLogout,
-  username = "Your profile"
+  username = "Your profile",
 }) {
   const [expanded, setExpanded] = React.useState(false);
 
@@ -45,7 +47,6 @@ export default function Navigation({
         <div className="os-brand">
           <div className="os-logo">O</div>
           <span>OUR SOCIAL</span>
-
           <button
             className="os-collapse"
             onClick={() => setExpanded(!expanded)}
@@ -99,6 +100,7 @@ export default function Navigation({
           navigationItems[3],
           navigationItems[4],
           navigationItems[6],
+          navigationItems[7],
         ].map(({ id, icon: Icon, label }) => (
           <button
             key={id}

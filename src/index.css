@@ -1,14 +1,47 @@
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
 
+/* ================================
+   OUR SOCIAL — BLACK & WHITE THEME
+================================ */
+
 :root {
   font-family: 'DM Sans', sans-serif;
-  color: #eee9ff;
-  background: #080710;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --bg: #080808;
+  --panel: #141414;
+  --panel-2: #1d1d1d;
+  --border: #333333;
+  --text: #ffffff;
+  --muted: #a0a0a0;
+  --white: #ffffff;
+  --black: #000000;
+}
+
+:root[data-theme="dark"] {
+  --bg: #080808;
+  --panel: #141414;
+  --panel-2: #1d1d1d;
+  --border: #333333;
+  --text: #ffffff;
+  --muted: #a0a0a0;
+  --white: #ffffff;
+  --black: #000000;
+}
+
+:root[data-theme="light"] {
+  --bg: #ffffff;
+  --panel: #f5f5f5;
+  --panel-2: #ebebeb;
+  --border: #d6d6d6;
+  --text: #111111;
+  --muted: #666666;
+  --white: #111111;
+  --black: #ffffff;
 }
 
 * {
@@ -18,7 +51,8 @@
 html {
   min-width: 320px;
   min-height: 100%;
-  background: #080710;
+  background: var(--bg);
+  color: var(--text);
   scroll-behavior: smooth;
 }
 
@@ -26,20 +60,24 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background:
-    radial-gradient(ellipse at 15% 15%, rgba(91, 48, 174, .17), transparent 35%),
-    radial-gradient(ellipse at 85% 55%, rgba(67, 35, 128, .12), transparent 40%),
-    linear-gradient(145deg, #080710, #0d0a18 55%, #090711);
-  color: #eee9ff;
+  background: var(--bg);
+  color: var(--text);
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
-  background: transparent;
+  background: var(--bg);
+  color: var(--text);
 }
 
-button, input, textarea {
+button,
+input,
+textarea,
+select {
   font: inherit;
 }
 
@@ -49,14 +87,15 @@ button {
 
 button:focus-visible,
 input:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid #9565ff;
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--text);
   outline-offset: 3px;
 }
 
 ::selection {
-  background: rgba(149, 101, 255, .4);
-  color: white;
+  background: var(--text);
+  color: var(--bg);
 }
 
 ::-webkit-scrollbar {
@@ -64,14 +103,14 @@ textarea:focus-visible {
 }
 
 ::-webkit-scrollbar-track {
-  background: #090811;
+  background: var(--bg);
 }
 
 ::-webkit-scrollbar-thumb {
   border-radius: 20px;
-  background: #40305f;
+  background: var(--muted);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #7950bd;
+  background: var(--text);
 }

@@ -1,4 +1,4 @@
-
+import PreferencesSettings from "./PreferencesSettings";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase";
 import Navigation from "./Navigation";
@@ -2655,6 +2655,8 @@ export default function App() {
             </section>
           )}
 
+          
+          
           {/* NOTIFICATIONS */}
 
           {activePage === "activity" && (
@@ -2672,7 +2674,7 @@ export default function App() {
                   <span className="eyebrow">STAY IN THE LOOP</span>
                   <h1>Notifications</h1>
                   <p>
-                    {unreadCount
+                    {unreadCount > 0
                       ? `You have ${unreadCount} unread notifications.`
                       : "You're all caught up."}
                   </p>
@@ -2715,15 +2717,14 @@ export default function App() {
                       actor.username ||
                       "Someone";
 
-                    let message = "interacted with you.";
+                    const messages = {
+                      like: "liked your post.",
+                      comment: "commented on your post.",
+                      follow: "started following you.",
+                    };
 
-                    if (item.type === "like") {
-                      message = "liked your post.";
-                    } else if (item.type === "comment") {
-                      message = "commented on your post.";
-                    } else if (item.type === "follow") {
-                      message = "started following you.";
-                    }
+                    const message =
+                      messages[item.type] || "interacted with you.";
 
                     return (
                       <div
@@ -2741,7 +2742,10 @@ export default function App() {
                         }}
                       >
                         <button
-                          onClick={() => openUserProfile(item.actor_id)}
+                          onClick={() =>
+                            openUserProfile(item.actor_id)
+                          }
+                          aria-label={`Open ${actorName}'s profile`}
                           style={{
                             border: "none",
                             background: "transparent",
@@ -2756,7 +2760,7 @@ export default function App() {
                           />
                         </button>
 
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ margin: 0 }}>
                             <strong>{actorName}</strong>{" "}
                             {message}
@@ -2773,27 +2777,27 @@ export default function App() {
                         </div>
 
                         {!item.is_read && (
-                          <span
-                            style={{
-                              width: "9px",
-                              height: "9px",
-                              borderRadius: "50%",
-                              background: "#9b78ff",
-                              flexShrink: 0,
-                            }}
-                          />
-                        )}
+                          <>
+                            <span
+                              style={{
+                                width: "9px",
+                                height: "9px",
+                                borderRadius: "50%",
+                                background: "#9b78ff",
+                                flexShrink: 0,
+                              }}
+                            />
 
-                        {!item.is_read && (
-                          <button
-                            className="secondary-button"
-                            onClick={() =>
-                              markNotificationRead(item.id)
-                            }
-                            style={{ padding: "8px 10px" }}
-                          >
-                            Read
-                          </button>
+                            <button
+                              className="secondary-button"
+                              onClick={() =>
+                                markNotificationRead(item.id)
+                              }
+                              style={{ padding: "8px 10px" }}
+                            >
+                              Read
+                            </button>
+                          </>
                         )}
                       </div>
                     );
@@ -2802,6 +2806,19 @@ export default function App() {
               )}
             </section>
           )}
+
+          {/* SETTINGS */}
+
+          {activePage === "settings" && (
+            <section className="other-page">
+              <span className="eyebrow">
+                PERSONALIZE YOUR EXPERIENCE
+              </span>
+
+              <PreferencesSettings />
+            </section>
+          )}
+
         </div>
       </main>
     </div>
@@ -2857,6 +2874,7 @@ function PostList({
             <div className="post-header">
               <button
                 onClick={() => onOpenProfile?.(post.user_id)}
+                aria-label={`Open ${name}'s profile`}
                 style={{
                   border: "none",
                   background: "transparent",
@@ -2911,11 +2929,22 @@ function PostList({
             )}
 
             <div className="post-stats">
-              <span>{post.likesCount || 0} likes</span>
-
-              <span onClick={() => onComments(post.id)}>
-                View comments
+              <span>
+                {post.likesCount || 0} likes
               </span>
+
+              <button
+                type="button"
+                onClick={() => onComments(post.id)}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  color: "inherit",
+                  cursor: "pointer",
+                }}
+              >
+                View comments
+              </button>
             </div>
 
             <div className="post-actions">
@@ -2941,7 +2970,10 @@ function PostList({
             {openComments === post.id && (
               <div className="comments-area">
                 {comments.map((comment) => (
-                  <div className="comment-item" key={comment.id}>
+                  <div
+                    className="comment-item"
+                    key={comment.id}
+                  >
                     <Avatar
                       url={comment.author?.avatar_url}
                       name={comment.author?.username}

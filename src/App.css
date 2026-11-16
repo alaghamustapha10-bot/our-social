@@ -1315,3 +1315,74 @@ body {
     transform: translateY(0);
   }
 }
+
+/* =====================================
+   OUR SOCIAL 2.0 — GLOBAL NEUTRAL THEME
+===================================== */
+root {
+--purple: var(--text);
+--purple-light: var(--text);
+}
+
+body,
+#root,
+.main-area,
+.page-content {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+.sidebar,
+.topbar,
+.mobile-nav,
+.other-page,
+.post-card,
+.story-card,
+.composer,
+.profile-card,
+.settings-card,
+.notification-card,
+.message-card {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+.brand,
+.brand-mark,
+.nav-item.active,
+.nav-item:hover,
+button.primary,
+button[class*="purple"],
+button[class*="accent"] {
+  background: var(--text) !important;
+  color: var(--bg) !important;
+  border-color: var(--text) !important;
+}
+
+.nav-item,
+button,
+input,
+textarea,
+select {
+  border-color: var(--border);
+}
+
+input,
+textarea,
+select {
+  background: var(--panel-2) !important;
+  color: var(--text) !important;
+}
+
+::placeholder {
+  color: var(--muted) !important;
+}
+
+a {
+  color: var(--text);
+}
+
+* {
+  scrollbar-color: var(--muted) var(--bg);
+}
