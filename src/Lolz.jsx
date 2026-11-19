@@ -1,22 +1,32 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Play, Heart, MessageCircle, Plus, Upload,
-  X, Send, LoaderCircle, Video, Volume2, VolumeX
+  Play,
+  Heart,
+  MessageCircle,
+  Plus,
+  X,
+  Send,
+  LoaderCircle,
+  Video,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { supabase } from "./supabase";
 import "./Lolz.css";
 
 function formatDate(date) {
-  return new Date(date).toLocaleDateString("ar", {
-    day: "numeric",
-    month: "short",
-  });
+  return new Date(date).toLocaleDateString(
+    document.documentElement.lang === "ar" ? "ar" : "en",
+    { day: "numeric", month: "short" }
+  );
 }
 
 export default function Lolz({ user }) {
   const fileRef = useRef(null);
   const videoRefs = useRef({});
+  const feedRef = useRef(null);
+
   const [videos, setVideos] = useState([]);
   const [file, setFile] = useState(null);
   const [caption, setCaption] = useState("");
@@ -28,12 +38,14 @@ export default function Lolz({ user }) {
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
   const [soundOn, setSoundOn] = useState(false);
+  const [pausedVideoId, setPausedVideoId] = useState(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   useEffect(() => {
     loadVideos();
   }, []);
 
-  // تشغيل الفيديو الظاهر وإيقاف الفيديوهات الأخرى
+  // تشغيل الفيديو الظاهر وإيقاف بقية الفيديوهات
   useEffect(() => {
     const elements = Object.values(videoRefs.current).filter(Boolean);
 
@@ -52,7 +64,10 @@ export default function Lolz({ user }) {
           }
         });
       },
-      { threshold: [0, 0.3, 0.65, 1] }
+      {
+        root: feedRef.current,
+        threshold: [0, 0.3, 0.65, 1],
+      }
     );
 
     elements.forEach((video) => observer.observe(video));
@@ -97,8 +112,13 @@ export default function Lolz({ user }) {
 
     if (videoIds.length) {
       const [likesResult, commentsResult] = await Promise.all([
-        supabase.from("lolz_likes").select("*").in("video_id", videoIds),
-        supabase.from("lolz_comments")
+        supabase
+          .from("lolz_likes")
+          .select("*")
+          .in("video_id", videoIds),
+
+        supabase
+          .from("lolz_comments")
           .select("*")
           .in("video_id", videoIds)
           .order("created_at", { ascending: true }),
@@ -109,7 +129,7 @@ export default function Lolz({ user }) {
     }
 
     const commentUserIds = [
-      ...new Set(commentRows.map((c) => c.user_id))
+      ...new Set(commentRows.map((c) => c.user_id)),
     ];
 
     let commentProfiles = [];
@@ -234,6 +254,7 @@ export default function Lolz({ user }) {
 
     setFile(null);
     setCaption("");
+    setUploadOpen(false);
 
     if (fileRef.current) {
       fileRef.current.value = "";
@@ -241,7 +262,12 @@ export default function Lolz({ user }) {
 
     setNotice("تم نشر فيديو LOLZ بنجاح!");
     setBusy(false);
+
     await loadVideos();
+
+    if (feedRef.current) {
+      feedRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 
   async function toggleLike(videoId) {
@@ -264,11 +290,13 @@ export default function Lolz({ user }) {
     }));
 
     const result = current.liked
-      ? await supabase.from("lolz_likes")
+      ? await supabase
+          .from("lolz_likes")
           .delete()
           .eq("video_id", videoId)
           .eq("user_id", user.id)
-      : await supabase.from("lolz_likes")
+      : await supabase
+          .from("lolz_likes")
           .insert({ video_id: videoId, user_id: user.id });
 
     if (result.error) {
@@ -307,10 +335,12 @@ export default function Lolz({ user }) {
   }
 
   function displayName(profile) {
-    return profile?.display_name ||
+    return (
+      profile?.display_name ||
       profile?.full_name ||
       profile?.username ||
-      "OUR SOCIAL member";
+      "OUR SOCIAL member"
+    );
   }
 
   function toggleSound() {
@@ -322,119 +352,165 @@ export default function Lolz({ user }) {
     });
   }
 
+  function togglePlayback(videoId) {
+    const video = videoRefs.current[videoId];
+
+    if (!video) return;
+
+    if (video.paused) {
+      video.play().catch(() => {});
+      setPausedVideoId(null);
+    } else {
+      video.pause();
+      setPausedVideoId(videoId);
+    }
+  }
+
+  function toggleComments(videoId) {
+    setOpenComments((prev) => ({
+      ...prev,
+      [videoId]: !prev[videoId],
+    }));
+  }
+
+  function openUpload() {
+    if (!user) {
+      setNotice("سجّل الدخول أولاً لنشر فيديو.");
+      return;
+    }
+
+    setUploadOpen(true);
+  }
+
   return (
     <main className="lolz-page">
-
       <header className="lolz-header">
-        <div>
-          <span className="lolz-kicker">OUR SOCIAL SHORT VIDEOS</span>
+        <div className="lolz-heading-copy">
+          <span className="lolz-kicker">OUR SOCIAL · SHORT VIDEOS</span>
           <h1>LOLZ<span>✦</span></h1>
-          <p>لحظات قصيرة، إبداع بلا حدود.</p>
+          <p>لحظات قصيرة، ومجتمع لا يتوقف.</p>
         </div>
 
         <button
           className="lolz-create-button"
-          onClick={() => fileRef.current?.click()}
+          onClick={openUpload}
+          type="button"
         >
-          <Plus size={19} />
-          <span>أنشئ فيديو</span>
+          <Plus size={20} />
+          <span>إنشاء فيديو</span>
         </button>
       </header>
 
-      <section className="lolz-upload-card">
-        <div className="lolz-upload-icon">
-          <Video size={25} />
+      {notice && (
+        <div className="lolz-notice" role="status">
+          <span>{notice}</span>
+          <button onClick={() => setNotice("")} aria-label="إغلاق">
+            <X size={17} />
+          </button>
         </div>
+      )}
 
-        <div className="lolz-upload-copy">
-          <h3>شارك لحظتك مع الجميع</h3>
-          <p>ارفع فيديو قصيراً واجعل مجتمع OUR SOCIAL يشاهده.</p>
-        </div>
-
-        <button
-          className="lolz-upload-trigger"
-          onClick={() => fileRef.current?.click()}
+      {uploadOpen && (
+        <div
+          className="lolz-upload-backdrop"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget && !busy) {
+              setUploadOpen(false);
+            }
+          }}
         >
-          <Upload size={17} />
-          اختيار فيديو
-        </button>
+          <section className="lolz-upload-modal">
+            <div className="lolz-modal-heading">
+              <div>
+                <span className="lolz-kicker">SHARE A MOMENT</span>
+                <h2>أنشئ فيديو جديداً</h2>
+              </div>
 
-        <form className="lolz-upload-form" onSubmit={publishVideo}>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="video/*"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-            hidden
-          />
-
-          {file && (
-            <div className="lolz-selected-file">
-              <Video size={17} />
-              <span>{file.name}</span>
               <button
                 type="button"
-                onClick={() => {
-                  setFile(null);
-                  if (fileRef.current) fileRef.current.value = "";
-                }}
-                aria-label="إزالة الفيديو"
+                onClick={() => !busy && setUploadOpen(false)}
+                aria-label="إغلاق"
+                disabled={busy}
               >
-                <X size={16} />
+                <X size={21} />
               </button>
             </div>
-          )}
 
-          {file && (
-            <>
+            <form className="lolz-upload-form" onSubmit={publishVideo}>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="video/*"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                hidden
+              />
+
+              <button
+                type="button"
+                className="lolz-file-picker"
+                onClick={() => fileRef.current?.click()}
+              >
+                <Video size={27} />
+                <strong>
+                  {file ? "تغيير الفيديو" : "اختر فيديو من جهازك"}
+                </strong>
+                <span>
+                  {file
+                    ? file.name
+                    : "MP4 أو أي صيغة فيديو مدعومة · حتى 100 MB"}
+                </span>
+              </button>
+
+              {file && (
+                <button
+                  type="button"
+                  className="lolz-remove-file"
+                  onClick={() => {
+                    setFile(null);
+                    if (fileRef.current) fileRef.current.value = "";
+                  }}
+                >
+                  <X size={15} />
+                  إزالة الملف
+                </button>
+              )}
+
               <textarea
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
                 placeholder="اكتب وصفاً لفيديوك..."
                 maxLength={500}
-                rows={2}
+                rows={3}
               />
 
               <button
                 type="submit"
                 className="lolz-publish-button"
-                disabled={busy}
+                disabled={busy || !file}
               >
                 {busy ? (
                   <>
-                    <LoaderCircle className="lolz-spin" size={17} />
-                    جارٍ النشر...
+                    <LoaderCircle className="lolz-spin" size={18} />
+                    جارٍ رفع الفيديو...
                   </>
                 ) : (
                   <>
-                    <Play size={17} />
+                    <Plus size={18} />
                     نشر الفيديو
                   </>
                 )}
               </button>
-            </>
-          )}
-        </form>
-      </section>
-
-      {notice && (
-        <div className="lolz-notice">
-          <span>{notice}</span>
-          <button onClick={() => setNotice("")} aria-label="إغلاق">
-            <X size={16} />
-          </button>
+            </form>
+          </section>
         </div>
       )}
 
-      <div className="lolz-section-heading">
+      <div className="lolz-feed-heading">
         <div>
-          <span className="lolz-kicker">THE COMMUNITY FEED</span>
+          <span className="lolz-kicker">THE COMMUNITY</span>
           <h2>اكتشف الفيديوهات</h2>
         </div>
-
-        <span className="lolz-video-count">
-          {videos.length} فيديو
-        </span>
+        <span className="lolz-video-count">{videos.length} فيديو</span>
       </div>
 
       {loading ? (
@@ -448,13 +524,18 @@ export default function Lolz({ user }) {
             <Video size={32} />
           </div>
           <h3>البداية من هنا!</h3>
-          <p>لا توجد فيديوهات بعد. كن أول من يشارك لحظته في LOLZ.</p>
-          <button onClick={() => fileRef.current?.click()}>
-            <Plus size={17} /> أضف أول فيديو
+          <p>لا توجد فيديوهات بعد. كن أول من يشارك لحظته.</p>
+          <button onClick={openUpload} type="button">
+            <Plus size={18} />
+            أضف أول فيديو
           </button>
         </div>
       ) : (
-        <section className="lolz-feed">
+        <section
+          className="lolz-feed"
+          ref={feedRef}
+          aria-label="فيديوهات LOLZ"
+        >
           {videos.map((video) => {
             const likeInfo = likes[video.id] || {
               count: 0,
@@ -463,12 +544,11 @@ export default function Lolz({ user }) {
 
             const videoComments = comments[video.id] || [];
             const profile = video.profile;
+            const isCommentsOpen = !!openComments[video.id];
 
             return (
               <article className="lolz-video-card" key={video.id}>
-
                 <div className="lolz-video-stage">
-
                   <video
                     ref={(element) => {
                       if (element) {
@@ -483,8 +563,19 @@ export default function Lolz({ user }) {
                     loop
                     muted={!soundOn}
                     preload="metadata"
-                    controls
+                    onClick={() => togglePlayback(video.id)}
                   />
+
+                  {pausedVideoId === video.id && (
+                    <button
+                      className="lolz-play-overlay"
+                      onClick={() => togglePlayback(video.id)}
+                      aria-label="تشغيل الفيديو"
+                      type="button"
+                    >
+                      <Play size={34} fill="currentColor" />
+                    </button>
+                  )}
 
                   <div className="lolz-video-top">
                     <span className="lolz-label">✦ LOLZ</span>
@@ -493,15 +584,46 @@ export default function Lolz({ user }) {
                       className="lolz-sound-button"
                       onClick={toggleSound}
                       aria-label={soundOn ? "كتم الصوت" : "تشغيل الصوت"}
+                      type="button"
                     >
-                      {soundOn
-                        ? <Volume2 size={19} />
-                        : <VolumeX size={19} />
-                      }
+                      {soundOn ? (
+                        <Volume2 size={19} />
+                      ) : (
+                        <VolumeX size={19} />
+                      )}
                     </button>
                   </div>
 
-                  <div className="lolz-video-overlay">
+                  <div className="lolz-video-actions">
+                    <button
+                      className={likeInfo.liked ? "is-liked" : ""}
+                      onClick={() => toggleLike(video.id)}
+                      aria-label="إعجاب"
+                      type="button"
+                    >
+                      <span className="lolz-action-icon">
+                        <Heart
+                          size={26}
+                          fill={likeInfo.liked ? "currentColor" : "none"}
+                        />
+                      </span>
+                      <span>{likeInfo.count}</span>
+                    </button>
+
+                    <button
+                      className={isCommentsOpen ? "is-active" : ""}
+                      onClick={() => toggleComments(video.id)}
+                      aria-label="التعليقات"
+                      type="button"
+                    >
+                      <span className="lolz-action-icon">
+                        <MessageCircle size={26} />
+                      </span>
+                      <span>{videoComments.length}</span>
+                    </button>
+                  </div>
+
+                  <div className="lolz-video-bottom">
                     <div className="lolz-video-user">
                       {profile?.avatar_url ? (
                         <img src={profile.avatar_url} alt="" />
@@ -511,7 +633,7 @@ export default function Lolz({ user }) {
                         </div>
                       )}
 
-                      <div>
+                      <div className="lolz-user-details">
                         <strong>{displayName(profile)}</strong>
                         <span>
                           {profile?.username
@@ -524,95 +646,118 @@ export default function Lolz({ user }) {
                     </div>
 
                     {video.caption && (
-                      <p className="lolz-caption">
-                        {video.caption}
-                      </p>
+                      <p className="lolz-caption">{video.caption}</p>
                     )}
-                  </div>
-
-                  <div className="lolz-video-actions">
-                    <button
-                      className={likeInfo.liked ? "is-liked" : ""}
-                      onClick={() => toggleLike(video.id)}
-                    >
-                      <Heart
-                        size={25}
-                        fill={likeInfo.liked ? "currentColor" : "none"}
-                      />
-                      <span>{likeInfo.count}</span>
-                    </button>
-
-                    <button
-                      className={openComments[video.id] ? "is-active" : ""}
-                      onClick={() => setOpenComments((prev) => ({
-                        ...prev,
-                        [video.id]: !prev[video.id],
-                      }))}
-                    >
-                      <MessageCircle size={25} />
-                      <span>{videoComments.length}</span>
-                    </button>
                   </div>
                 </div>
 
-                {openComments[video.id] && (
-                  <div className="lolz-comments">
-                    <div className="lolz-comments-list">
-                      {videoComments.length === 0 ? (
-                        <p className="lolz-no-comments">
-                          لا توجد تعليقات بعد. كن أول من يعلّق.
-                        </p>
-                      ) : (
-                        videoComments.map((comment) => (
-                          <div className="lolz-comment" key={comment.id}>
-                            {comment.profile?.avatar_url ? (
-                              <img src={comment.profile.avatar_url} alt="" />
-                            ) : (
-                              <div className="lolz-comment-avatar">
-                                {displayName(comment.profile)
-                                  .charAt(0).toUpperCase()}
-                              </div>
-                            )}
+                <aside
+                  className={`lolz-side-panel ${
+                    isCommentsOpen ? "comments-open" : ""
+                  }`}
+                >
+                  <div className="lolz-side-user">
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="" />
+                    ) : (
+                      <div className="lolz-avatar-fallback">
+                        {displayName(profile).charAt(0).toUpperCase()}
+                      </div>
+                    )}
 
-                            <div>
-                              <strong>
-                                {displayName(comment.profile)}
-                              </strong>
-                              <p>{comment.content}</p>
-                            </div>
-                          </div>
-                        ))
-                      )}
+                    <div className="lolz-user-details">
+                      <strong>{displayName(profile)}</strong>
+                      <span>
+                        {profile?.username
+                          ? `@${profile.username}`
+                          : "OUR SOCIAL"}
+                      </span>
                     </div>
+                  </div>
 
-                    <form
-                      className="lolz-comment-form"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        addComment(video.id);
-                      }}
+                  {video.caption && (
+                    <p className="lolz-side-caption">{video.caption}</p>
+                  )}
+
+                  <div className="lolz-side-divider" />
+
+                  <div className="lolz-comments-heading">
+                    <strong>التعليقات</strong>
+                    <span>{videoComments.length}</span>
+                    <button
+                      type="button"
+                      className="lolz-mobile-close"
+                      onClick={() => toggleComments(video.id)}
+                      aria-label="إغلاق التعليقات"
                     >
-                      <input
-                        value={commentText[video.id] || ""}
-                        onChange={(e) => setCommentText((prev) => ({
+                      <X size={19} />
+                    </button>
+                  </div>
+
+                  <div className="lolz-comments-list">
+                    {videoComments.length === 0 ? (
+                      <p className="lolz-no-comments">
+                        لا توجد تعليقات بعد. كن أول من يعلّق.
+                      </p>
+                    ) : (
+                      videoComments.map((comment) => (
+                        <div className="lolz-comment" key={comment.id}>
+                          {comment.profile?.avatar_url ? (
+                            <img
+                              src={comment.profile.avatar_url}
+                              alt=""
+                            />
+                          ) : (
+                            <div className="lolz-comment-avatar">
+                              {displayName(comment.profile)
+                                .charAt(0)
+                                .toUpperCase()}
+                            </div>
+                          )}
+
+                          <div className="lolz-comment-content">
+                            <strong>{displayName(comment.profile)}</strong>
+                            <p>{comment.content}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  <form
+                    className="lolz-comment-form"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      addComment(video.id);
+                    }}
+                  >
+                    <input
+                      value={commentText[video.id] || ""}
+                      onChange={(e) =>
+                        setCommentText((prev) => ({
                           ...prev,
                           [video.id]: e.target.value,
-                        }))}
-                        placeholder="اكتب تعليقاً..."
-                        maxLength={1000}
-                      />
+                        }))
+                      }
+                      placeholder="اكتب تعليقاً..."
+                      maxLength={1000}
+                    />
 
-                      <button type="submit" aria-label="إرسال التعليق">
-                        <Send size={17} />
-                      </button>
-                    </form>
-                  </div>
-                )}
-
+                    <button type="submit" aria-label="إرسال التعليق">
+                      <Send size={18} />
+                    </button>
+                  </form>
+                </aside>
               </article>
             );
           })}
         </section>
+      )}
+
+      {!loading && videos.length > 1 && (
+        <p className="lolz-feed-hint">
+          اسحب للأعلى لمشاهدة الفيديو التالي
+        </p>
       )}
     </main>
   );

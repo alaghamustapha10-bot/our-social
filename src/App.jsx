@@ -1,3 +1,4 @@
+
 import PreferencesSettings from "./PreferencesSettings";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase";
@@ -5,17 +6,171 @@ import Navigation from "./Navigation";
 import Lolz from "./Lolz";
 import "./App.css";
 
-function timeAgo(date) {
-  if (!date) return "Recently";
+const translations = {
+  "Please sign in to continue.": "يرجى تسجيل الدخول للمتابعة.",
+  "Recently": "مؤخراً",
+  "Just now": "الآن",
+  "Your profile": "ملفك الشخصي",
+  "Could not start the application.": "تعذر تشغيل التطبيق.",
+  "Could not load posts: ": "تعذر تحميل المنشورات: ",
+  "Write something or choose an image first.": "اكتب شيئاً أو اختر صورة أولاً.",
+  "Please sign in first.": "يرجى تسجيل الدخول أولاً.",
+  "Your post has been published.": "تم نشر منشورك بنجاح.",
+  "Could not publish your post.": "تعذر نشر المنشور.",
+  "Please sign in to like posts.": "يرجى تسجيل الدخول للإعجاب بالمنشورات.",
+  "Please sign in to comment.": "يرجى تسجيل الدخول للتعليق.",
+  "Choose a photo or video for your story.": "اختر صورة أو فيديو لقصتك.",
+  "Your story is now live for 24 hours.": "قصتك متاحة الآن لمدة 24 ساعة.",
+  "Could not publish story.": "تعذر نشر القصة.",
+  "People search error: ": "حدث خطأ أثناء البحث عن الأشخاص: ",
+  "Follow error: ": "حدث خطأ أثناء المتابعة: ",
+  "Could not open profile: ": "تعذر فتح الملف الشخصي: ",
+  "Could not load notifications: ": "تعذر تحميل الإشعارات: ",
+  "Could not update notification: ": "تعذر تحديث الإشعار: ",
+  "Could not load conversations: ": "تعذر تحميل المحادثات: ",
+  "Could not load messages: ": "تعذر تحميل الرسائل: ",
+  "Could not open conversation: ": "تعذر فتح المحادثة: ",
+  "Could not send message: ": "تعذر إرسال الرسالة: ",
+  "Please choose an image or video.": "يرجى اختيار صورة أو فيديو.",
+  "Maximum file size is 100 MB.": "الحد الأقصى لحجم الملف هو 100 ميغابايت.",
+  "Only images and videos are allowed.": "يُسمح بالصور والفيديوهات فقط.",
+  "Could not upload the media file.": "تعذر رفع الملف.",
+  "Profile updated successfully.": "تم تحديث الملف الشخصي بنجاح.",
+  "Profile photo updated.": "تم تحديث الصورة الشخصية.",
+  "Search people by name or username...": "ابحث عن الأشخاص بالاسم أو اسم المستخدم...",
+  "Search posts and people...": "ابحث في المنشورات والأشخاص...",
+  "YOUR WORLD. YOUR PEOPLE.": "عالمك. وأصدقاؤك.",
+  "Welcome back": "مرحباً بعودتك",
+  "Your space. Your stories. Your community.": "مساحتك. قصصك. مجتمعك.",
+  "MOMENTS": "لحظات",
+  "Stories": "القصص",
+  "Disappear after 24 hours": "تختفي بعد 24 ساعة",
+  "Your story": "قصتك",
+  "Share story": "نشر القصة",
+  "Uploading...": "جارٍ الرفع...",
+  "Cancel": "إلغاء",
+  "What's happening in your world?": "ماذا يحدث في عالمك؟",
+  "Photo": "صورة",
+  "Publishing...": "جارٍ النشر...",
+  "Publish": "نشر",
+  "THE COMMUNITY": "المجتمع",
+  "Your feed": "آخر المنشورات",
+  "posts": "منشورات",
+  "FIND YOUR COMMUNITY": "اعثر على مجتمعك",
+  "Discover": "استكشف",
+  "Explore posts from the OUR SOCIAL community.": "اكتشف منشورات مجتمع OUR SOCIAL.",
+  "GROW YOUR COMMUNITY": "وسّع مجتمعك",
+  "Discover people": "اكتشف الأشخاص",
+  "Find people and connect with the community.": "اعثر على أشخاص وتواصل مع المجتمع.",
+  "Search by name or username...": "ابحث بالاسم أو اسم المستخدم...",
+  "Search": "بحث",
+  "Searching for people...": "جارٍ البحث عن الأشخاص...",
+  "No people found": "لم يتم العثور على أشخاص",
+  "Try another name or username.": "جرّب اسماً أو اسم مستخدم آخر.",
+  "Member": "عضو",
+  "Following": "تتابعه",
+  "Follow": "متابعة",
+  "Please wait...": "يرجى الانتظار...",
+  "OUR SOCIAL MEMBER": "عضو في OUR SOCIAL",
+  "Message": "مراسلة",
+  "Back": "رجوع",
+  "No bio yet.": "لا توجد نبذة بعد.",
+  "Posts": "المنشورات",
+  "Followers": "المتابعون",
+  "Following count": "يتابع",
+  "YOUR COLLECTION": "مجموعتك",
+  "Saved posts": "المنشورات المحفوظة",
+  "Edit photo": "تغيير الصورة",
+  "Close editor": "إغلاق التعديل",
+  "Edit profile": "تعديل الملف الشخصي",
+  "Tell the community something about yourself.": "أخبر المجتمع قليلاً عن نفسك.",
+  "Display name": "الاسم الظاهر",
+  "Your name": "اسمك",
+  "Username": "اسم المستخدم",
+  "Bio": "نبذة",
+  "Write a little about yourself...": "اكتب نبذة قصيرة عن نفسك...",
+  "Website": "الموقع الإلكتروني",
+  "Save changes": "حفظ التغييرات",
+  "Saving...": "جارٍ الحفظ...",
+  "Your posts": "منشوراتك",
+  "PRIVATE CONVERSATIONS": "محادثات خاصة",
+  "Messages": "الرسائل",
+  "Your chats": "محادثاتك",
+  "Refresh": "تحديث",
+  "Loading conversations...": "جارٍ تحميل المحادثات...",
+  "No conversations yet. Visit someone's profile and press Message to start a chat.": "لا توجد محادثات بعد. افتح الملف الشخصي لشخص ما واضغط على مراسلة لبدء محادثة.",
+  "Start a conversation": "ابدأ محادثة",
+  "Private conversation": "محادثة خاصة",
+  "Loading messages...": "جارٍ تحميل الرسائل...",
+  "No messages yet. Say hello!": "لا توجد رسائل بعد. قل مرحباً!",
+  "Remove": "إزالة",
+  "Write a message...": "اكتب رسالة...",
+  "Sending...": "جارٍ الإرسال...",
+  "Send": "إرسال",
+  "Images and videos only · Maximum 100 MB": "الصور والفيديوهات فقط · الحد الأقصى 100 ميغابايت",
+  "Your private messages": "رسائلك الخاصة",
+  "Choose a conversation or visit a person's profile and press Message.": "اختر محادثة أو افتح الملف الشخصي لشخص واضغط على مراسلة.",
+  "STAY IN THE LOOP": "ابقَ على اطلاع",
+  "Notifications": "الإشعارات",
+  "You have": "لديك",
+  "unread notifications.": "إشعارات غير مقروءة.",
+  "You're all caught up.": "أنت على اطلاع بكل جديد.",
+  "Mark all as read": "تحديد الكل كمقروء",
+  "Loading notifications...": "جارٍ تحميل الإشعارات...",
+  "No notifications yet": "لا توجد إشعارات بعد",
+  "Likes, comments and new followers will appear here.": "ستظهر هنا الإعجابات والتعليقات والمتابعون الجدد.",
+  "liked your post.": "أُعجب بمنشورك.",
+  "commented on your post.": "علّق على منشورك.",
+  "started following you.": "بدأ بمتابعتك.",
+  "interacted with you.": "تفاعل معك.",
+  "Read": "قراءة",
+  "PERSONALIZE YOUR EXPERIENCE": "خصص تجربتك",
+  "Nothing here yet": "لا يوجد شيء هنا بعد",
+  "When posts are available, they will appear here.": "عندما تتوفر منشورات، ستظهر هنا.",
+  "likes": "إعجاب",
+  "View comments": "عرض التعليقات",
+  "Like": "إعجاب",
+  "Comment": "تعليق",
+  "Saved": "محفوظ",
+  "Save": "حفظ",
+  "Write a comment...": "اكتب تعليقاً...",
+  "No bio yet": "لا توجد نبذة بعد",
+  "Photo message": "صورة",
+  "Video message": "فيديو",
+  "Someone": "شخص ما",
+  "Edit": "تعديل",
+};
+
+function useTranslation() {
+  const isArabic = document.documentElement.lang === "ar";
+
+  const t = (value) => {
+    if (!isArabic || !value) return value;
+    return translations[value] || value;
+  };
+
+  return { t, isArabic };
+}
+
+function timeAgo(date, isArabic = false) {
+  if (!date) return isArabic ? "مؤخراً" : "Recently";
 
   const seconds = Math.floor(
     (Date.now() - new Date(date).getTime()) / 1000
   );
 
-  if (seconds < 60) return "Just now";
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
+  if (seconds < 60) return isArabic ? "الآن" : "Just now";
+  if (seconds < 3600) {
+    const value = Math.floor(seconds / 60);
+    return isArabic ? `منذ ${value} د` : `${value}m ago`;
+  }
+  if (seconds < 86400) {
+    const value = Math.floor(seconds / 3600);
+    return isArabic ? `منذ ${value} س` : `${value}h ago`;
+  }
+
+  const value = Math.floor(seconds / 86400);
+  return isArabic ? `منذ ${value} يوم` : `${value}d ago`;
 }
 
 function Avatar({ url, name, size = "normal" }) {
@@ -31,6 +186,8 @@ function Avatar({ url, name, size = "normal" }) {
 }
 
 export default function App() {
+  const { t, isArabic } = useTranslation();
+
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
 
@@ -70,7 +227,6 @@ export default function App() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messageSending, setMessageSending] = useState(false);
 
-  // Chat media
   const [messageFile, setMessageFile] = useState(null);
   const [messageFilePreview, setMessageFilePreview] = useState("");
 
@@ -100,7 +256,6 @@ export default function App() {
   const messageMediaInput = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // Create and clean up the local preview URL.
   useEffect(() => {
     if (!messageFile) {
       setMessageFilePreview("");
@@ -116,10 +271,6 @@ export default function App() {
   useEffect(() => {
     startApp();
   }, []);
-
-  // ----------------------------------
-  // INITIAL APP LOAD
-  // ----------------------------------
 
   async function startApp() {
     setLoading(true);
@@ -169,15 +320,13 @@ export default function App() {
         loadFollowStats(currentUser.id),
       ]);
     } catch (error) {
-      setNotice(error.message || "Could not start the application.");
+      setNotice(error.message || t("Could not start the application."));
     }
 
     setLoading(false);
   }
 
-  // ----------------------------------
   // POSTS
-  // ----------------------------------
 
   async function loadPosts(userId = user?.id) {
     const { data, error } = await supabase
@@ -186,7 +335,7 @@ export default function App() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      setNotice("Could not load posts: " + error.message);
+      setNotice(t("Could not load posts: ") + error.message);
       return;
     }
 
@@ -243,15 +392,15 @@ export default function App() {
   }
 
   async function publishPost(event) {
-    event.preventDefault();
+    event?.preventDefault();
 
     if (!newPost.trim() && !postFile) {
-      setNotice("Write something or choose an image first.");
+      setNotice(t("Write something or choose an image first."));
       return;
     }
 
     if (!user) {
-      setNotice("Please sign in first.");
+      setNotice(t("Please sign in first."));
       return;
     }
 
@@ -276,22 +425,18 @@ export default function App() {
       setNewPost("");
       setPostFile(null);
 
-      if (imageInput.current) {
-        imageInput.current.value = "";
-      }
+      if (imageInput.current) imageInput.current.value = "";
 
       await loadPosts(user.id);
-      setNotice("Your post has been published.");
+      setNotice(t("Your post has been published."));
     } catch (error) {
-      setNotice(error.message || "Could not publish your post.");
+      setNotice(error.message || t("Could not publish your post."));
     }
 
     setBusy(false);
   }
 
-  // ----------------------------------
-  // NOTIFICATION CREATION
-  // ----------------------------------
+  // NOTIFICATIONS
 
   async function createNotification(recipientId, type, postId = null) {
     if (!user || !recipientId || recipientId === user.id) return;
@@ -308,18 +453,14 @@ export default function App() {
       .from("notifications")
       .insert(notification);
 
-    if (error) {
-      console.error("Notification error:", error.message);
-    }
+    if (error) console.error("Notification error:", error.message);
   }
 
-  // ----------------------------------
-  // LIKE / UNLIKE
-  // ----------------------------------
+  // LIKES
 
   async function toggleLike(postId) {
     if (!user) {
-      setNotice("Please sign in to like posts.");
+      setNotice(t("Please sign in to like posts."));
       return;
     }
 
@@ -372,9 +513,7 @@ export default function App() {
     }
   }
 
-  // ----------------------------------
   // COMMENTS
-  // ----------------------------------
 
   async function loadComments(postId) {
     setOpenComments(postId);
@@ -419,7 +558,7 @@ export default function App() {
     event.preventDefault();
 
     if (!user) {
-      setNotice("Please sign in to comment.");
+      setNotice(t("Please sign in to comment."));
       return;
     }
 
@@ -446,9 +585,7 @@ export default function App() {
     await loadComments(postId);
   }
 
-  // ----------------------------------
   // STORIES
-  // ----------------------------------
 
   async function loadStories() {
     const { data, error } = await supabase
@@ -485,12 +622,12 @@ export default function App() {
     event.preventDefault();
 
     if (!storyFile) {
-      setNotice("Choose a photo or video for your story.");
+      setNotice(t("Choose a photo or video for your story."));
       return;
     }
 
     if (!user) {
-      setNotice("Please sign in first.");
+      setNotice(t("Please sign in first."));
       return;
     }
 
@@ -508,23 +645,18 @@ export default function App() {
       if (error) throw error;
 
       setStoryFile(null);
-
-      if (storyInput.current) {
-        storyInput.current.value = "";
-      }
+      if (storyInput.current) storyInput.current.value = "";
 
       await loadStories();
-      setNotice("Your story is now live for 24 hours.");
+      setNotice(t("Your story is now live for 24 hours."));
     } catch (error) {
-      setNotice(error.message || "Could not publish story.");
+      setNotice(error.message || t("Could not publish story."));
     }
 
     setBusy(false);
   }
 
-  // ----------------------------------
-  // FILE UPLOAD
-  // ----------------------------------
+  // MEDIA UPLOAD
 
   async function uploadMedia(file, folder) {
     if (!file || !user) return null;
@@ -553,9 +685,7 @@ export default function App() {
     return data.publicUrl;
   }
 
-  // ----------------------------------
   // PEOPLE SEARCH
-  // ----------------------------------
 
   async function searchPeople(term = "") {
     if (!user) return;
@@ -583,12 +713,11 @@ export default function App() {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
 
       setPeople(data || []);
     } catch (error) {
-      setNotice("People search error: " + error.message);
+      setNotice(t("People search error: ") + error.message);
     }
 
     setPeopleLoading(false);
@@ -597,16 +726,11 @@ export default function App() {
   useEffect(() => {
     if (!user || activePage !== "people") return;
 
-    const timer = setTimeout(() => {
-      searchPeople(search);
-    }, 350);
-
+    const timer = setTimeout(() => searchPeople(search), 350);
     return () => clearTimeout(timer);
   }, [search, activePage, user?.id]);
 
-  // ----------------------------------
   // FOLLOWING
-  // ----------------------------------
 
   async function loadFollowing(userId = user?.id) {
     if (!userId) return;
@@ -647,11 +771,9 @@ export default function App() {
 
   async function toggleFollow(personId) {
     if (!user || personId === user.id) return;
-
     if (followBusy.includes(personId)) return;
 
     const alreadyFollowing = followingIds.includes(personId);
-
     setFollowBusy((current) => [...current, personId]);
 
     try {
@@ -676,7 +798,6 @@ export default function App() {
         if (error) throw error;
 
         setFollowingIds((current) => [...current, personId]);
-
         await createNotification(personId, "follow");
       }
 
@@ -694,7 +815,7 @@ export default function App() {
         }));
       }
     } catch (error) {
-      setNotice("Follow error: " + error.message);
+      setNotice(t("Follow error: ") + error.message);
       await loadFollowing(user.id);
     }
 
@@ -703,9 +824,7 @@ export default function App() {
     );
   }
 
-  // ----------------------------------
-  // VIEW OTHER USER PROFILE
-  // ----------------------------------
+  // OTHER USER PROFILE
 
   async function openUserProfile(personId) {
     if (!personId) return;
@@ -755,7 +874,6 @@ export default function App() {
 
       const profilePosts = postsResult.data || [];
       const postIds = profilePosts.map((post) => post.id);
-
       let likes = [];
 
       if (postIds.length) {
@@ -781,10 +899,7 @@ export default function App() {
       );
 
       setLikedPosts((current) => {
-        const otherIds = current.filter(
-          (id) => !postIds.includes(id)
-        );
-
+        const otherIds = current.filter((id) => !postIds.includes(id));
         const myLikes = likes
           .filter((like) => like.user_id === user.id)
           .map((like) => like.post_id);
@@ -797,16 +912,14 @@ export default function App() {
         following: followingResult.count || 0,
       });
     } catch (error) {
-      setNotice("Could not open profile: " + error.message);
+      setNotice(t("Could not open profile: ") + error.message);
       goTo("people");
     }
 
     setProfileLoading(false);
   }
 
-  // ----------------------------------
   // NOTIFICATIONS
-  // ----------------------------------
 
   async function loadNotifications(userId = user?.id) {
     if (!userId) return;
@@ -848,7 +961,7 @@ export default function App() {
         }))
       );
     } catch (error) {
-      setNotice("Could not load notifications: " + error.message);
+      setNotice(t("Could not load notifications: ") + error.message);
     }
 
     setNotificationLoading(false);
@@ -862,15 +975,13 @@ export default function App() {
       .eq("recipient_id", user.id);
 
     if (error) {
-      setNotice("Could not update notification: " + error.message);
+      setNotice(t("Could not update notification: ") + error.message);
       return;
     }
 
     setNotifications((current) =>
       current.map((item) =>
-        item.id === notificationId
-          ? { ...item, is_read: true }
-          : item
+        item.id === notificationId ? { ...item, is_read: true } : item
       )
     );
   }
@@ -898,9 +1009,7 @@ export default function App() {
     }
   }, [activePage, user?.id]);
 
-  // ----------------------------------
-  // MESSAGING: LOAD CONVERSATIONS
-  // ----------------------------------
+  // MESSAGING
 
   async function loadConversations() {
     if (!user) return;
@@ -940,7 +1049,6 @@ export default function App() {
       if (profilesError) throw profilesError;
 
       const profileMap = {};
-
       (profiles || []).forEach((item) => {
         profileMap[item.id] = item;
       });
@@ -974,18 +1082,14 @@ export default function App() {
         return results.find((item) => item.id === current.id) || current;
       });
     } catch (error) {
-      setNotice("Could not load conversations: " + error.message);
+      setNotice(t("Could not load conversations: ") + error.message);
     }
 
     setMessagesLoading(false);
   }
 
-  // ----------------------------------
-  // MESSAGING: LOAD MESSAGES
-  // ----------------------------------
- async function loadMessages(conversationId) {
+  async function loadMessages(conversationId) {
     if (!conversationId) return;
- 
 
     setMessagesLoading(true);
 
@@ -997,17 +1101,13 @@ export default function App() {
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-
       setConversationMessages(data || []);
     } catch (error) {
-      setNotice("Could not load messages: " + error.message);
+      setNotice(t("Could not load messages: ") + error.message);
     }
 
     setMessagesLoading(false);
   }
-  // ----------------------------------
-  // REALTIME: INSTANT MESSAGES
-  // ----------------------------------
 
   useEffect(() => {
     if (!user || !activeConversation?.id) return;
@@ -1036,13 +1136,8 @@ export default function App() {
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => supabase.removeChannel(channel);
   }, [activeConversation?.id, user?.id]);
-  // ----------------------------------
-  // MESSAGING: OPEN CONVERSATION
-  // ----------------------------------
 
   async function openConversationWith(person) {
     if (!user || !person?.id || person.id === user.id) return;
@@ -1092,35 +1187,29 @@ export default function App() {
       }
 
       goTo("messages");
-
       await loadMessages(conversation.id);
       await loadConversations();
       setActiveConversation(selectedConversation);
     } catch (error) {
-      setNotice("Could not open conversation: " + error.message);
+      setNotice(t("Could not open conversation: ") + error.message);
     }
   }
 
-  // ----------------------------------
-  // MESSAGING: SELECT / CLEAR MEDIA
-  // ----------------------------------
-
   function handleMessageFileChange(event) {
     const file = event.target.files?.[0];
-
     if (!file) return;
 
     if (
       !file.type.startsWith("image/") &&
       !file.type.startsWith("video/")
     ) {
-      setNotice("Please choose an image or video.");
+      setNotice(t("Please choose an image or video."));
       event.target.value = "";
       return;
     }
 
     if (file.size > 100 * 1024 * 1024) {
-      setNotice("Maximum file size is 100 MB.");
+      setNotice(t("Maximum file size is 100 MB."));
       event.target.value = "";
       return;
     }
@@ -1131,15 +1220,10 @@ export default function App() {
 
   function clearMessageFile() {
     setMessageFile(null);
-
     if (messageMediaInput.current) {
       messageMediaInput.current.value = "";
     }
   }
-
-  // ----------------------------------
-  // MESSAGING: SEND MESSAGE
-  // ----------------------------------
 
   async function sendMessage(event) {
     event.preventDefault();
@@ -1163,21 +1247,18 @@ export default function App() {
           !file.type.startsWith("image/") &&
           !file.type.startsWith("video/")
         ) {
-          throw new Error("Only images and videos are allowed.");
+          throw new Error(t("Only images and videos are allowed."));
         }
 
         if (file.size > 100 * 1024 * 1024) {
-          throw new Error("Maximum file size is 100 MB.");
+          throw new Error(t("Maximum file size is 100 MB."));
         }
 
-        messageType = file.type.startsWith("image/")
-          ? "image"
-          : "video";
-
+        messageType = file.type.startsWith("image/") ? "image" : "video";
         mediaUrl = await uploadMedia(file, "messages");
 
         if (!mediaUrl) {
-          throw new Error("Could not upload the media file.");
+          throw new Error(t("Could not upload the media file."));
         }
       }
 
@@ -1186,7 +1267,11 @@ export default function App() {
         sender_id: user.id,
         content:
           content ||
-          (messageType === "image" ? "Photo" : messageType === "video" ? "Video" : ""),
+          (messageType === "image"
+            ? "Photo"
+            : messageType === "video"
+            ? "Video"
+            : ""),
         message_type: messageType,
         media_url: mediaUrl,
         file_name: file?.name || null,
@@ -1205,7 +1290,7 @@ export default function App() {
       await loadMessages(activeConversation.id);
       await loadConversations();
     } catch (error) {
-      setNotice("Could not send message: " + error.message);
+      setNotice(t("Could not send message: ") + error.message);
     } finally {
       setMessageSending(false);
     }
@@ -1218,18 +1303,13 @@ export default function App() {
   }, [activePage, user?.id]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-    });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversationMessages]);
 
-  // ----------------------------------
   // PROFILE
-  // ----------------------------------
 
   async function saveProfile(event) {
     event.preventDefault();
-
     if (!user) return;
 
     setBusy(true);
@@ -1248,13 +1328,9 @@ export default function App() {
     if (error) {
       setNotice(error.message);
     } else {
-      setProfile((current) => ({
-        ...current,
-        ...profileForm,
-      }));
-
+      setProfile((current) => ({ ...current, ...profileForm }));
       setEditProfile(false);
-      setNotice("Profile updated successfully.");
+      setNotice(t("Profile updated successfully."));
     }
 
     setBusy(false);
@@ -1283,7 +1359,7 @@ export default function App() {
         avatar_url: avatarUrl,
       }));
 
-      setNotice("Profile photo updated.");
+      setNotice(t("Profile photo updated."));
     } catch (error) {
       setNotice(error.message);
     }
@@ -1295,19 +1371,16 @@ export default function App() {
     await supabase.auth.signOut();
   }
 
-  // ----------------------------------
-  // NAVIGATION AND DISPLAY
-  // ----------------------------------
+  // NAVIGATION
 
   const displayName =
     profile?.display_name ||
     profile?.full_name ||
     profile?.username ||
-    "Your profile";
+    t("Your profile");
 
   const filteredPosts = posts.filter((post) => {
     const term = search.toLowerCase().trim();
-
     if (!term) return true;
 
     return (
@@ -1324,9 +1397,7 @@ export default function App() {
       ? filteredPosts.filter((post) => post.user_id === user?.id)
       : filteredPosts;
 
-  const unreadCount = notifications.filter(
-    (item) => !item.is_read
-  ).length;
+  const unreadCount = notifications.filter((item) => !item.is_read).length;
 
   function goTo(page) {
     setActivePage(page);
@@ -1336,15 +1407,33 @@ export default function App() {
 
   function createPost() {
     goTo("home");
-
-    setTimeout(() => {
-      postInput.current?.focus();
-    }, 100);
+    setTimeout(() => postInput.current?.focus(), 100);
   }
+
+  const postListProps = {
+    likedPosts,
+    savedPosts,
+    onLike: toggleLike,
+    onSave: (id) =>
+      setSavedPosts((current) =>
+        current.includes(id)
+          ? current.filter((item) => item !== id)
+          : [...current, id]
+      ),
+    onComments: loadComments,
+    openComments,
+    comments,
+    commentText,
+    setCommentText,
+    onAddComment: addComment,
+    onOpenProfile: openUserProfile,
+    t,
+    isArabic,
+  };
 
   if (loading) {
     return (
-      <div className="loading-screen">
+      <div className="loading-screen" dir={isArabic ? "rtl" : "ltr"}>
         OUR SOCIAL<span>.</span>
       </div>
     );
@@ -1352,14 +1441,17 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="loading-screen">
-        Please sign in to continue.
+      <div className="loading-screen" dir={isArabic ? "rtl" : "ltr"}>
+        {t("Please sign in to continue.")}
       </div>
     );
   }
 
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell ${isArabic ? "is-arabic" : ""}`}
+      dir={isArabic ? "rtl" : "ltr"}
+    >
       <Navigation
         page={activePage}
         setPage={goTo}
@@ -1380,30 +1472,26 @@ export default function App() {
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder={
+              placeholder={t(
                 activePage === "people"
                   ? "Search people by name or username..."
                   : "Search posts and people..."
-              }
+              )}
             />
           </div>
 
-          <button
-            className="top-profile"
-            onClick={() => goTo("profile")}
-          >
-            <Avatar
-              url={profile?.avatar_url}
-              name={displayName}
-            />
+          <button className="top-profile" onClick={() => goTo("profile")}>
+            <Avatar url={profile?.avatar_url} name={displayName} />
           </button>
         </header>
 
         <div className="page-content">
           {notice && (
-            <div className="notice">
+            <div className="notice" role="status">
               <span>{notice}</span>
-              <button onClick={() => setNotice("")}>×</button>
+              <button onClick={() => setNotice("")} aria-label="Close">
+                ×
+              </button>
             </div>
           )}
 
@@ -1412,21 +1500,17 @@ export default function App() {
           {activePage === "home" && (
             <>
               <section className="welcome-section">
-                <div>
+                <div className="welcome-content">
                   <span className="eyebrow">
-                    YOUR WORLD. YOUR PEOPLE.
+                    {t("YOUR WORLD. YOUR PEOPLE.")}
                   </span>
-
                   <h1>
-                    Welcome back, {displayName.split(" ")[0]}.
+                    {t("Welcome back")}، {displayName.split(" ")[0]}.
                   </h1>
-
-                  <p>
-                    Your space. Your stories. Your community.
-                  </p>
+                  <p>{t("Your space. Your stories. Your community.")}</p>
                 </div>
 
-                <div className="welcome-decoration">
+                <div className="welcome-decoration" aria-hidden="true">
                   OS<span>.</span>
                 </div>
               </section>
@@ -1434,12 +1518,11 @@ export default function App() {
               <section className="stories-section">
                 <div className="section-heading">
                   <div>
-                    <span className="eyebrow">MOMENTS</span>
-                    <h2>Stories</h2>
+                    <span className="eyebrow">{t("MOMENTS")}</span>
+                    <h2>{t("Stories")}</h2>
                   </div>
-
                   <span className="subtle-text">
-                    Disappear after 24 hours
+                    {t("Disappear after 24 hours")}
                   </span>
                 </div>
 
@@ -1456,17 +1539,14 @@ export default function App() {
                       />
                       <span className="add-story-plus">+</span>
                     </div>
-
-                    <span>Your story</span>
+                    <span>{t("Your story")}</span>
                   </button>
 
                   {stories.map((story) => (
                     <button
                       className="story-item"
                       key={story.id}
-                      onClick={() =>
-                        window.open(story.media_url, "_blank")
-                      }
+                      onClick={() => window.open(story.media_url, "_blank")}
                     >
                       <div className="story-ring">
                         <Avatar
@@ -1475,20 +1555,16 @@ export default function App() {
                           size="large"
                         />
                       </div>
-
                       <span>
                         {story.author?.display_name ||
                           story.author?.username ||
-                          "Member"}
+                          t("Member")}
                       </span>
                     </button>
                   ))}
                 </div>
 
-                <form
-                  className="story-upload"
-                  onSubmit={publishStory}
-                >
+                <form className="story-upload" onSubmit={publishStory}>
                   <input
                     ref={storyInput}
                     type="file"
@@ -1501,42 +1577,32 @@ export default function App() {
 
                   {storyFile && (
                     <>
-                      <span>{storyFile.name}</span>
-
+                      <span className="file-name">{storyFile.name}</span>
                       <button type="submit" disabled={busy}>
-                        {busy ? "Uploading..." : "Share story"}
+                        {busy ? t("Uploading...") : t("Share story")}
                       </button>
-
                       <button
                         type="button"
                         onClick={() => {
                           setStoryFile(null);
-                          if (storyInput.current) {
-                            storyInput.current.value = "";
-                          }
+                          if (storyInput.current) storyInput.current.value = "";
                         }}
                       >
-                        Cancel
+                        {t("Cancel")}
                       </button>
                     </>
                   )}
                 </form>
               </section>
 
-              <section className="composer-card">
+              <form className="composer-card" onSubmit={publishPost}>
                 <div className="composer-top">
-                  <Avatar
-                    url={profile?.avatar_url}
-                    name={displayName}
-                  />
-
+                  <Avatar url={profile?.avatar_url} name={displayName} />
                   <textarea
                     ref={postInput}
                     value={newPost}
-                    onChange={(event) =>
-                      setNewPost(event.target.value)
-                    }
-                    placeholder="What's happening in your world?"
+                    onChange={(event) => setNewPost(event.target.value)}
+                    placeholder={t("What's happening in your world?")}
                     rows="2"
                   />
                 </div>
@@ -1552,63 +1618,39 @@ export default function App() {
                         setPostFile(event.target.files?.[0] || null)
                       }
                     />
-
                     <button
                       type="button"
                       onClick={() => imageInput.current?.click()}
                     >
-                      ▧ Photo
+                      ▧ {t("Photo")}
                     </button>
-
                     {postFile && (
-                      <span className="file-name">
-                        {postFile.name}
-                      </span>
+                      <span className="file-name">{postFile.name}</span>
                     )}
                   </div>
 
                   <button
                     className="primary-button"
-                    onClick={publishPost}
+                    type="submit"
                     disabled={busy}
                   >
-                    {busy ? "Publishing..." : "Publish ↗"}
+                    {busy ? t("Publishing...") : `${t("Publish")} ↗`}
                   </button>
                 </div>
-              </section>
+              </form>
 
               <section className="feed-section">
                 <div className="section-heading">
                   <div>
-                    <span className="eyebrow">THE COMMUNITY</span>
-                    <h2>Your feed</h2>
+                    <span className="eyebrow">{t("THE COMMUNITY")}</span>
+                    <h2>{t("Your feed")}</h2>
                   </div>
-
                   <span className="subtle-text">
-                    {posts.length} posts
+                    {posts.length} {t("posts")}
                   </span>
                 </div>
 
-                <PostList
-                  posts={visiblePosts}
-                  likedPosts={likedPosts}
-                  savedPosts={savedPosts}
-                  onLike={toggleLike}
-                  onSave={(id) =>
-                    setSavedPosts((current) =>
-                      current.includes(id)
-                        ? current.filter((item) => item !== id)
-                        : [...current, id]
-                    )
-                  }
-                  onComments={loadComments}
-                  openComments={openComments}
-                  comments={comments}
-                  commentText={commentText}
-                  setCommentText={setCommentText}
-                  onAddComment={addComment}
-                  onOpenProfile={openUserProfile}
-                />
+                <PostList posts={visiblePosts} {...postListProps} />
               </section>
             </>
           )}
@@ -1617,36 +1659,10 @@ export default function App() {
 
           {activePage === "discover" && (
             <section className="other-page">
-              <span className="eyebrow">
-                FIND YOUR COMMUNITY
-              </span>
-
-              <h1>Discover</h1>
-
-              <p>
-                Explore posts from the OUR SOCIAL community.
-              </p>
-
-              <PostList
-                posts={visiblePosts}
-                likedPosts={likedPosts}
-                savedPosts={savedPosts}
-                onLike={toggleLike}
-                onSave={(id) =>
-                  setSavedPosts((current) =>
-                    current.includes(id)
-                      ? current.filter((item) => item !== id)
-                      : [...current, id]
-                  )
-                }
-                onComments={loadComments}
-                openComments={openComments}
-                comments={comments}
-                commentText={commentText}
-                setCommentText={setCommentText}
-                onAddComment={addComment}
-                onOpenProfile={openUserProfile}
-              />
+              <span className="eyebrow">{t("FIND YOUR COMMUNITY")}</span>
+              <h1>{t("Discover")}</h1>
+              <p>{t("Explore posts from the OUR SOCIAL community.")}</p>
+              <PostList posts={visiblePosts} {...postListProps} />
             </section>
           )}
 
@@ -1654,91 +1670,49 @@ export default function App() {
 
           {activePage === "people" && (
             <section className="other-page">
-              <span className="eyebrow">GROW YOUR COMMUNITY</span>
-              <h1>Discover people</h1>
-              <p>Find people and connect with the community.</p>
+              <span className="eyebrow">{t("GROW YOUR COMMUNITY")}</span>
+              <h1>{t("Discover people")}</h1>
+              <p>{t("Find people and connect with the community.")}</p>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: "12px",
-                  alignItems: "center",
-                  margin: "24px 0",
-                  flexWrap: "wrap",
-                }}
-              >
+              <div className="people-search">
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search by name or username..."
-                  style={{
-                    flex: "1",
-                    minWidth: "220px",
-                    padding: "14px 16px",
-                    borderRadius: "12px",
-                    border: "1px solid rgba(160,130,255,.25)",
-                    background: "#17151f",
-                    color: "white",
-                  }}
+                  placeholder={t("Search by name or username...")}
                 />
-
                 <button
                   className="primary-button"
                   onClick={() => searchPeople(search)}
                 >
-                  Search
+                  {t("Search")}
                 </button>
               </div>
 
               {peopleLoading ? (
-                <p>Searching for people...</p>
+                <p>{t("Searching for people...")}</p>
               ) : people.length === 0 ? (
                 <div className="empty-state">
                   <span>✦</span>
-                  <h3>No people found</h3>
-                  <p>Try another name or username.</p>
+                  <h3>{t("No people found")}</h3>
+                  <p>{t("Try another name or username.")}</p>
                 </div>
               ) : (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                      "repeat(auto-fill,minmax(250px,1fr))",
-                    gap: "16px",
-                  }}
-                >
+                <div className="people-grid">
                   {people.map((person) => {
                     const name =
                       person.display_name ||
                       person.full_name ||
                       person.username ||
-                      "Member";
+                      t("Member");
 
                     const isFollowing = followingIds.includes(person.id);
                     const isBusy = followBusy.includes(person.id);
 
                     return (
-                      <div
-                        key={person.id}
-                        style={{
-                          background: "#17151f",
-                          border: "1px solid rgba(160,130,255,.18)",
-                          borderRadius: "18px",
-                          padding: "20px",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "14px",
-                          minWidth: 0,
-                        }}
-                      >
+                      <article className="person-card" key={person.id}>
                         <button
+                          className="person-avatar-button"
                           onClick={() => openUserProfile(person.id)}
-                          style={{
-                            border: "none",
-                            background: "transparent",
-                            padding: 0,
-                            cursor: "pointer",
-                          }}
                         >
                           <Avatar
                             url={person.avatar_url}
@@ -1747,45 +1721,18 @@ export default function App() {
                           />
                         </button>
 
-                        <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="person-info">
                           <button
+                            className="person-name"
                             onClick={() => openUserProfile(person.id)}
-                            style={{
-                              display: "block",
-                              color: "white",
-                              background: "transparent",
-                              border: "none",
-                              padding: 0,
-                              cursor: "pointer",
-                              textAlign: "left",
-                              fontWeight: "bold",
-                              maxWidth: "100%",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
                           >
                             {name}
                           </button>
-
-                          <span
-                            style={{
-                              color: "#a49ab9",
-                              fontSize: "13px",
-                            }}
-                          >
+                          <span className="person-handle">
                             @{person.username || "member"}
                           </span>
-
                           {person.bio && (
-                            <p
-                              style={{
-                                color: "#aaa1b8",
-                                fontSize: "12px",
-                                margin: "6px 0 0",
-                              }}
-                            >
-                              {person.bio}
-                            </p>
+                            <p className="person-bio">{person.bio}</p>
                           )}
                         </div>
 
@@ -1793,22 +1740,16 @@ export default function App() {
                           onClick={() => toggleFollow(person.id)}
                           disabled={isBusy}
                           className={
-                            isFollowing
-                              ? "secondary-button"
-                              : "primary-button"
+                            isFollowing ? "secondary-button" : "primary-button"
                           }
-                          style={{
-                            padding: "9px 12px",
-                            whiteSpace: "nowrap",
-                          }}
                         >
                           {isBusy
                             ? "..."
                             : isFollowing
-                            ? "Following"
-                            : "Follow"}
+                            ? t("Following")
+                            : t("Follow")}
                         </button>
-                      </div>
+                      </article>
                     );
                   })}
                 </div>
@@ -1822,12 +1763,12 @@ export default function App() {
             <section className="profile-page">
               {profileLoading || !selectedProfile ? (
                 <div className="empty-state">
-                  <h3>Loading profile...</h3>
+                  <h3>{t("Loading profile...")}</h3>
                 </div>
               ) : (
                 <>
                   <div className="profile-cover">
-                    <span>OUR SOCIAL MEMBER</span>
+                    <span>{t("OUR SOCIAL MEMBER")}</span>
                   </div>
 
                   <div className="profile-main">
@@ -1842,14 +1783,7 @@ export default function App() {
                       />
                     </div>
 
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "10px",
-                        flexWrap: "wrap",
-                        marginTop: "12px",
-                      }}
-                    >
+                    <div className="profile-action-row">
                       <button
                         className={
                           followingIds.includes(selectedProfile.id)
@@ -1860,24 +1794,24 @@ export default function App() {
                         onClick={() => toggleFollow(selectedProfile.id)}
                       >
                         {followBusy.includes(selectedProfile.id)
-                          ? "Please wait..."
+                          ? t("Please wait...")
                           : followingIds.includes(selectedProfile.id)
-                          ? "Following"
-                          : "Follow"}
+                          ? t("Following")
+                          : t("Follow")}
                       </button>
 
                       <button
                         className="secondary-button"
                         onClick={() => openConversationWith(selectedProfile)}
                       >
-                        Message
+                        {t("Message")}
                       </button>
 
                       <button
                         className="secondary-button"
                         onClick={() => goTo("people")}
                       >
-                        Back
+                        {t("Back")}
                       </button>
                     </div>
 
@@ -1886,13 +1820,11 @@ export default function App() {
                         selectedProfile.full_name ||
                         selectedProfile.username}
                     </h1>
-
                     <p className="profile-handle">
                       @{selectedProfile.username || "member"}
                     </p>
-
                     <p className="profile-bio">
-                      {selectedProfile.bio || "No bio yet."}
+                      {selectedProfile.bio || t("No bio yet.")}
                     </p>
 
                     {selectedProfile.website && (
@@ -1908,44 +1840,25 @@ export default function App() {
                     <div className="profile-stats">
                       <div>
                         <strong>{selectedProfilePosts.length}</strong>
-                        <span>Posts</span>
+                        <span>{t("Posts")}</span>
                       </div>
-
                       <div>
                         <strong>{selectedProfileStats.followers}</strong>
-                        <span>Followers</span>
+                        <span>{t("Followers")}</span>
                       </div>
-
                       <div>
                         <strong>{selectedProfileStats.following}</strong>
-                        <span>Following</span>
+                        <span>{t("Following count")}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="section-heading profile-post-heading">
-                    <h2>Posts</h2>
+                    <h2>{t("Posts")}</h2>
                   </div>
-
                   <PostList
                     posts={selectedProfilePosts}
-                    likedPosts={likedPosts}
-                    savedPosts={savedPosts}
-                    onLike={toggleLike}
-                    onSave={(id) =>
-                      setSavedPosts((current) =>
-                        current.includes(id)
-                          ? current.filter((item) => item !== id)
-                          : [...current, id]
-                      )
-                    }
-                    onComments={loadComments}
-                    openComments={openComments}
-                    comments={comments}
-                    commentText={commentText}
-                    setCommentText={setCommentText}
-                    onAddComment={addComment}
-                    onOpenProfile={openUserProfile}
+                    {...postListProps}
                   />
                 </>
               )}
@@ -1956,26 +1869,16 @@ export default function App() {
 
           {activePage === "saved" && (
             <section className="other-page">
-              <span className="eyebrow">YOUR COLLECTION</span>
-              <h1>Saved posts</h1>
-
+              <span className="eyebrow">{t("YOUR COLLECTION")}</span>
+              <h1>{t("Saved posts")}</h1>
               <PostList
                 posts={visiblePosts}
-                likedPosts={likedPosts}
-                savedPosts={savedPosts}
-                onLike={toggleLike}
+                {...postListProps}
                 onSave={(id) =>
                   setSavedPosts((current) =>
                     current.filter((item) => item !== id)
                   )
                 }
-                onComments={loadComments}
-                openComments={openComments}
-                comments={comments}
-                commentText={commentText}
-                setCommentText={setCommentText}
-                onAddComment={addComment}
-                onOpenProfile={openUserProfile}
               />
             </section>
           )}
@@ -1984,12 +1887,12 @@ export default function App() {
 
           {activePage === "lolz" && <Lolz user={user} />}
 
-          {/* PROFILE */}
+          {/* OWN PROFILE */}
 
           {activePage === "profile" && (
             <section className="profile-page">
               <div className="profile-cover">
-                <span>OUR SOCIAL MEMBER</span>
+                <span>{t("OUR SOCIAL MEMBER")}</span>
               </div>
 
               <div className="profile-main">
@@ -2010,11 +1913,8 @@ export default function App() {
                     }
                   />
 
-                  <label
-                    htmlFor="avatar-upload"
-                    className="avatar-edit"
-                  >
-                    Edit photo
+                  <label htmlFor="avatar-upload" className="avatar-edit">
+                    {t("Edit photo")}
                   </label>
                 </div>
 
@@ -2022,18 +1922,15 @@ export default function App() {
                   className="secondary-button edit-profile-button"
                   onClick={() => setEditProfile(!editProfile)}
                 >
-                  {editProfile ? "Close editor" : "Edit profile"}
+                  {editProfile ? t("Close editor") : t("Edit profile")}
                 </button>
 
                 <h1>{displayName}</h1>
-
                 <p className="profile-handle">
                   @{profile?.username || "user"}
                 </p>
-
                 <p className="profile-bio">
-                  {profile?.bio ||
-                    "Tell the community something about yourself."}
+                  {profile?.bio || t("Tell the community something about yourself.")}
                 </p>
 
                 {profile?.website && (
@@ -2047,12 +1944,8 @@ export default function App() {
                 )}
 
                 {editProfile && (
-                  <form
-                    className="profile-edit-form"
-                    onSubmit={saveProfile}
-                  >
-                    <label>Display name</label>
-
+                  <form className="profile-edit-form" onSubmit={saveProfile}>
+                    <label>{t("Display name")}</label>
                     <input
                       value={profileForm.display_name}
                       onChange={(event) =>
@@ -2061,11 +1954,10 @@ export default function App() {
                           display_name: event.target.value,
                         })
                       }
-                      placeholder="Your name"
+                      placeholder={t("Your name")}
                     />
 
-                    <label>Username</label>
-
+                    <label>{t("Username")}</label>
                     <input
                       value={profileForm.username}
                       onChange={(event) =>
@@ -2077,8 +1969,7 @@ export default function App() {
                       placeholder="username"
                     />
 
-                    <label>Bio</label>
-
+                    <label>{t("Bio")}</label>
                     <textarea
                       value={profileForm.bio}
                       onChange={(event) =>
@@ -2087,11 +1978,10 @@ export default function App() {
                           bio: event.target.value,
                         })
                       }
-                      placeholder="Write a little about yourself..."
+                      placeholder={t("Write a little about yourself...")}
                     />
 
-                    <label>Website</label>
-
+                    <label>{t("Website")}</label>
                     <input
                       value={profileForm.website}
                       onChange={(event) =>
@@ -2103,11 +1993,8 @@ export default function App() {
                       placeholder="https://example.com"
                     />
 
-                    <button
-                      className="primary-button"
-                      disabled={busy}
-                    >
-                      {busy ? "Saving..." : "Save changes"}
+                    <button className="primary-button" disabled={busy}>
+                      {busy ? t("Saving...") : t("Save changes")}
                     </button>
                   </form>
                 )}
@@ -2117,45 +2004,23 @@ export default function App() {
                     <strong>
                       {posts.filter((p) => p.user_id === user.id).length}
                     </strong>
-                    <span>Posts</span>
+                    <span>{t("Posts")}</span>
                   </div>
-
                   <div>
                     <strong>{followStats.followers}</strong>
-                    <span>Followers</span>
+                    <span>{t("Followers")}</span>
                   </div>
-
                   <div>
                     <strong>{followStats.following}</strong>
-                    <span>Following</span>
+                    <span>{t("Following count")}</span>
                   </div>
                 </div>
               </div>
 
               <div className="section-heading profile-post-heading">
-                <h2>Your posts</h2>
+                <h2>{t("Your posts")}</h2>
               </div>
-
-              <PostList
-                posts={visiblePosts}
-                likedPosts={likedPosts}
-                savedPosts={savedPosts}
-                onLike={toggleLike}
-                onSave={(id) =>
-                  setSavedPosts((current) =>
-                    current.includes(id)
-                      ? current.filter((item) => item !== id)
-                      : [...current, id]
-                  )
-                }
-                onComments={loadComments}
-                openComments={openComments}
-                comments={comments}
-                commentText={commentText}
-                setCommentText={setCommentText}
-                onAddComment={addComment}
-                onOpenProfile={openUserProfile}
-              />
+              <PostList posts={visiblePosts} {...postListProps} />
             </section>
           )}
 
@@ -2163,82 +2028,54 @@ export default function App() {
 
           {activePage === "messages" && (
             <section className="other-page">
-              <span className="eyebrow">PRIVATE CONVERSATIONS</span>
-              <h1>Messages</h1>
+              <span className="eyebrow">{t("PRIVATE CONVERSATIONS")}</span>
+              <h1>{t("Messages")}</h1>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns:
-                    "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
-                  gap: "18px",
-                  marginTop: "24px",
-                }}
-              >
-                {/* CONVERSATION LIST */}
-
-                <div
-                  style={{
-                    background: "#17151f",
-                    border: "1px solid rgba(160,130,255,.18)",
-                    borderRadius: "16px",
-                    padding: "14px",
-                    minWidth: 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <h3 style={{ margin: "5px 0 14px" }}>
-                      Your chats
-                    </h3>
-
+              <div className="messages-layout">
+                <div className="conversation-panel">
+                  <div className="panel-heading">
+                    <h3>{t("Your chats")}</h3>
                     <button
                       className="secondary-button"
                       onClick={loadConversations}
-                      style={{ padding: "7px 10px" }}
                     >
-                      Refresh
+                      {t("Refresh")}
                     </button>
                   </div>
 
                   {messagesLoading && conversations.length === 0 ? (
-                    <p>Loading conversations...</p>
+                    <p>{t("Loading conversations...")}</p>
                   ) : conversations.length === 0 ? (
-                    <p style={{ color: "#a49ab9", fontSize: "13px" }}>
-                      No conversations yet. Visit someone's profile and
-                      press Message to start a chat.
+                    <p className="subtle-text">
+                      {t("No conversations yet. Visit someone's profile and press Message to start a chat.")}
                     </p>
                   ) : (
-                    <div style={{ display: "grid", gap: "8px" }}>
+                    <div className="conversation-list">
                       {conversations.map((conversation) => {
                         const person = conversation.otherProfile || {};
                         const name =
                           person.display_name ||
                           person.full_name ||
                           person.username ||
-                          "Member";
+                          t("Member");
 
                         const isActive =
                           activeConversation?.id === conversation.id;
 
                         const lastMessage = conversation.lastMessage;
 
-                        const lastMessagePreview =
+                        const preview =
                           lastMessage?.message_type === "image"
-                            ? "📷 Photo"
+                            ? `📷 ${t("Photo")}`
                             : lastMessage?.message_type === "video"
-                            ? "🎥 Video"
-                            : lastMessage?.content || "Start a conversation";
+                            ? `🎥 ${t("Video message")}`
+                            : lastMessage?.content ||
+                              t("Start a conversation");
 
                         return (
                           <button
                             key={conversation.id}
+                            className={`conversation-item ${isActive ? "active" : ""}`}
                             onClick={async () => {
                               setActiveConversation(conversation);
                               setConversationMessages([]);
@@ -2251,52 +2088,15 @@ export default function App() {
 
                               await loadMessages(conversation.id);
                             }}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "10px",
-                              width: "100%",
-                              textAlign: "left",
-                              padding: "10px",
-                              borderRadius: "12px",
-                              border: isActive
-                                ? "1px solid #9670ff"
-                                : "1px solid rgba(160,130,255,.12)",
-                              background: isActive
-                                ? "rgba(116,75,220,.2)"
-                                : "transparent",
-                              color: "white",
-                              cursor: "pointer",
-                            }}
                           >
                             <Avatar
                               url={person.avatar_url}
                               name={name}
                               size="large"
                             />
-
-                            <span style={{ minWidth: 0, flex: 1 }}>
-                              <strong
-                                style={{
-                                  display: "block",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }}
-                              >
-                                {name}
-                              </strong>
-
-                              <small
-                                style={{
-                                  display: "block",
-                                  color: "#a49ab9",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                }}
-                              >
-                                {lastMessagePreview}
-                              </small>
+                            <span className="conversation-person">
+                              <strong>{name}</strong>
+                              <small>{preview}</small>
                             </span>
                           </button>
                         );
@@ -2305,31 +2105,10 @@ export default function App() {
                   )}
                 </div>
 
-                {/* CHAT WINDOW */}
-
-                <div
-                  style={{
-                    background: "#17151f",
-                    border: "1px solid rgba(160,130,255,.18)",
-                    borderRadius: "16px",
-                    padding: "14px",
-                    minWidth: 0,
-                    display: "flex",
-                    flexDirection: "column",
-                    minHeight: "430px",
-                  }}
-                >
+                <div className="chat-panel">
                   {activeConversation ? (
                     <>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "10px",
-                          paddingBottom: "14px",
-                          borderBottom: "1px solid rgba(160,130,255,.15)",
-                        }}
-                      >
+                      <div className="chat-header">
                         <Avatar
                           url={activeConversation.otherProfile?.avatar_url}
                           name={
@@ -2338,104 +2117,45 @@ export default function App() {
                           }
                           size="large"
                         />
-
                         <div>
                           <strong>
                             {activeConversation.otherProfile?.display_name ||
                               activeConversation.otherProfile?.full_name ||
                               activeConversation.otherProfile?.username ||
-                              "Member"}
+                              t("Member")}
                           </strong>
-
-                          <div
-                            style={{
-                              color: "#a49ab9",
-                              fontSize: "12px",
-                            }}
-                          >
-                            Private conversation
-                          </div>
+                          <small>{t("Private conversation")}</small>
                         </div>
                       </div>
 
-                      {/* MESSAGE HISTORY */}
-
-                      <div
-                        style={{
-                          flex: 1,
-                          overflowY: "auto",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "10px",
-                          padding: "16px 2px",
-                          minHeight: "260px",
-                          maxHeight: "450px",
-                        }}
-                      >
+                      <div className="chat-history">
                         {messagesLoading ? (
-                          <p>Loading messages...</p>
+                          <p>{t("Loading messages...")}</p>
                         ) : conversationMessages.length === 0 ? (
-                          <p
-                            style={{
-                              color: "#a49ab9",
-                              textAlign: "center",
-                              margin: "auto",
-                            }}
-                          >
-                            No messages yet. Say hello!
+                          <p className="chat-empty">
+                            {t("No messages yet. Say hello!")}
                           </p>
                         ) : (
                           conversationMessages.map((message) => {
                             const mine = message.sender_id === user.id;
-
                             const isImage =
                               message.message_type === "image" &&
                               message.media_url;
-
                             const isVideo =
                               message.message_type === "video" &&
                               message.media_url;
-
-                            const isMedia =
-                              isImage || isVideo;
+                            const isMedia = isImage || isVideo;
 
                             return (
                               <div
                                 key={message.id}
-                                style={{
-                                  alignSelf: mine
-                                    ? "flex-end"
-                                    : "flex-start",
-                                  maxWidth: "85%",
-                                  minWidth: 0,
-                                  background: mine
-                                    ? "rgba(116,75,220,.35)"
-                                    : "#252230",
-                                  border: "1px solid rgba(160,130,255,.16)",
-                                  borderRadius: "14px",
-                                  padding: "10px 13px",
-                                  color: "white",
-                                  overflowWrap: "anywhere",
-                                }}
+                                className={`message-bubble ${mine ? "mine" : "theirs"}`}
                               >
                                 {isImage && (
                                   <img
                                     src={message.media_url}
                                     alt={message.file_name || "Shared image"}
                                     loading="lazy"
-                                    style={{
-                                      display: "block",
-                                      width: "100%",
-                                      maxWidth: "320px",
-                                      maxHeight: "320px",
-                                      objectFit: "contain",
-                                      borderRadius: "10px",
-                                      marginBottom:
-                                        message.content &&
-                                        message.content !== "Photo"
-                                          ? "8px"
-                                          : "0",
-                                    }}
                                   />
                                 )}
 
@@ -2445,18 +2165,6 @@ export default function App() {
                                     controls
                                     playsInline
                                     preload="metadata"
-                                    style={{
-                                      display: "block",
-                                      width: "100%",
-                                      maxWidth: "320px",
-                                      maxHeight: "320px",
-                                      borderRadius: "10px",
-                                      marginBottom:
-                                        message.content &&
-                                        message.content !== "Video"
-                                          ? "8px"
-                                          : "0",
-                                    }}
                                   />
                                 )}
 
@@ -2467,74 +2175,27 @@ export default function App() {
                                   <div>{message.content}</div>
                                 )}
 
-                                <small
-                                  style={{
-                                    display: "block",
-                                    color: "#b9afcb",
-                                    fontSize: "10px",
-                                    marginTop: "5px",
-                                    textAlign: "right",
-                                  }}
-                                >
-                                  {timeAgo(message.created_at)}
+                                <small>
+                                  {timeAgo(message.created_at, isArabic)}
                                 </small>
                               </div>
                             );
                           })
                         )}
-
                         <div ref={messagesEndRef} />
                       </div>
 
-                      {/* SELECTED MEDIA PREVIEW */}
-
                       {messageFile && messageFilePreview && (
-                        <div
-                          style={{
-                            borderTop: "1px solid rgba(160,130,255,.15)",
-                            padding: "12px 0",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "12px",
-                            minWidth: 0,
-                          }}
-                        >
+                        <div className="message-file-preview">
                           {messageFile.type.startsWith("image/") ? (
-                            <img
-                              src={messageFilePreview}
-                              alt="Preview"
-                              style={{
-                                width: "76px",
-                                height: "76px",
-                                objectFit: "cover",
-                                borderRadius: "10px",
-                              }}
-                            />
+                            <img src={messageFilePreview} alt="Preview" />
                           ) : (
-                            <video
-                              src={messageFilePreview}
-                              style={{
-                                width: "110px",
-                                height: "76px",
-                                objectFit: "cover",
-                                borderRadius: "10px",
-                              }}
-                            />
+                            <video src={messageFilePreview} />
                           )}
 
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <strong
-                              style={{
-                                display: "block",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {messageFile.name}
-                            </strong>
-
-                            <small style={{ color: "#a49ab9" }}>
+                          <div className="preview-file-info">
+                            <strong>{messageFile.name}</strong>
+                            <small>
                               {(messageFile.size / (1024 * 1024)).toFixed(2)} MB
                             </small>
                           </div>
@@ -2544,28 +2205,13 @@ export default function App() {
                             onClick={clearMessageFile}
                             disabled={messageSending}
                             className="secondary-button"
-                            style={{
-                              padding: "7px 11px",
-                              flexShrink: 0,
-                            }}
                           >
-                            Remove
+                            {t("Remove")}
                           </button>
                         </div>
                       )}
 
-                      {/* MESSAGE COMPOSER */}
-
-                      <form
-                        onSubmit={sendMessage}
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: "8px",
-                          borderTop: "1px solid rgba(160,130,255,.15)",
-                          paddingTop: "12px",
-                        }}
-                      >
+                      <form className="message-composer" onSubmit={sendMessage}>
                         <input
                           ref={messageMediaInput}
                           type="file"
@@ -2576,14 +2222,10 @@ export default function App() {
 
                         <button
                           type="button"
-                          className="secondary-button"
+                          className="secondary-button attach-button"
                           onClick={() => messageMediaInput.current?.click()}
                           disabled={messageSending}
                           title="Attach a photo or video"
-                          style={{
-                            padding: "10px 13px",
-                            flexShrink: 0,
-                          }}
                         >
                           📎
                         </button>
@@ -2593,17 +2235,8 @@ export default function App() {
                           onChange={(event) =>
                             setMessageText(event.target.value)
                           }
-                          placeholder="Write a message..."
+                          placeholder={t("Write a message...")}
                           disabled={messageSending}
-                          style={{
-                            flex: 1,
-                            minWidth: "100px",
-                            padding: "12px",
-                            borderRadius: "12px",
-                            border: "1px solid rgba(160,130,255,.25)",
-                            background: "#100e17",
-                            color: "white",
-                          }}
                         />
 
                         <button
@@ -2614,38 +2247,20 @@ export default function App() {
                             (!messageText.trim() && !messageFile)
                           }
                         >
-                          {messageSending ? "Sending..." : "Send"}
+                          {messageSending ? t("Sending...") : t("Send")}
                         </button>
                       </form>
 
-                      <small
-                        style={{
-                          color: "#a49ab9",
-                          fontSize: "11px",
-                          marginTop: "7px",
-                        }}
-                      >
-                        Images and videos only · Maximum 100 MB
+                      <small className="upload-hint">
+                        {t("Images and videos only · Maximum 100 MB")}
                       </small>
                     </>
                   ) : (
-                    <div
-                      style={{
-                        flex: 1,
-                        display: "grid",
-                        placeItems: "center",
-                        textAlign: "center",
-                        color: "#a49ab9",
-                        padding: "20px",
-                      }}
-                    >
+                    <div className="chat-placeholder">
                       <div>
-                        <h3 style={{ color: "white" }}>
-                          Your private messages
-                        </h3>
+                        <h3>{t("Your private messages")}</h3>
                         <p>
-                          Choose a conversation or visit a person's
-                          profile and press Message.
+                          {t("Choose a conversation or visit a person's profile and press Message.")}
                         </p>
                       </div>
                     </div>
@@ -2655,28 +2270,18 @@ export default function App() {
             </section>
           )}
 
-          
-          
           {/* NOTIFICATIONS */}
 
           {activePage === "activity" && (
             <section className="other-page">
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: "15px",
-                  flexWrap: "wrap",
-                }}
-              >
+              <div className="notifications-heading">
                 <div>
-                  <span className="eyebrow">STAY IN THE LOOP</span>
-                  <h1>Notifications</h1>
+                  <span className="eyebrow">{t("STAY IN THE LOOP")}</span>
+                  <h1>{t("Notifications")}</h1>
                   <p>
                     {unreadCount > 0
-                      ? `You have ${unreadCount} unread notifications.`
-                      : "You're all caught up."}
+                      ? `${t("You have")} ${unreadCount} ${t("unread notifications.")}`
+                      : t("You're all caught up.")}
                   </p>
                 </div>
 
@@ -2685,73 +2290,49 @@ export default function App() {
                     className="secondary-button"
                     onClick={markAllNotificationsRead}
                   >
-                    Mark all as read
+                    {t("Mark all as read")}
                   </button>
                 )}
               </div>
 
               {notificationLoading ? (
-                <p>Loading notifications...</p>
+                <p>{t("Loading notifications...")}</p>
               ) : notifications.length === 0 ? (
                 <div className="empty-state">
                   <span>✦</span>
-                  <h3>No notifications yet</h3>
+                  <h3>{t("No notifications yet")}</h3>
                   <p>
-                    Likes, comments and new followers will appear here.
+                    {t("Likes, comments and new followers will appear here.")}
                   </p>
                 </div>
               ) : (
-                <div
-                  style={{
-                    display: "grid",
-                    gap: "12px",
-                    marginTop: "24px",
-                  }}
-                >
+                <div className="notifications-list">
                   {notifications.map((item) => {
                     const actor = item.actor || {};
-
                     const actorName =
                       actor.display_name ||
                       actor.full_name ||
                       actor.username ||
-                      "Someone";
+                      t("Someone");
 
                     const messages = {
-                      like: "liked your post.",
-                      comment: "commented on your post.",
-                      follow: "started following you.",
+                      like: t("liked your post."),
+                      comment: t("commented on your post."),
+                      follow: t("started following you."),
                     };
 
                     const message =
-                      messages[item.type] || "interacted with you.";
+                      messages[item.type] || t("interacted with you.");
 
                     return (
-                      <div
+                      <article
                         key={item.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "14px",
-                          padding: "16px",
-                          borderRadius: "16px",
-                          background: item.is_read
-                            ? "#17151f"
-                            : "rgba(116,75,220,.17)",
-                          border: "1px solid rgba(160,130,255,.18)",
-                        }}
+                        className={`notification-item ${item.is_read ? "" : "unread"}`}
                       >
                         <button
-                          onClick={() =>
-                            openUserProfile(item.actor_id)
-                          }
+                          onClick={() => openUserProfile(item.actor_id)}
                           aria-label={`Open ${actorName}'s profile`}
-                          style={{
-                            border: "none",
-                            background: "transparent",
-                            padding: 0,
-                            cursor: "pointer",
-                          }}
+                          className="notification-avatar"
                         >
                           <Avatar
                             url={actor.avatar_url}
@@ -2760,46 +2341,27 @@ export default function App() {
                           />
                         </button>
 
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ margin: 0 }}>
-                            <strong>{actorName}</strong>{" "}
-                            {message}
+                        <div className="notification-content">
+                          <p>
+                            <strong>{actorName}</strong> {message}
                           </p>
-
-                          <span
-                            style={{
-                              color: "#a49ab9",
-                              fontSize: "12px",
-                            }}
-                          >
-                            {timeAgo(item.created_at)}
+                          <span>
+                            {timeAgo(item.created_at, isArabic)}
                           </span>
                         </div>
 
                         {!item.is_read && (
                           <>
-                            <span
-                              style={{
-                                width: "9px",
-                                height: "9px",
-                                borderRadius: "50%",
-                                background: "#9b78ff",
-                                flexShrink: 0,
-                              }}
-                            />
-
+                            <span className="unread-dot" />
                             <button
                               className="secondary-button"
-                              onClick={() =>
-                                markNotificationRead(item.id)
-                              }
-                              style={{ padding: "8px 10px" }}
+                              onClick={() => markNotificationRead(item.id)}
                             >
-                              Read
+                              {t("Read")}
                             </button>
                           </>
                         )}
-                      </div>
+                      </article>
                     );
                   })}
                 </div>
@@ -2812,22 +2374,18 @@ export default function App() {
           {activePage === "settings" && (
             <section className="other-page">
               <span className="eyebrow">
-                PERSONALIZE YOUR EXPERIENCE
+                {t("PERSONALIZE YOUR EXPERIENCE")}
               </span>
-
               <PreferencesSettings />
             </section>
           )}
-
         </div>
       </main>
     </div>
   );
 }
 
-// ----------------------------------
-// POST LIST COMPONENT
-// ----------------------------------
+// POST LIST
 
 function PostList({
   posts,
@@ -2842,15 +2400,15 @@ function PostList({
   setCommentText,
   onAddComment,
   onOpenProfile,
+  t,
+  isArabic,
 }) {
   if (!posts.length) {
     return (
       <div className="empty-state">
         <span>✦</span>
-        <h3>Nothing here yet</h3>
-        <p>
-          When posts are available, they will appear here.
-        </p>
+        <h3>{t("Nothing here yet")}</h3>
+        <p>{t("When posts are available, they will appear here.")}</p>
       </div>
     );
   }
@@ -2864,7 +2422,7 @@ function PostList({
           author.display_name ||
           author.full_name ||
           author.username ||
-          "Member";
+          t("Member");
 
         const liked = likedPosts.includes(post.id);
         const saved = savedPosts.includes(post.id);
@@ -2875,37 +2433,22 @@ function PostList({
               <button
                 onClick={() => onOpenProfile?.(post.user_id)}
                 aria-label={`Open ${name}'s profile`}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  padding: 0,
-                  cursor: "pointer",
-                }}
+                className="post-avatar-button"
               >
-                <Avatar
-                  url={author.avatar_url}
-                  name={name}
-                />
+                <Avatar url={author.avatar_url} name={name} />
               </button>
 
               <div className="post-author">
                 <button
                   onClick={() => onOpenProfile?.(post.user_id)}
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                    color: "inherit",
-                    padding: 0,
-                    cursor: "pointer",
-                    fontWeight: "bold",
-                  }}
+                  className="post-author-name"
                 >
                   {name}
                 </button>
 
                 <span>
                   @{author.username || "member"} ·{" "}
-                  {timeAgo(post.created_at)}
+                  {timeAgo(post.created_at, isArabic)}
                 </span>
               </div>
 
@@ -2913,37 +2456,22 @@ function PostList({
             </div>
 
             {post.content && (
-              <p className="post-content">
-                {post.content}
-              </p>
+              <p className="post-content">{post.content}</p>
             )}
 
             {post.image_url && (
               <div className="post-image">
-                <img
-                  src={post.image_url}
-                  alt="Post"
-                  loading="lazy"
-                />
+                <img src={post.image_url} alt="Post" loading="lazy" />
               </div>
             )}
 
             <div className="post-stats">
               <span>
-                {post.likesCount || 0} likes
+                {post.likesCount || 0} {t("likes")}
               </span>
 
-              <button
-                type="button"
-                onClick={() => onComments(post.id)}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  color: "inherit",
-                  cursor: "pointer",
-                }}
-              >
-                View comments
+              <button type="button" onClick={() => onComments(post.id)}>
+                {t("View comments")}
               </button>
             </div>
 
@@ -2952,28 +2480,25 @@ function PostList({
                 className={liked ? "liked" : ""}
                 onClick={() => onLike(post.id)}
               >
-                {liked ? "♥" : "♡"} <span>Like</span>
+                {liked ? "♥" : "♡"} <span>{t("Like")}</span>
               </button>
 
               <button onClick={() => onComments(post.id)}>
-                ◯ <span>Comment</span>
+                ◯ <span>{t("Comment")}</span>
               </button>
 
               <button
                 className={saved ? "saved" : ""}
                 onClick={() => onSave(post.id)}
               >
-                ▣ <span>{saved ? "Saved" : "Save"}</span>
+                ▣ <span>{saved ? t("Saved") : t("Save")}</span>
               </button>
             </div>
 
             {openComments === post.id && (
               <div className="comments-area">
                 {comments.map((comment) => (
-                  <div
-                    className="comment-item"
-                    key={comment.id}
-                  >
+                  <div className="comment-item" key={comment.id}>
                     <Avatar
                       url={comment.author?.avatar_url}
                       name={comment.author?.username}
@@ -2984,9 +2509,8 @@ function PostList({
                       <strong>
                         {comment.author?.display_name ||
                           comment.author?.username ||
-                          "Member"}
+                          t("Member")}
                       </strong>
-
                       <p>{comment.content}</p>
                     </div>
                   </div>
@@ -2994,21 +2518,14 @@ function PostList({
 
                 <form
                   className="comment-form"
-                  onSubmit={(event) =>
-                    onAddComment(event, post.id)
-                  }
+                  onSubmit={(event) => onAddComment(event, post.id)}
                 >
                   <input
                     value={commentText}
-                    onChange={(event) =>
-                      setCommentText(event.target.value)
-                    }
-                    placeholder="Write a comment..."
+                    onChange={(event) => setCommentText(event.target.value)}
+                    placeholder={t("Write a comment...")}
                   />
-
-                  <button type="submit">
-                    Send ↗
-                  </button>
+                  <button type="submit">{t("Send")} ↗</button>
                 </form>
               </div>
             )}

@@ -1,7 +1,13 @@
 
+/* =====================================
+   OUR SOCIAL — PEOPLE PAGE
+   BLACK & WHITE DESIGN
+===================================== */
+
 .people-page {
   width: 100%;
   padding-bottom: 40px;
+  color: var(--text);
 }
 
 .people-heading {
@@ -11,12 +17,14 @@
 .people-heading h1 {
   font-size: clamp(28px, 4vw, 38px);
   margin: 10px 0;
-  color: #fff;
+  color: var(--text);
 }
 
 .people-heading p {
-  color: #999;
+  color: var(--muted);
 }
+
+/* SEARCH */
 
 .people-search {
   display: flex;
@@ -24,14 +32,14 @@
   gap: 12px;
   padding: 0 18px;
   min-height: 56px;
-  border: 1px solid rgba(170, 120, 255, 0.2);
+  border: 1px solid var(--border);
   border-radius: 16px;
-  background: #17151f;
+  background: var(--panel);
   margin-bottom: 30px;
 }
 
 .people-search span {
-  color: #b58aff;
+  color: var(--text);
   font-size: 27px;
 }
 
@@ -40,9 +48,15 @@
   border: none;
   outline: none;
   background: transparent;
-  color: white;
+  color: var(--text);
   font-size: 15px;
 }
+
+.people-search input::placeholder {
+  color: var(--muted);
+}
+
+/* RESULTS */
 
 .people-results-heading {
   display: flex;
@@ -52,14 +66,16 @@
 }
 
 .people-results-heading h2 {
-  color: white;
+  color: var(--text);
   font-size: 20px;
 }
 
 .people-results-heading span {
-  color: #999;
+  color: var(--muted);
   font-size: 13px;
 }
+
+/* PEOPLE GRID */
 
 .people-grid {
   display: grid;
@@ -67,9 +83,11 @@
   gap: 18px;
 }
 
+/* PERSON CARD */
+
 .person-card {
-  background: linear-gradient(145deg, #201c2d, #15131c);
-  border: 1px solid rgba(170, 120, 255, 0.15);
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 20px;
   padding: 25px 18px;
   text-align: center;
@@ -78,8 +96,10 @@
 
 .person-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(181, 138, 255, 0.55);
+  border-color: var(--muted);
 }
+
+/* AVATAR */
 
 .person-avatar {
   width: 82px;
@@ -89,11 +109,11 @@
   overflow: hidden;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #7845d8, #bd65d9);
-  color: white;
+  background: var(--panel-2);
+  color: var(--text);
   font-size: 30px;
   font-weight: 800;
-  border: 3px solid rgba(190, 145, 255, 0.5);
+  border: 3px solid var(--border);
 }
 
 .person-avatar img {
@@ -102,45 +122,49 @@
   object-fit: cover;
 }
 
+/* PERSON INFORMATION */
+
 .person-card h3 {
-  color: white;
+  color: var(--text);
   font-size: 17px;
   margin: 0 0 5px;
 }
 
 .person-username {
-  color: #b58aff;
+  color: var(--muted);
   font-size: 13px;
 }
 
 .person-bio {
-  color: #999;
+  color: var(--muted);
   font-size: 13px;
   min-height: 36px;
   margin: 14px 0;
   overflow-wrap: anywhere;
 }
 
+/* FOLLOW BUTTON */
+
 .person-follow {
   width: 100%;
-  border: none;
+  border: 1px solid var(--text);
   border-radius: 12px;
   padding: 12px;
-  background: linear-gradient(100deg, #8049df, #a35ce9);
-  color: white;
+  background: var(--text);
+  color: var(--bg);
   font-weight: 700;
   cursor: pointer;
   transition: 0.2s;
 }
 
 .person-follow:hover {
-  filter: brightness(1.15);
+  opacity: 0.85;
 }
 
 .person-follow.following {
-  background: #30283d;
-  border: 1px solid #7655a0;
-  color: #d5baff;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
 }
 
 .person-follow:disabled {
@@ -148,29 +172,36 @@
   cursor: wait;
 }
 
+/* EMPTY STATE */
+
 .people-empty {
   text-align: center;
   padding: 55px 20px;
-  color: #999;
+  color: var(--muted);
 }
 
 .people-empty span {
-  color: #b58aff;
+  color: var(--text);
   font-size: 35px;
 }
 
 .people-empty h3 {
-  color: white;
+  color: var(--text);
 }
 
+/* NOTICE */
+
 .people-notice {
-  background: #30202a;
-  color: #ffb7c5;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
   padding: 13px;
   border-radius: 12px;
   margin-bottom: 20px;
   overflow-wrap: anywhere;
 }
+
+/* MOBILE */
 
 @media (max-width: 600px) {
   .people-grid {
