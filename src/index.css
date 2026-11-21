@@ -1,9 +1,9 @@
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
 
-/* ================================
-   OUR SOCIAL — BLACK & WHITE THEME
-================================ */
+/* =================================
+   OUR SOCIAL — GLOBAL DESIGN SYSTEM
+================================= */
 
 :root {
   font-family: 'DM Sans', sans-serif;
@@ -44,32 +44,45 @@
   --black: #ffffff;
 }
 
-* {
+/* Global reset */
+
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
 html {
+  width: 100%;
   min-width: 320px;
   min-height: 100%;
+  margin: 0;
+  padding: 0;
   background: var(--bg);
   color: var(--text);
   scroll-behavior: smooth;
 }
 
 body {
-  margin: 0;
+  width: 100%;
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  font-family: 'DM Sans', sans-serif;
   background: var(--bg);
   color: var(--text);
-  transition:
-    background 0.25s ease,
-    color 0.25s ease;
+  transition: background 0.25s ease, color 0.25s ease;
 }
 
 #root {
   width: 100%;
+  min-width: 0;
   min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
   background: var(--bg);
   color: var(--text);
 }
@@ -85,6 +98,15 @@ button {
   cursor: pointer;
 }
 
+button:disabled {
+  cursor: not-allowed;
+}
+
+img,
+video {
+  max-width: 100%;
+}
+
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
@@ -97,6 +119,8 @@ select:focus-visible {
   background: var(--text);
   color: var(--bg);
 }
+
+/* Scrollbar */
 
 ::-webkit-scrollbar {
   width: 8px;
@@ -113,4 +137,203 @@ select:focus-visible {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text);
+}
+
+@media (max-width: 760px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* =====================================
+   LOLZ — CALL SYSTEM
+===================================== */
+
+.lolz-calls {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: inherit;
+}
+
+.lolz-start-call-actions,
+.lolz-call-controls {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.lolz-start-call-actions button,
+.lolz-call-controls button,
+.lolz-incoming-call button {
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: var(--panel-2, #f1f1f1);
+  color: var(--text, #171717);
+  transition: 0.2s ease;
+}
+
+.lolz-start-call-actions button:hover,
+.lolz-call-controls button:hover {
+  transform: translateY(-2px);
+  background: var(--input, #e8e8e8);
+}
+
+.lolz-start-call-actions button:disabled,
+.lolz-incoming-call button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lolz-incoming-call {
+  position: fixed;
+  z-index: 9999;
+  top: 22px;
+  right: 22px;
+  width: min(390px, calc(100vw - 32px));
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel, #fff);
+  color: var(--text, #171717);
+  border: 1px solid var(--border, #e5e5e5);
+  border-radius: 18px;
+  box-shadow: 0 12px 45px rgba(0, 0, 0, 0.16);
+}
+
+.lolz-call-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #e7f8ed;
+  color: #159447;
+  flex-shrink: 0;
+}
+
+.lolz-call-info {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lolz-call-info strong {
+  font-size: 14px;
+}
+
+.lolz-call-info span {
+  font-size: 12px;
+  color: var(--muted, #888);
+}
+
+.lolz-incoming-call .lolz-accept-call {
+  background: #16a34a;
+  color: white;
+}
+
+.lolz-incoming-call .lolz-reject-call,
+.lolz-call-controls .lolz-end-call {
+  background: #dc2626;
+  color: white;
+}
+
+.lolz-call-panel {
+  position: fixed;
+  z-index: 9998;
+  inset: auto 20px 20px auto;
+  width: min(440px, calc(100vw - 40px));
+  padding: 18px;
+  background: var(--panel, #fff);
+  color: var(--text, #171717);
+  border: 1px solid var(--border, #e5e5e5);
+  border-radius: 20px;
+  box-shadow: 0 15px 55px rgba(0, 0, 0, 0.2);
+}
+
+.lolz-call-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.lolz-call-panel-header span {
+  color: #16a34a;
+  font-size: 12px;
+}
+
+.lolz-call-videos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.lolz-local-video,
+.lolz-remote-media {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lolz-call-controls {
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.lolz-call-status,
+.lolz-call-error {
+  position: fixed;
+  z-index: 10000;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: var(--panel, #fff);
+  color: var(--text, #171717);
+  border: 1px solid var(--border, #e5e5e5);
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.1);
+}
+
+.lolz-call-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #dc2626;
+}
+
+.lolz-call-error button {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .lolz-call-panel {
+    inset: auto 10px 10px 10px;
+    width: auto;
+  }
+
+  .lolz-incoming-call {
+    top: 10px;
+    right: 10px;
+  }
 }

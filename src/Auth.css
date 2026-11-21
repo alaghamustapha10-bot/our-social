@@ -19,8 +19,9 @@
   color: var(--auth-text);
   background: var(--auth-bg);
   font-family: "DM Sans", "IBM Plex Sans Arabic", sans-serif;
-  position: relative;
-  overflow: hidden;
+    position: relative;
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 .auth-page[dir="rtl"] {
