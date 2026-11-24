@@ -1,5 +1,13 @@
 {
   "appId": "com.oursocial.app",
   "appName": "OUR SOCIAL",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "extConfig": {},
+    "CapacitorUpdater": {
+      "version": "0.0.0",
+      "appId": "com.oursocial.app",
+      "autoUpdate": "atBackground"
+    }
+  }
 }

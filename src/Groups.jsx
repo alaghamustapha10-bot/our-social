@@ -24,6 +24,10 @@ import {
   X,
   MessageCircle,
   RefreshCw,
+  Mic,
+  Square,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 
 import { supabase } from "./supabase";
@@ -41,6 +45,15 @@ function formatTime(value) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function formatDuration(seconds = 0) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  return `${String(minutes).padStart(2, "0")}:${String(
+    remainingSeconds
+  ).padStart(2, "0")}`;
 }
 
 function GroupAvatar({ group, size = "normal" }) {
@@ -76,7 +89,7 @@ function MemberAvatar({ profile }) {
   );
 }
 
-export default function Groups({ user }) {
+export default function Groups({ user, onCallContextChange }) {
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -103,9 +116,25 @@ export default function Groups({ user }) {
   const [groupVisibility, setGroupVisibility] = useState("public");
   const [inviteInput, setInviteInput] = useState("");
 
+  // VOICE MESSAGE STATE
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [voiceFile, setVoiceFile] = useState(null);
+  const [voicePreviewUrl, setVoicePreviewUrl] = useState("");
+  const [uploadingVoice, setUploadingVoice] = useState(false);
+
   const messagesEndRef = useRef(null);
   const channelRef = useRef(null);
   const creatingRef = useRef(false);
+  const shouldAutoScrollRef = useRef(true);
+
+  const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const recordingChunksRef = useRef([]);
+  const recordingStartedAtRef = useRef(null);
+  const recordingGroupIdRef = useRef(null);
+  const recordingCancelledRef = useRef(false);
+  const recordingPointerRef = useRef(false);
 
   const notify = useCallback((message) => {
     setNotice(message);
@@ -132,6 +161,290 @@ export default function Groups({ user }) {
       (data || []).map((item) => [item.id, item])
     );
   }, []);
+
+  // CLEAR VOICE PREVIEW
+  const clearVoicePreview = useCallback(() => {
+    setVoiceFile(null);
+
+    setVoicePreviewUrl((currentUrl) => {
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl);
+      }
+
+      return "";
+    });
+
+    setRecordingSeconds(0);
+  }, []);
+
+  // STOP MICROPHONE TRACKS
+  const stopMediaStream = useCallback(() => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current
+        .getTracks()
+        .forEach((track) => track.stop());
+
+      mediaStreamRef.current = null;
+    }
+  }, []);
+
+  // CANCEL RECORDING
+  const cancelRecording = useCallback(() => {
+    recordingCancelledRef.current = true;
+    recordingPointerRef.current = false;
+
+    const recorder = mediaRecorderRef.current;
+
+    if (recorder && recorder.state !== "inactive") {
+      try {
+        recorder.stop();
+      } catch (err) {
+        console.warn("Could not stop voice recorder:", err);
+      }
+    }
+
+    mediaRecorderRef.current = null;
+    stopMediaStream();
+
+    recordingChunksRef.current = [];
+
+    setIsRecording(false);
+    setRecordingSeconds(0);
+  }, [stopMediaStream]);
+
+  // START VOICE RECORDING
+  const startVoiceRecording = useCallback(async () => {
+    if (
+      !user?.id ||
+      !selectedGroup?.id ||
+      !selectedGroup?.myRole ||
+      isRecording ||
+      uploadingVoice ||
+      voiceFile
+    ) {
+      return;
+    }
+
+    if (
+      !navigator.mediaDevices?.getUserMedia ||
+      typeof MediaRecorder === "undefined"
+    ) {
+      setError(
+        "Voice recording is not supported by this browser or device."
+      );
+      return;
+    }
+
+    setError("");
+    recordingCancelledRef.current = false;
+    recordingPointerRef.current = true;
+    recordingChunksRef.current = [];
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      // The user may have released the recording button
+      // while the browser was requesting microphone access.
+      if (!recordingPointerRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      if (
+        selectedGroup?.id !== recordingGroupIdRef.current &&
+        recordingGroupIdRef.current
+      ) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      mediaStreamRef.current = stream;
+
+      const mimeCandidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/ogg",
+      ];
+
+      const supportedMimeType = mimeCandidates.find((type) =>
+        MediaRecorder.isTypeSupported(type)
+      );
+
+      const recorder = supportedMimeType
+        ? new MediaRecorder(stream, {
+            mimeType: supportedMimeType,
+          })
+        : new MediaRecorder(stream);
+
+      mediaRecorderRef.current = recorder;
+      recordingStartedAtRef.current = Date.now();
+      recordingGroupIdRef.current = selectedGroup.id;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data?.size > 0) {
+          recordingChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onerror = (event) => {
+        console.error("Voice recording error:", event);
+
+        setError("Voice recording failed.");
+        setIsRecording(false);
+        stopMediaStream();
+      };
+
+      recorder.onstop = () => {
+        stopMediaStream();
+
+        mediaRecorderRef.current = null;
+
+        if (recordingCancelledRef.current) {
+          recordingChunksRef.current = [];
+          return;
+        }
+
+        const chunks = recordingChunksRef.current;
+        recordingChunksRef.current = [];
+
+        if (!chunks.length) {
+          setError("The recording is empty. Please try again.");
+          return;
+        }
+
+        const mimeType =
+          recorder.mimeType ||
+          supportedMimeType ||
+          "audio/webm";
+
+        const extension = mimeType.includes("ogg")
+          ? "ogg"
+          : mimeType.includes("mp4")
+          ? "m4a"
+          : "webm";
+
+        const file = new File(
+          chunks,
+          `voice-${Date.now()}.${extension}`,
+          {
+            type: mimeType,
+          }
+        );
+
+        const duration = Math.max(
+          1,
+          Math.round(
+            (Date.now() - recordingStartedAtRef.current) / 1000
+          )
+        );
+
+        setVoiceFile(file);
+        setRecordingSeconds(duration);
+        setVoicePreviewUrl(URL.createObjectURL(file));
+      };
+
+      recorder.start(250);
+
+      setIsRecording(true);
+      setRecordingSeconds(0);
+    } catch (err) {
+      console.error("Could not start voice recording:", err);
+
+      recordingPointerRef.current = false;
+      stopMediaStream();
+
+      setIsRecording(false);
+
+      if (err.name === "NotAllowedError") {
+        setError(
+          "Microphone permission was denied. Please allow microphone access."
+        );
+      } else if (err.name === "NotFoundError") {
+        setError("No microphone was found on this device.");
+      } else {
+        setError(
+          err.message || "Could not start voice recording."
+        );
+      }
+    }
+  }, [
+    user?.id,
+    selectedGroup?.id,
+    selectedGroup?.myRole,
+    isRecording,
+    uploadingVoice,
+    voiceFile,
+    stopMediaStream,
+  ]);
+
+  // STOP RECORDING AND PREPARE PREVIEW
+  const stopVoiceRecording = useCallback(() => {
+    recordingPointerRef.current = false;
+
+    const recorder = mediaRecorderRef.current;
+
+    if (recorder && recorder.state !== "inactive") {
+      try {
+        recorder.stop();
+      } catch (err) {
+        console.error("Could not finish recording:", err);
+        setError("Could not finish the voice recording.");
+      }
+    }
+
+    setIsRecording(false);
+  }, []);
+
+  // RECORDING TIMER
+  useEffect(() => {
+    if (!isRecording) return undefined;
+
+    const interval = window.setInterval(() => {
+      if (recordingStartedAtRef.current) {
+        setRecordingSeconds(
+          Math.floor(
+            (Date.now() - recordingStartedAtRef.current) / 1000
+          )
+        );
+      }
+    }, 250);
+
+    return () => window.clearInterval(interval);
+  }, [isRecording]);
+
+  // CLEAN UP RECORDING WHEN COMPONENT UNMOUNTS
+  useEffect(() => {
+    return () => {
+      recordingPointerRef.current = false;
+
+      const recorder = mediaRecorderRef.current;
+
+      if (recorder && recorder.state !== "inactive") {
+        try {
+          recorder.stop();
+        } catch {
+          // Ignore cleanup errors.
+        }
+      }
+
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current
+          .getTracks()
+          .forEach((track) => track.stop());
+      }
+
+      if (voicePreviewUrl) {
+        URL.revokeObjectURL(voicePreviewUrl);
+      }
+    };
+  }, [voicePreviewUrl]);
 
   // LOAD GROUPS
   const loadGroups = useCallback(async () => {
@@ -437,27 +750,34 @@ export default function Groups({ user }) {
             return [...current, incoming];
           });
 
-          const profileMap = await getProfiles([
-            incoming.sender_id,
-          ]);
+          try {
+            const profileMap = await getProfiles([
+              incoming.sender_id,
+            ]);
 
-          setProfiles((current) => ({
-            ...current,
-            ...profileMap,
-          }));
+            setProfiles((current) => ({
+              ...current,
+              ...profileMap,
+            }));
 
-          setMessages((current) =>
-            current.map((item) =>
-              item.id === incoming.id
-                ? {
-                    ...item,
-                    sender:
-                      profileMap[incoming.sender_id] ||
-                      null,
-                  }
-                : item
-            )
-          );
+            setMessages((current) =>
+              current.map((item) =>
+                item.id === incoming.id
+                  ? {
+                      ...item,
+                      sender:
+                        profileMap[incoming.sender_id] ||
+                        null,
+                    }
+                  : item
+              )
+            );
+          } catch (err) {
+            console.error(
+              "Could not load message sender:",
+              err
+            );
+          }
 
           loadGroups();
         }
@@ -480,12 +800,31 @@ export default function Groups({ user }) {
     loadGroups,
   ]);
 
-  // SCROLL TO LATEST MESSAGE
+  // SMART SCROLL
   useEffect(() => {
+    if (!shouldAutoScrollRef.current) return;
+
     messagesEndRef.current?.scrollIntoView({
       behavior: "smooth",
+      block: "end",
     });
   }, [messages]);
+
+  // RESET SCROLLING WHEN A DIFFERENT GROUP IS OPENED
+  useEffect(() => {
+    shouldAutoScrollRef.current = true;
+  }, [selectedGroup?.id]);
+
+  // CLEAN UP A VOICE PREVIEW WHEN SWITCHING GROUPS
+  useEffect(() => {
+    if (
+      voiceFile &&
+      recordingGroupIdRef.current &&
+      selectedGroup?.id !== recordingGroupIdRef.current
+    ) {
+      clearVoicePreview();
+    }
+  }, [selectedGroup?.id, voiceFile, clearVoicePreview]);
 
   // FILTER GROUPS
   const filteredGroups = useMemo(() => {
@@ -511,6 +850,16 @@ export default function Groups({ user }) {
 
   // OPEN GROUP
   const openGroup = (group) => {
+    if (selectedGroup?.id !== group.id) {
+      if (isRecording) {
+        cancelRecording();
+      }
+
+      if (voiceFile) {
+        clearVoicePreview();
+      }
+    }
+
     setSelectedGroup(group);
     setShowInfo(true);
     setError("");
@@ -725,7 +1074,7 @@ export default function Groups({ user }) {
     }
   };
 
-  // SEND MESSAGE
+  // SEND TEXT MESSAGE
   const sendMessage = async (event) => {
     event.preventDefault();
 
@@ -798,6 +1147,121 @@ export default function Groups({ user }) {
       );
     } finally {
       setSending(false);
+    }
+  };
+
+  // SEND VOICE MESSAGE
+  const sendVoiceMessage = async () => {
+    if (
+      !voiceFile ||
+      !selectedGroup?.id ||
+      !selectedGroup?.myRole ||
+      uploadingVoice
+    ) {
+      return;
+    }
+
+    const targetGroupId = selectedGroup.id;
+
+    setUploadingVoice(true);
+    setError("");
+
+    try {
+      const {
+        data: authData,
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) throw authError;
+
+      if (!authData.user) {
+        throw new Error("Please sign in first.");
+      }
+
+      if (authData.user.id !== user?.id) {
+        throw new Error(
+          "Your application user does not match your Supabase account."
+        );
+      }
+
+      const extension = voiceFile.name.split(".").pop() || "webm";
+
+      const fileName = `voice-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 9)}.${extension}`;
+
+      const storagePath = `${authData.user.id}/messages/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("social-media")
+        .upload(storagePath, voiceFile, {
+          cacheControl: "3600",
+          contentType: voiceFile.type || "audio/webm",
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const {
+        data: publicUrlData,
+      } = supabase.storage
+        .from("social-media")
+        .getPublicUrl(storagePath);
+
+      const mediaUrl = publicUrlData?.publicUrl;
+
+      if (!mediaUrl) {
+        throw new Error(
+          "Could not create a URL for the voice message."
+        );
+      }
+
+      if (selectedGroup?.id !== targetGroupId) {
+        throw new Error(
+          "The selected group changed before the message could be sent."
+        );
+      }
+
+      const {
+        data,
+        error: insertError,
+      } = await supabase
+        .from("group_messages")
+        .insert({
+          group_id: targetGroupId,
+          sender_id: authData.user.id,
+          content: "Voice message",
+          message_type: "audio",
+          media_url: mediaUrl,
+          file_name: fileName,
+          mime_type: voiceFile.type || "audio/webm",
+        })
+        .select("*")
+        .single();
+
+      if (insertError) throw insertError;
+
+      setMessages((current) => [
+        ...current,
+        {
+          ...data,
+          sender: profiles[authData.user.id] || null,
+        },
+      ]);
+
+      clearVoicePreview();
+      recordingGroupIdRef.current = null;
+
+      loadGroups();
+      notify("Voice message sent.");
+    } catch (err) {
+      console.error("Send voice message error:", err);
+
+      setError(
+        err.message || "Voice message could not be sent."
+      );
+    } finally {
+      setUploadingVoice(false);
     }
   };
 
@@ -933,6 +1397,7 @@ export default function Groups({ user }) {
     }
   };
 
+  // GROUP ROLE
   const currentRole = selectedGroup?.myRole;
 
   const canManage =
@@ -941,8 +1406,14 @@ export default function Groups({ user }) {
 
   const isOwner = currentRole === "owner";
 
+  // CLEAR THE OLD FLOATING CALL CONTEXT
+  // Group calls are now rendered inside the group chat.
+  useEffect(() => {
+    onCallContextChange?.(null);
+  }, [onCallContextChange]);
+
   return (
-    <section className="groups-page">
+    <section className={`groups-page ${selectedGroup ? "group-chat-open" : ""}`}>
       <div className="groups-top-heading">
         <div>
           <span className="groups-eyebrow">
@@ -1071,6 +1542,11 @@ export default function Groups({ user }) {
                   ? profiles[lastMessage.sender_id]
                   : null;
 
+                const lastMessagePreview =
+                  lastMessage?.message_type === "audio"
+                    ? "🎤 Voice message"
+                    : lastMessage?.content;
+
                 return (
                   <button
                     key={group.id}
@@ -1101,7 +1577,7 @@ export default function Groups({ user }) {
                               sender?.display_name ||
                               sender?.username ||
                               "Member"
-                            }: ${lastMessage.content}`
+                            }: ${lastMessagePreview || ""}`
                           : group.description ||
                             "No messages yet"}
                       </span>
@@ -1181,7 +1657,11 @@ export default function Groups({ user }) {
               <header className="groups-chat-header">
                 <button
                   className="groups-back-button"
-                  onClick={() => setSelectedGroup(null)}
+                  onClick={() => {
+                    if (isRecording) cancelRecording();
+                    if (voiceFile) clearVoicePreview();
+                    setSelectedGroup(null);
+                  }}
                   title="Back to groups"
                 >
                   <ArrowLeft size={19} />
@@ -1260,17 +1740,32 @@ export default function Groups({ user }) {
                 </div>
               ) : (
                 <>
-                  {/* GROUP CALLS */}
-                  <Calls
-                    supabase={supabase}
-                    user={user}
-                    callType="group"
-                    groupId={selectedGroup.id}
-                    canStart={canManage}
-                    canEnd={canManage}
-                  />
+                  {/* GROUP CALLS — INSIDE THE GROUP CHAT */}
+                  <div className="groups-call-section">
+                    <Calls
+                      supabase={supabase}
+                      user={user}
+                      conversation={null}
+                      callType="group"
+                      groupId={selectedGroup.id}
+                      canStart={true}
+                      canEnd={canManage}
+                    />
+                  </div>
 
-                  <div className="groups-message-history">
+                  <div
+                    className="groups-message-history"
+                    onScroll={(event) => {
+                      const element = event.currentTarget;
+                      const distanceFromBottom =
+                        element.scrollHeight -
+                        element.scrollTop -
+                        element.clientHeight;
+
+                      shouldAutoScrollRef.current =
+                        distanceFromBottom < 120;
+                    }}
+                  >
                     {messagesLoading ? (
                       <div className="groups-loading">
                         Loading messages...
@@ -1300,6 +1795,10 @@ export default function Groups({ user }) {
                           sender?.username ||
                           "Member";
 
+                        const isAudio =
+                          message.message_type === "audio" &&
+                          Boolean(message.media_url);
+
                         return (
                           <article
                             key={message.id}
@@ -1321,7 +1820,24 @@ export default function Groups({ user }) {
                               )}
 
                               <div className="groups-message-bubble">
-                                {message.content}
+                                {isAudio ? (
+                                  <div className="groups-audio-message">
+                                    <div className="groups-audio-label">
+                                      <Mic size={16} />
+                                      <span>Voice message</span>
+                                    </div>
+
+                                    <audio
+                                      controls
+                                      preload="metadata"
+                                      src={message.media_url}
+                                    >
+                                      Your browser does not support audio playback.
+                                    </audio>
+                                  </div>
+                                ) : (
+                                  message.content
+                                )}
 
                                 <small>
                                   {formatTime(
@@ -1338,6 +1854,75 @@ export default function Groups({ user }) {
                     <div ref={messagesEndRef} />
                   </div>
 
+                  {/* VOICE RECORDING PREVIEW */}
+                  {voiceFile && voicePreviewUrl && (
+                    <div className="groups-voice-preview">
+                      <div className="groups-voice-preview-info">
+                        <Mic size={19} />
+
+                        <div>
+                          <strong>Voice message preview</strong>
+                          <small>
+                            {formatDuration(recordingSeconds)}
+                          </small>
+                        </div>
+                      </div>
+
+                      <audio
+                        controls
+                        src={voicePreviewUrl}
+                        preload="metadata"
+                      />
+
+                      <div className="groups-voice-preview-actions">
+                        <button
+                          type="button"
+                          className="groups-voice-cancel"
+                          onClick={clearVoicePreview}
+                          disabled={uploadingVoice}
+                          title="Delete recording"
+                        >
+                          <Trash2 size={18} />
+                          Cancel
+                        </button>
+
+                        <button
+                          type="button"
+                          className="groups-voice-send"
+                          onClick={sendVoiceMessage}
+                          disabled={uploadingVoice}
+                        >
+                          {uploadingVoice ? (
+                            <>
+                              <Loader2
+                                size={17}
+                                className="groups-spinning"
+                              />
+                              Sending...
+                            </>
+                          ) : (
+                            <>
+                              <Send size={17} />
+                              Send voice
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* RECORDING INDICATOR */}
+                  {isRecording && (
+                    <div className="groups-recording-indicator">
+                      <span className="groups-recording-dot" />
+                      <span>Recording voice message...</span>
+                      <strong>
+                        {formatDuration(recordingSeconds)}
+                      </strong>
+                      <span>Release to finish</span>
+                    </div>
+                  )}
+
                   <form
                     className="groups-composer"
                     onSubmit={sendMessage}
@@ -1348,13 +1933,79 @@ export default function Groups({ user }) {
                         setMessageText(event.target.value)
                       }
                       placeholder="Write a message..."
-                      disabled={sending}
+                      disabled={
+                        sending ||
+                        isRecording ||
+                        Boolean(voiceFile) ||
+                        uploadingVoice
+                      }
                     />
+
+                    <button
+                      type="button"
+                      className={`groups-voice-button ${
+                        isRecording ? "recording" : ""
+                      }`}
+                      disabled={
+                        sending ||
+                        uploadingVoice ||
+                        Boolean(voiceFile)
+                      }
+                      title={
+                        isRecording
+                          ? "Release to finish recording"
+                          : "Hold to record a voice message"
+                      }
+                      onPointerDown={(event) => {
+                        if (
+                          event.button !== undefined &&
+                          event.button !== 0
+                        ) {
+                          return;
+                        }
+
+                        event.preventDefault();
+                        recordingGroupIdRef.current =
+                          selectedGroup.id;
+
+                        startVoiceRecording();
+                      }}
+                      onPointerUp={(event) => {
+                        event.preventDefault();
+
+                        if (recordingPointerRef.current) {
+                          stopVoiceRecording();
+                        }
+                      }}
+                      onPointerLeave={() => {
+                        if (recordingPointerRef.current) {
+                          stopVoiceRecording();
+                        }
+                      }}
+                      onPointerCancel={() => {
+                        if (recordingPointerRef.current) {
+                          cancelRecording();
+                        }
+                      }}
+                      onContextMenu={(event) =>
+                        event.preventDefault()
+                      }
+                    >
+                      {isRecording ? (
+                        <Square size={18} />
+                      ) : (
+                        <Mic size={19} />
+                      )}
+                    </button>
 
                     <button
                       type="submit"
                       disabled={
-                        sending || !messageText.trim()
+                        sending ||
+                        !messageText.trim() ||
+                        isRecording ||
+                        Boolean(voiceFile) ||
+                        uploadingVoice
                       }
                       title="Send message"
                     >

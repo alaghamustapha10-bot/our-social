@@ -1,0 +1,799 @@
+/* =====================================================
+   LOLZ — CALL EXPERIENCE 2026
+   Modern Glass • WhatsApp / Telegram Inspired
+   Responsive • RTL • Light / Dark
+===================================================== */
+
+.lolz-calls {
+  --call-accent: #7770ff;
+  --call-accent-hover: #6259e8;
+  --call-success: #18a66c;
+  --call-danger: #e34f60;
+  --call-text: var(--text, #202230);
+  --call-muted: var(--muted, #858899);
+  --call-border: var(--border, rgba(120, 120, 145, .17));
+  --call-panel: var(--panel, rgba(255, 255, 255, .88));
+  --call-soft: var(--panel-2, rgba(120, 120, 145, .08));
+
+  width: 100%;
+  min-width: 0;
+  color: var(--call-text) !important;
+  font-family: inherit;
+  direction: inherit;
+}
+
+[data-theme="dark"] .lolz-calls {
+  --call-accent: #9690ff;
+  --call-accent-hover: #aaa5ff;
+  --call-text: #f3f3f7;
+  --call-muted: #a5a8b7;
+  --call-border: rgba(255, 255, 255, .1);
+  --call-panel: rgba(29, 31, 42, .94);
+  --call-soft: rgba(255, 255, 255, .07);
+}
+
+.lolz-calls,
+.lolz-calls * {
+  box-sizing: border-box;
+}
+
+.lolz-calls button {
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background .2s ease,
+    color .2s ease,
+    border-color .2s ease,
+    transform .2s ease,
+    box-shadow .2s ease,
+    opacity .2s ease;
+}
+
+.lolz-calls button:focus-visible {
+  outline: 3px solid rgb(119 112 255 / 35%);
+  outline-offset: 3px;
+}
+
+.lolz-calls button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.lolz-calls button:active:not(:disabled) {
+  transform: scale(.96);
+}
+
+.lolz-calls button:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+}
+
+/* ==============================
+   PRIVATE CALL BUTTONS
+============================== */
+
+.lolz-calls > div:first-child:not(:has(button[title="تحديث"])) {
+  display: flex;
+  align-items: center;
+  gap: 10px !important;
+  padding: 9px 0 !important;
+}
+
+.lolz-calls > div:first-child:not(:has(button[title="تحديث"])) button {
+  width: 45px !important;
+  height: 45px !important;
+  border: 1px solid var(--call-border) !important;
+  border-radius: 15px !important;
+  color: #fff !important;
+  box-shadow: 0 5px 15px rgb(0 0 0 / 9%);
+}
+
+.lolz-calls > div:first-child:not(:has(button[title="تحديث"])) button:first-child {
+  background: var(--call-success) !important;
+}
+
+.lolz-calls > div:first-child:not(:has(button[title="تحديث"])) button:last-child {
+  background: #496fc4 !important;
+}
+
+.lolz-calls > div:first-child:not(:has(button[title="تحديث"])) button:hover {
+  transform: translateY(-2px);
+}
+
+/* ==============================
+   GROUP / CHANNEL CALL PANEL
+============================== */
+
+.lolz-calls > div:has(button[title="تحديث"]) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 19px !important;
+  margin: 12px 0 !important;
+  overflow: hidden;
+  border: 1px solid var(--call-border) !important;
+  border-radius: 21px !important;
+  background: var(--call-panel) !important;
+  color: var(--call-text) !important;
+  box-shadow: 0 9px 28px rgb(20 20 40 / 6%);
+  backdrop-filter: blur(20px) saturate(145%);
+  -webkit-backdrop-filter: blur(20px) saturate(145%);
+}
+
+.lolz-calls > div:has(button[title="تحديث"]) strong {
+  color: var(--call-text);
+  font-size: 15px;
+  font-weight: 850;
+  letter-spacing: -.2px;
+}
+
+.lolz-calls > div:has(button[title="تحديث"]) p {
+  color: var(--call-muted) !important;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.lolz-calls button[title="تحديث"] {
+  width: 39px !important;
+  height: 39px !important;
+  border: 1px solid var(--call-border) !important;
+  border-radius: 12px !important;
+  background: var(--call-soft) !important;
+  color: var(--call-text) !important;
+}
+
+.lolz-calls button[title="تحديث"]:hover {
+  border-color: var(--call-accent) !important;
+  color: var(--call-accent) !important;
+}
+
+.lolz-calls > div:has(button[title="تحديث"]) button:not([title="تحديث"]) {
+  min-height: 42px;
+  border: 0 !important;
+  border-radius: 12px !important;
+  color: white !important;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.lolz-calls > div:has(button[title="تحديث"]) button:not([title="تحديث"]):first-child {
+  background: var(--call-success) !important;
+}
+
+.lolz-calls > div:has(button[title="تحديث"]) button:not([title="تحديث"]):nth-child(2) {
+  background: #496fc4 !important;
+}
+
+/* ==============================
+   ACTIVE CALL LIST
+============================== */
+
+.lolz-calls .lolz-active-call-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.lolz-calls .lolz-active-call-item {
+  display: grid !important;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px !important;
+  width: 100%;
+  min-width: 0;
+  padding: 12px !important;
+  border: 1px solid var(--call-border);
+  border-radius: 14px !important;
+  background: var(--call-soft) !important;
+  color: var(--call-text);
+}
+
+.lolz-calls .lolz-active-call-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--call-text);
+  font-size: 13px;
+}
+
+.lolz-calls .lolz-active-call-join {
+  min-width: 85px;
+  min-height: 44px !important;
+  padding: 0 14px !important;
+  border-radius: 11px !important;
+  background: var(--call-success) !important;
+  color: #fff !important;
+  white-space: nowrap;
+}
+
+/* ==============================
+   INCOMING CALL
+============================== */
+
+.lolz-calls > div:has(button[title="قبول المكالمة"]) {
+  display: flex;
+  align-items: center;
+  gap: 12px !important;
+  padding: 16px !important;
+  margin: 12px 0 !important;
+  border: 1px solid var(--call-border) !important;
+  border-radius: 21px !important;
+  background: var(--call-panel) !important;
+  color: var(--call-text) !important;
+  box-shadow: 0 9px 30px rgb(20 20 40 / 8%);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.lolz-calls > div:has(button[title="قبول المكالمة"]) > div:first-child {
+  width: 54px !important;
+  height: 54px !important;
+  flex: 0 0 54px;
+  overflow: hidden;
+  border: 2px solid var(--call-border);
+  border-radius: 18px !important;
+  background: linear-gradient(135deg, var(--call-accent), #4942a9) !important;
+  color: #fff;
+  box-shadow: 0 5px 15px rgb(90 80 190 / 17%);
+}
+
+.lolz-calls > div:has(button[title="قبول المكالمة"]) > div:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+
+.lolz-calls > div:has(button[title="قبول المكالمة"]) strong {
+  color: var(--call-text);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.lolz-calls > div:has(button[title="قبول المكالمة"]) small {
+  display: block;
+  margin-top: 5px;
+  color: var(--call-muted) !important;
+  font-size: 11px;
+}
+
+.lolz-calls button[title="قبول المكالمة"],
+.lolz-calls button[title="رفض المكالمة"] {
+  width: 46px !important;
+  height: 46px !important;
+  flex: 0 0 46px;
+  border: 0 !important;
+  border-radius: 15px !important;
+  color: #fff !important;
+  box-shadow: 0 5px 14px rgb(0 0 0 / 12%);
+}
+
+.lolz-calls button[title="قبول المكالمة"] {
+  background: var(--call-success) !important;
+}
+
+.lolz-calls button[title="رفض المكالمة"] {
+  background: var(--call-danger) !important;
+}
+
+/* ==============================
+   ACTIVE CALL SCREEN
+============================== */
+
+.lolz-calls .lolz-call-active-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  width: 100%;
+  min-width: 0;
+  padding: 22px !important;
+  margin: 12px 0 !important;
+  overflow: hidden;
+  border: 1px solid var(--call-border) !important;
+  border-radius: 24px !important;
+  background:
+    radial-gradient(ellipse at 15% 0%, rgb(119 112 255 / 12%), transparent 50%),
+    var(--call-panel) !important;
+  color: var(--call-text) !important;
+  box-shadow: 0 12px 36px rgb(20 20 40 / 8%);
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+}
+
+.lolz-calls .lolz-call-active-panel.is-minimized {
+  display: none !important;
+}
+
+.lolz-calls .lolz-call-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--call-border);
+}
+
+.lolz-calls .lolz-call-header > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.lolz-calls .lolz-call-header strong {
+  color: var(--call-text);
+  font-size: 16px !important;
+  font-weight: 850;
+  letter-spacing: -.3px;
+}
+
+.lolz-calls .lolz-call-header > div:first-child > span {
+  color: var(--call-muted) !important;
+}
+
+/* Timer and minimize button */
+
+.lolz-calls .lolz-call-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.lolz-calls .lolz-call-timer {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 11px;
+  border: 1px solid var(--call-border);
+  border-radius: 11px;
+  background: var(--call-soft);
+  color: var(--call-text);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lolz-calls .lolz-call-minimize-button {
+  width: 42px !important;
+  height: 42px !important;
+  flex: 0 0 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+  border: 1px solid var(--call-border) !important;
+  border-radius: 12px !important;
+  background: var(--call-soft) !important;
+  color: var(--call-text) !important;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.lolz-calls .lolz-call-minimize-button:hover {
+  border-color: var(--call-accent) !important;
+  color: var(--call-accent) !important;
+}
+
+/* ==============================
+   MINIMIZED CALL TIMER
+============================== */
+
+.lolz-calls .lolz-call-mini {
+  width: min(280px, 100%);
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px auto;
+  padding: 11px 14px;
+  border: 1px solid rgba(72, 213, 151, 0.3);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #202b32, #20242d);
+  color: #fff;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lolz-calls .lolz-call-mini-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.lolz-calls .lolz-call-mini-name > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lolz-calls .lolz-call-mini-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #48d597;
+  box-shadow: 0 0 9px rgba(72, 213, 151, 0.65);
+}
+
+.lolz-calls .lolz-call-mini-duration {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  color: #72e0ad;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.lolz-calls .lolz-call-mini:hover {
+  border-color: rgba(72, 213, 151, 0.6);
+  filter: brightness(1.08);
+}
+
+.lolz-calls .lolz-call-mini:active {
+  transform: scale(.98);
+}
+
+/* ==============================
+   MEDIA AREAS
+============================== */
+
+.lolz-calls .lolz-call-active-panel video {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: 440px;
+  border: 1px solid var(--call-border);
+  border-radius: 19px !important;
+  background: #090b10;
+  object-fit: cover !important;
+}
+
+.lolz-calls .lolz-call-active-panel audio {
+  display: none;
+}
+
+.lolz-calls .lolz-call-active-panel > div:has(video) {
+  width: 100%;
+  min-width: 0;
+}
+
+.lolz-calls .lolz-call-active-panel > div:nth-child(2),
+.lolz-calls .lolz-call-active-panel > div:nth-child(3) {
+  min-width: 0;
+}
+
+/* ==============================
+   CALL CONTROL BUTTONS
+============================== */
+
+.lolz-calls .lolz-call-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px !important;
+  width: 100%;
+  margin-top: 15px !important;
+  padding: 4px 0;
+}
+
+.lolz-calls .lolz-call-controls > button {
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+
+.lolz-calls .lolz-call-controls > button:not(.lolz-call-end-button) {
+  width: 49px !important;
+  height: 49px !important;
+  flex: 0 0 49px;
+  padding: 0 !important;
+  border: 1px solid var(--call-border) !important;
+  border-radius: 16px !important;
+  background: var(--call-soft) !important;
+  color: var(--call-text) !important;
+  box-shadow: 0 4px 13px rgb(0 0 0 / 6%);
+}
+
+.lolz-calls .lolz-call-controls > button:not(.lolz-call-end-button):hover {
+  border-color: var(--call-accent) !important;
+  background: rgb(119 112 255 / 13%) !important;
+  color: var(--call-accent) !important;
+}
+
+.lolz-calls .lolz-call-end-button {
+  width: 56px !important;
+  height: 56px !important;
+  flex: 0 0 56px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: var(--call-danger) !important;
+  color: #fff !important;
+  box-shadow: 0 7px 20px rgb(227 72 85 / 25%);
+}
+
+.lolz-calls .lolz-call-end-button:hover {
+  background: #c93645 !important;
+  transform: translateY(-2px);
+}
+
+.lolz-calls .lolz-call-audio-retry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 45px;
+  padding: 12px;
+  margin-top: 12px;
+  border: 1px solid rgb(119 112 255 / 20%) !important;
+  border-radius: 13px !important;
+  background: var(--call-accent) !important;
+  color: #fff !important;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+/* ==============================
+   CONNECTING / ERROR
+============================== */
+
+.lolz-calls > div[style*="جارٍ الاتصال"] {
+  padding: 12px 15px !important;
+  border: 1px solid var(--call-border);
+  border-radius: 12px;
+  background: var(--call-soft);
+  color: var(--call-muted) !important;
+  font-size: 12px;
+}
+
+.lolz-calls > div[style*="background: rgb(84, 43, 50)"],
+.lolz-calls > div[style*="background: #542b32"] {
+  border: 1px solid rgb(227 72 85 / 25%);
+  border-radius: 13px !important;
+  background: rgb(227 72 85 / 10%) !important;
+  color: var(--call-danger) !important;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.lolz-calls > div[style*="background: rgb(84, 43, 50)"] button,
+.lolz-calls > div[style*="background: #542b32"] button {
+  width: 34px !important;
+  height: 34px !important;
+  border: 1px solid var(--call-border) !important;
+  border-radius: 10px !important;
+  background: var(--call-soft) !important;
+  color: var(--call-text) !important;
+}
+
+/* ==============================
+   CALL STATUS
+============================== */
+
+.lolz-calls .lolz-call-active-panel > div:last-child {
+  color: var(--call-muted) !important;
+  font-size: 11px !important;
+}
+
+/* ==============================
+   GLOBAL PERSISTENT CALL DOCK
+   Independent from page navigation
+================================ */
+
+.lolz-call-dock {
+  position: fixed;
+  z-index: 1200;
+
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 78px);
+
+  transform: translateX(-50%);
+
+  width: min(520px, calc(100vw - 24px));
+  max-height: min(72dvh, 700px);
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+
+  pointer-events: auto;
+}
+
+.lolz-call-dock .lolz-calls {
+  width: 100%;
+  margin: 0;
+}
+
+/* Desktop floating call window */
+
+@media (min-width: 761px) {
+  .lolz-call-dock {
+    left: auto;
+    right: 22px;
+    bottom: 22px;
+
+    transform: none;
+
+    width: min(440px, calc(100vw - 44px));
+    max-height: calc(100dvh - 44px);
+  }
+}
+
+/* Compact dock when minimized */
+
+.lolz-call-dock:has(.lolz-call-mini) {
+  width: min(280px, calc(100vw - 20px)) !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+@media (min-width: 761px) {
+  .lolz-call-dock:has(.lolz-call-mini) {
+    width: 280px !important;
+  }
+}
+
+/* ==============================
+   MOBILE
+============================== */
+
+@media (max-width: 760px) {
+  .lolz-calls {
+    width: 100%;
+  }
+
+  .lolz-calls > div:has(button[title="تحديث"]) {
+    padding: 15px !important;
+    border-radius: 18px !important;
+  }
+
+  .lolz-calls > div:has(button[title="قبول المكالمة"]) {
+    flex-wrap: wrap;
+    gap: 9px !important;
+    padding: 12px !important;
+    border-radius: 17px !important;
+  }
+
+  .lolz-calls > div:has(button[title="قبول المكالمة"]) > div:nth-child(2) {
+    flex: 1 1 calc(100% - 125px);
+  }
+
+  .lolz-calls .lolz-call-active-panel {
+    padding: 13px !important;
+    border-radius: 17px !important;
+  }
+
+  .lolz-calls .lolz-call-header {
+    flex-wrap: wrap;
+    gap: 9px;
+  }
+
+  .lolz-calls .lolz-call-header > div:first-child {
+    flex-basis: 100%;
+  }
+
+  .lolz-calls .lolz-call-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .lolz-calls .lolz-call-active-panel video {
+    max-height: 55vh;
+    border-radius: 15px !important;
+  }
+
+  .lolz-calls .lolz-active-call-item {
+    grid-template-columns: 25px minmax(0, 1fr);
+    padding: 11px !important;
+  }
+
+  .lolz-calls .lolz-active-call-join {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 46px !important;
+  }
+
+  .lolz-calls .lolz-call-controls {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 9px !important;
+    margin-top: 15px !important;
+  }
+
+  .lolz-calls .lolz-call-controls > button:not(.lolz-call-end-button) {
+    width: 46px !important;
+    height: 46px !important;
+    flex-basis: 46px;
+    border-radius: 14px !important;
+  }
+
+  .lolz-calls .lolz-call-end-button {
+    width: 53px !important;
+    height: 53px !important;
+    flex-basis: 53px !important;
+    border-radius: 16px !important;
+  }
+
+  .lolz-calls .lolz-call-mini {
+    width: min(280px, 100%);
+    min-height: 56px;
+  }
+
+  .lolz-calls > div:first-child:not(:has(button[title="تحديث"])) button {
+    width: 43px !important;
+    height: 43px !important;
+  }
+
+  .lolz-call-dock {
+    width: calc(100vw - 20px);
+
+    bottom: calc(
+      env(safe-area-inset-bottom, 0px) + 72px
+    );
+
+    max-height: calc(
+      100dvh - 100px - env(safe-area-inset-bottom, 0px)
+    );
+  }
+}
+
+/* ==============================
+   SMALL PHONES
+============================== */
+
+@media (max-width: 390px) {
+  .lolz-calls .lolz-call-active-panel {
+    padding: 12px !important;
+  }
+
+  .lolz-calls .lolz-call-controls {
+    gap: 7px !important;
+  }
+
+  .lolz-calls .lolz-call-controls > button:not(.lolz-call-end-button) {
+    width: 42px !important;
+    height: 42px !important;
+    flex-basis: 42px;
+  }
+
+  .lolz-calls .lolz-call-end-button {
+    width: 49px !important;
+    height: 49px !important;
+    flex-basis: 49px !important;
+  }
+
+  .lolz-calls .lolz-call-mini {
+    padding: 10px;
+    gap: 7px;
+  }
+
+  .lolz-calls .lolz-call-mini-name {
+    font-size: 12px;
+  }
+}
+
+/* ==============================
+   ACCESSIBILITY
+============================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .lolz-calls *,
+  .lolz-calls *::before,
+  .lolz-calls *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}

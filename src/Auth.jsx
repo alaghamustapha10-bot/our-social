@@ -1,7 +1,12 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import "./Auth.css";
+
+const GOOGLE_REDIRECT_URL =
+  "com.oursocial.app://login-callback";
 
 const translations = {
   en: {
@@ -101,6 +106,33 @@ export default function Auth() {
     }
   }, [language, isArabic]);
 
+  // Restore the Google button when the external browser is closed.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let listener;
+    let disposed = false;
+
+    Browser.addListener("browserFinished", () => {
+      setLoading(false);
+    })
+      .then((handle) => {
+        if (disposed) {
+          handle.remove();
+        } else {
+          listener = handle;
+        }
+      })
+      .catch((error) => {
+        console.error("Browser listener error:", error);
+      });
+
+    return () => {
+      disposed = true;
+      listener?.remove();
+    };
+  }, []);
+
   function changeLanguage() {
     setLanguage((current) => (current === "ar" ? "en" : "ar"));
     setMessage("");
@@ -157,16 +189,38 @@ export default function Auth() {
     setMessageType("");
 
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
+      const isNative = Capacitor.isNativePlatform();
+
+      const { data, error } =
+        await supabase.auth.signInWithOAuth({
+          provider: "google",
+          options: {
+            redirectTo: isNative
+              ? GOOGLE_REDIRECT_URL
+              : window.location.origin,
+
+            skipBrowserRedirect: isNative,
+          },
+        });
 
       if (error) throw error;
+
+      if (isNative) {
+        if (!data?.url) {
+          throw new Error("Google OAuth URL was not returned.");
+        }
+
+        await Browser.open({
+          url: data.url,
+        });
+      }
     } catch (error) {
-      setMessage(error.message || t.googleError);
+      console.error("Google login error:", error);
+
+      setMessage(
+        error.message || t.googleError
+      );
+
       setMessageType("error");
       setLoading(false);
     }
@@ -319,6 +373,7 @@ export default function Auth() {
                       ? t.login
                       : t.signup}
                 </span>
+
                 {!loading && (
                   <span className="auth-submit-arrow" aria-hidden="true">
                     {isArabic ? "←" : "→"}
@@ -355,6 +410,7 @@ export default function Auth() {
 
             <div className="auth-switch-area">
               <span>{isLogin ? t.noAccount : t.hasAccount}</span>
+
               <button
                 type="button"
                 className="auth-switch"

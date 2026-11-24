@@ -1,5 +1,4 @@
 
-import React from "react";
 import {
   Home,
   Compass,
@@ -15,12 +14,10 @@ import {
   Menu,
   X,
   Settings,
-  ArrowLeft,
-  ChevronRight,
-  Users2,
-  LayoutGrid,
+  Crown,
 } from "lucide-react";
 
+import { useState } from "react";
 import "./Navigation.css";
 
 const mainItems = [
@@ -57,23 +54,15 @@ const connectionItems = [
 
 const accountItems = [
   { id: "profile", label: "Profile", icon: UserRound },
+  { id: "premium", label: "LOLZ Premium", icon: Crown },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
 const mobileNavigationItems = [
-  "home",
-  "discover",
-  "lolz",
-  "messages",
-  "activity",
-  "profile",
-];
-
-const allItems = [
-  ...mainItems,
-  ...communityItems,
-  ...connectionItems,
-  ...accountItems,
+  { id: "home", label: "Home", icon: Home },
+  { id: "lolz", label: "LOLZ", icon: Clapperboard },
+  { id: "messages", label: "Messages", icon: MessageCircle },
+  { id: "activity", label: "Notifications", icon: Bell },
 ];
 
 export default function Navigation({
@@ -81,23 +70,14 @@ export default function Navigation({
   setPage,
   onCreate,
   onLogout,
-  username = "Your profile",
+  username,
 }) {
-  const [expanded, setExpanded] = React.useState(false);
-  const [view, setView] = React.useState("main");
+  const [expanded, setExpanded] = useState(false);
 
-  const safeUsername =
-    typeof username === "string" && username.trim()
-      ? username.trim()
-      : "Your profile";
-
-  const isCommunityPage = communityItems.some(
-    (item) => item.id === page
-  );
+  const safeUsername = username || "User";
 
   const closeMenu = () => {
     setExpanded(false);
-    setView("main");
   };
 
   const changePage = (id) => {
@@ -105,25 +85,20 @@ export default function Navigation({
     closeMenu();
   };
 
-  const openCommunity = () => {
-    setView("community");
-  };
-
   const renderLink = (item) => {
     const Icon = item.icon;
-    const active = page === item.id;
 
     return (
       <button
         key={item.id}
         type="button"
-        className={`os-link ${active ? "active" : ""}`}
+        className={`os-link ${page === item.id ? "active" : ""}`}
         onClick={() => changePage(item.id)}
-        aria-current={active ? "page" : undefined}
+        aria-current={page === item.id ? "page" : undefined}
       >
-        <Icon size={20} aria-hidden="true" />
+        <Icon />
         <span>{item.label}</span>
-        {active && <i aria-hidden="true" />}
+        {page === item.id && <i />}
       </button>
     );
   };
@@ -134,160 +109,61 @@ export default function Navigation({
         <button
           type="button"
           className="os-sidebar-backdrop"
-          onClick={closeMenu}
           aria-label="Close navigation menu"
+          onClick={closeMenu}
         />
       )}
 
-      <aside
-        className={`os-sidebar ${expanded ? "expanded" : ""} ${
-          view === "community" ? "community-view" : ""
-        }`}
-        aria-label="Main navigation"
-      >
-        {/* BRAND */}
+      <aside className={`os-sidebar ${expanded ? "expanded" : ""}`}>
         <div className="os-brand">
           <div className="os-logo">L</div>
+
           <span className="os-brand-name">LOLZ</span>
 
           <button
             type="button"
             className="os-collapse"
-            onClick={() => {
-              if (view === "community") {
-                setView("main");
-              } else {
-                setExpanded((previous) => !previous);
-              }
-            }}
-            aria-label={expanded ? "Close menu" : "Open menu"}
+            onClick={closeMenu}
+            aria-label="Close menu"
           >
-            {expanded ? <X size={21} /> : <Menu size={21} />}
+            <X />
           </button>
         </div>
 
-        {/* MAIN NAVIGATION */}
-        {view === "main" && (
-          <div className="os-navigation-view">
-            <div className="os-nav-heading">
-              <span className="os-nav-eyebrow">YOUR SPACE</span>
-              <span className="os-nav-description">
-                Everything in one place
-              </span>
-            </div>
+        <div className="os-navigation-view">
+          <div className="os-nav-section">
+            <span className="os-nav-eyebrow">MAIN MENU</span>
 
-            <nav className="os-links">
+            <div className="os-links">
               {mainItems.map(renderLink)}
-            </nav>
-
-            {/* COMMUNITY ENTRY */}
-            <div className="os-nav-section">
-              <span className="os-nav-eyebrow">COMMUNITY</span>
-
-              <button
-                type="button"
-                className={`os-link os-category-link ${
-                  isCommunityPage ? "active" : ""
-                }`}
-                onClick={openCommunity}
-                aria-label="Open Community"
-              >
-                <Users2 size={20} aria-hidden="true" />
-                <span>Community</span>
-                <ChevronRight
-                  className="os-category-arrow"
-                  size={18}
-                  aria-hidden="true"
-                />
-              </button>
-            </div>
-
-            {/* CONNECTIONS */}
-            <div className="os-nav-section">
-              <span className="os-nav-eyebrow">CONNECTIONS</span>
-
-              <nav className="os-links">
-                {connectionItems.map(renderLink)}
-              </nav>
-            </div>
-
-            {/* ACCOUNT */}
-            <div className="os-nav-section">
-              <span className="os-nav-eyebrow">ACCOUNT</span>
-
-              <nav className="os-links">
-                {accountItems.map(renderLink)}
-              </nav>
             </div>
           </div>
-        )}
 
-        {/* COMMUNITY SUBPAGE */}
-        {view === "community" && (
-          <div className="os-navigation-view os-community-view">
-            <button
-              type="button"
-              className="os-back-button"
-              onClick={() => setView("main")}
-            >
-              <ArrowLeft size={18} aria-hidden="true" />
-              <span>Back to menu</span>
-            </button>
+          <div className="os-nav-section">
+            <span className="os-nav-eyebrow">COMMUNITY</span>
 
-            <div className="os-community-heading">
-              <div className="os-community-icon">
-                <Users2 size={25} />
-              </div>
-
-              <div>
-                <span className="os-nav-eyebrow">EXPLORE TOGETHER</span>
-                <h2>Community</h2>
-                <p>Connect with people and communities.</p>
-              </div>
-            </div>
-
-            <div className="os-community-options">
-              {communityItems.map((item) => {
-                const Icon = item.icon;
-                const active = page === item.id;
-
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={`os-community-option ${
-                      active ? "active" : ""
-                    }`}
-                    onClick={() => changePage(item.id)}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    <span className="os-community-option-icon">
-                      <Icon size={22} aria-hidden="true" />
-                    </span>
-
-                    <span className="os-community-option-content">
-                      <strong>{item.label}</strong>
-                      <small>{item.description}</small>
-                    </span>
-
-                    <ChevronRight
-                      size={18}
-                      className="os-community-option-arrow"
-                      aria-hidden="true"
-                    />
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="os-community-footer">
-              <LayoutGrid size={17} />
-              <span>Your community, your space.</span>
+            <div className="os-links">
+              {communityItems.map(renderLink)}
             </div>
           </div>
-        )}
 
-        {/* SIDEBAR BOTTOM */}
+          <div className="os-nav-section">
+            <span className="os-nav-eyebrow">CONNECTIONS</span>
+
+            <div className="os-links">
+              {connectionItems.map(renderLink)}
+            </div>
+          </div>
+
+          <div className="os-nav-section">
+            <span className="os-nav-eyebrow">ACCOUNT</span>
+
+            <div className="os-links">
+              {accountItems.map(renderLink)}
+            </div>
+          </div>
+        </div>
+
         <div className="os-sidebar-bottom">
           <button
             type="button"
@@ -297,7 +173,7 @@ export default function Navigation({
               onCreate?.();
             }}
           >
-            <PlusSquare size={20} aria-hidden="true" />
+            <PlusSquare size={19} />
             <span>Create Post</span>
           </button>
 
@@ -306,10 +182,11 @@ export default function Navigation({
             className="os-user"
             onClick={() => changePage("profile")}
           >
-            <div className="os-avatar" aria-hidden="true">
+            <div className="os-avatar">
               {safeUsername.charAt(0).toUpperCase()}
             </div>
-            <span title={safeUsername}>{safeUsername}</span>
+
+            <span>{safeUsername}</span>
           </button>
 
           <button
@@ -320,47 +197,41 @@ export default function Navigation({
               onLogout?.();
             }}
           >
-            <LogOut size={19} aria-hidden="true" />
+            <LogOut size={18} />
             <span>Log out</span>
           </button>
         </div>
       </aside>
 
-      {/* MOBILE NAVIGATION */}
       <nav className="os-mobile-nav" aria-label="Mobile navigation">
-        <button
-          type="button"
-          className="os-mobile-menu-button"
-          onClick={() => {
-            setView("main");
-            setExpanded(true);
-          }}
-          aria-label="Open navigation menu"
-        >
-          <Menu aria-hidden="true" />
-        </button>
-
-        {mobileNavigationItems.map((id) => {
-          const item = allItems.find((entry) => entry.id === id);
-          if (!item) return null;
-
+        {mobileNavigationItems.map((item) => {
           const Icon = item.icon;
-          const active = page === item.id;
 
           return (
             <button
-              key={id}
+              key={item.id}
               type="button"
-              className={active ? "active" : ""}
-              onClick={() => changePage(id)}
+              className={page === item.id ? "active" : ""}
+              onClick={() => changePage(item.id)}
               aria-label={item.label}
               title={item.label}
-              aria-current={active ? "page" : undefined}
+              aria-current={page === item.id ? "page" : undefined}
             >
-              <Icon aria-hidden="true" />
+              <Icon />
             </button>
           );
         })}
+
+        <button
+          type="button"
+          className={expanded ? "active" : ""}
+          onClick={() => setExpanded((current) => !current)}
+          aria-label="More navigation options"
+          title="More"
+          aria-expanded={expanded}
+        >
+          {expanded ? <X /> : <Menu />}
+        </button>
       </nav>
     </>
   );

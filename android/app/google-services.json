@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "106826572777",
+    "project_id": "lolz-b682e",
+    "storage_bucket": "lolz-b682e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:106826572777:android:ec54bef30312277c842178",
+        "android_client_info": {
+          "package_name": "com.oursocial.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4TC8ePRTPfByn_BfnuTJZvqhJE03sIBM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

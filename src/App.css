@@ -1813,3 +1813,2180 @@ button:active:not(:disabled) {
     height: 18px;
   }
 }
+
+/* =========================================
+   LOLZ — MOBILE LAYOUT FIX
+========================================= */
+
+@media (max-width: 760px) {
+  .main-area {
+    width: 100%;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-bottom: 90px !important;
+    min-width: 0;
+  }
+
+  .page-content {
+    min-width: 0;
+    padding-bottom: 24px;
+  }
+
+  .messages-layout {
+    width: 100%;
+    max-width: 100%;
+    height: calc(100dvh - 155px);
+    min-height: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .conversation-panel,
+  .chat-history {
+    min-height: 0;
+  }
+
+  .chat-history {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .message-composer {
+    flex-shrink: 0;
+  }
+
+  .groups-workspace {
+    max-height: calc(100dvh - 205px);
+    min-height: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .main-area {
+    padding-bottom: 88px !important;
+  }
+
+  .messages-layout {
+    height: calc(100dvh - 145px);
+  }
+}
+
+/* =========================================
+   LOLZ — INSTAGRAM STYLE EDIT PROFILE
+========================================= */
+
+.profile-edit-form {
+  width: 100%;
+  max-width: 720px;
+  margin: 25px auto;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--panel);
+  box-shadow: var(--shadow-md);
+  gap: 20px;
+}
+
+.profile-edit-form label {
+  display: grid;
+  gap: 9px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.profile-edit-form input,
+.profile-edit-form textarea {
+  width: 100%;
+  border-radius: 11px;
+}
+
+.profile-edit-form textarea {
+  min-height: 110px;
+}
+
+.profile-avatar-wrap {
+  position: relative;
+  z-index: 2;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: -48px;
+}
+
+.profile-avatar-wrap .avatar-profile {
+  width: 112px !important;
+  height: 112px !important;
+  min-width: 112px !important;
+  min-height: 112px !important;
+  max-width: 112px !important;
+  max-height: 112px !important;
+  overflow: hidden;
+  border: 4px solid var(--panel);
+  border-radius: 50%;
+  background: var(--panel-2);
+  box-shadow: var(--shadow-md);
+}
+
+.profile-avatar-wrap .avatar-profile img {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatar-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--transition);
+}
+
+.avatar-edit:hover {
+  transform: scale(1.04);
+}
+
+@media (max-width: 600px) {
+  .profile-edit-form {
+    padding: 18px 14px;
+    border-radius: 15px;
+  }
+
+  .profile-avatar-wrap .avatar-profile {
+    width: 96px !important;
+    height: 96px !important;
+    min-width: 96px !important;
+    min-height: 96px !important;
+    max-width: 96px !important;
+    max-height: 96px !important;
+  }
+}
+
+/* LOLZ — FIX EDIT PROFILE AVATAR SIZE */
+.edit-profile-photo {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+.edit-profile-photo .avatar-profile {
+  width: 88px !important;
+  height: 88px !important;
+  min-width: 88px !important;
+  min-height: 88px !important;
+  max-width: 88px !important;
+  max-height: 88px !important;
+  flex: 0 0 88px !important;
+  overflow: hidden !important;
+  border-radius: 50% !important;
+}
+
+.edit-profile-photo .avatar-profile img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+}
+
+@media (max-width: 600px) {
+  .edit-profile-photo .avatar-profile {
+    width: 76px !important;
+    height: 76px !important;
+    min-width: 76px !important;
+    min-height: 76px !important;
+    max-width: 76px !important;
+    max-height: 76px !important;
+    flex-basis: 76px !important;
+  }
+}
+
+/* =========================================
+   LOLZ — EDIT PROFILE PHOTO SIZE FIX
+========================================= */
+
+.edit-profile-photo {
+  display: flex !important;
+  align-items: center !important;
+  gap: 18px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.edit-profile-photo .avatar-profile {
+  display: block !important;
+  width: 88px !important;
+  height: 88px !important;
+  min-width: 88px !important;
+  min-height: 88px !important;
+  max-width: 88px !important;
+  max-height: 88px !important;
+  flex: 0 0 88px !important;
+  overflow: hidden !important;
+  border-radius: 50% !important;
+}
+
+.edit-profile-photo .avatar-profile img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 50% !important;
+}
+
+.edit-profile-photo-info {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 7px !important;
+  min-width: 0 !important;
+}
+
+@media (max-width: 600px) {
+  .edit-profile-photo .avatar-profile {
+    width: 76px !important;
+    height: 76px !important;
+    min-width: 76px !important;
+    min-height: 76px !important;
+    max-width: 76px !important;
+    max-height: 76px !important;
+    flex-basis: 76px !important;
+  }
+}
+
+/* =========================================
+   LOLZ — GLOBAL AVATAR IMAGE FIX
+========================================= */
+
+.avatar {
+  position: relative !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.avatar img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  border-radius: inherit !important;
+}
+
+/* Profile avatar */
+.avatar-profile {
+  width: 112px !important;
+  height: 112px !important;
+  min-width: 112px !important;
+  min-height: 112px !important;
+  max-width: 112px !important;
+  max-height: 112px !important;
+}
+
+/* Small avatars */
+.avatar-small {
+  width: 36px !important;
+  height: 36px !important;
+}
+
+/* Normal avatars */
+.avatar-normal {
+  width: 44px !important;
+  height: 44px !important;
+}
+
+/* Large avatars */
+.avatar-large {
+  width: 64px !important;
+  height: 64px !important;
+}
+
+@media (max-width: 600px) {
+  .avatar-profile {
+    width: 96px !important;
+    height: 96px !important;
+    min-width: 96px !important;
+    min-height: 96px !important;
+    max-width: 96px !important;
+    max-height: 96px !important;
+  }
+}
+
+/* =========================================
+   LOLZ — PRIVATE CHAT MODERN REDESIGN
+   Mobile-first • RTL • Light/Dark
+========================================= */
+
+/* Chat container */
+.messages-layout {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--panel);
+  box-shadow: var(--shadow-md);
+}
+
+/* Conversation list */
+.conversation-panel {
+  background: var(--panel);
+}
+
+.panel-heading {
+  min-height: 76px;
+  padding: 18px;
+  background: var(--panel);
+}
+
+.panel-heading h3 {
+  font-size: 18px;
+  letter-spacing: -.3px;
+}
+
+.conversation-item {
+  position: relative;
+  min-height: 82px;
+  padding: 13px 17px;
+  border-bottom: 1px solid var(--border);
+  transition: background .18s ease;
+}
+
+.conversation-item:hover {
+  background: var(--panel-hover);
+}
+
+.conversation-item.active {
+  background: var(--accent-soft);
+}
+
+.conversation-person strong {
+  font-size: 14px;
+  letter-spacing: -.15px;
+}
+
+.conversation-person small {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Chat header */
+.chat-header {
+  min-height: 76px;
+  padding: 14px 20px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.chat-header strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.chat-header small {
+  font-size: 12px;
+}
+
+/* Chat background */
+.chat-history {
+  gap: 15px;
+  padding: 25px;
+  background:
+    radial-gradient(
+      circle at 15% 15%,
+      color-mix(in srgb, var(--accent) 4%, transparent),
+      transparent 35%
+    ),
+    var(--bg);
+}
+
+/* Message bubbles */
+.message-bubble {
+  max-width: min(76%, 480px);
+  padding: 12px 15px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.75;
+  box-shadow: 0 2px 7px rgba(0, 0, 0, .035);
+  transition: transform .15s ease;
+}
+
+.message-bubble.mine {
+  border: 0;
+  border-end-end-radius: 5px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  color: #fff;
+}
+
+.message-bubble.theirs {
+  border: 1px solid var(--border);
+  border-end-start-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.message-bubble small {
+  font-size: 10px;
+  opacity: .8;
+}
+
+/* Message composer */
+.message-composer {
+  gap: 10px;
+  margin: 13px 17px 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+}
+
+.message-composer:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.message-composer input:not([type="file"]) {
+  min-height: 43px;
+  font-size: 14px;
+}
+
+.message-composer button {
+  border-radius: 12px;
+}
+
+/* Attachment preview */
+.message-file-preview {
+  margin: 10px 17px;
+  padding: 12px;
+  border-radius: 15px;
+  background: var(--panel-2);
+}
+
+/* Mobile chat */
+@media (max-width: 760px) {
+  .messages-layout {
+    height: calc(100dvh - 155px);
+    min-height: 420px;
+    border: 0;
+    border-radius: 15px;
+    box-shadow: none;
+    background: var(--bg);
+  }
+
+  .conversation-item {
+    min-height: 76px;
+    padding: 12px 14px;
+  }
+
+  .chat-header {
+    min-height: 65px;
+    padding: 10px 13px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .025);
+  }
+
+  .chat-history {
+    gap: 12px;
+    padding: 17px 12px;
+  }
+
+  .message-bubble {
+    max-width: 88%;
+    padding: 10px 13px;
+    border-radius: 16px;
+    font-size: 13px;
+  }
+
+  .message-composer {
+    margin: 9px 9px 10px;
+    padding: 6px 8px;
+    border-radius: 17px;
+  }
+
+  .message-composer input:not([type="file"]) {
+    min-height: 40px;
+    font-size: 13px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 380px) {
+  .chat-header {
+    padding-inline: 10px;
+  }
+
+  .chat-history {
+    padding-inline: 9px;
+  }
+
+  .message-bubble {
+    max-width: 92%;
+    padding: 9px 11px;
+  }
+
+  .message-composer {
+    gap: 5px;
+    margin-inline: 6px;
+  }
+}
+
+/* =====================================================
+   LOLZ — MODERN GLASS DESIGN SYSTEM
+   Global visual refresh • Light/Dark • RTL • Responsive
+===================================================== */
+
+:root {
+  --accent: #7770ff;
+  --accent-hover: #6259e8;
+  --accent-soft: rgba(119, 112, 255, 0.11);
+
+  --bg: #f4f3fa;
+  --panel: rgba(255, 255, 255, 0.78);
+  --panel-2: rgba(248, 247, 253, 0.9);
+  --panel-hover: rgba(239, 237, 250, 0.92);
+  --input: rgba(247, 246, 252, 0.88);
+
+  --text: #201f2b;
+  --muted: #777487;
+  --muted-2: #aaa7ba;
+
+  --border: rgba(125, 117, 166, 0.16);
+  --border-strong: rgba(119, 112, 255, 0.28);
+
+  --shadow-sm: 0 3px 12px rgba(40, 34, 85, 0.045);
+  --shadow-md: 0 9px 28px rgba(40, 34, 85, 0.075);
+  --shadow-lg: 0 18px 50px rgba(40, 34, 85, 0.13);
+
+  --radius-sm: 12px;
+  --radius-md: 17px;
+  --radius-lg: 23px;
+  --radius-xl: 28px;
+}
+
+:root[data-theme="dark"],
+[data-theme="dark"],
+.app-shell[data-theme="dark"] {
+  --accent: #9690ff;
+  --accent-hover: #aaa5ff;
+  --accent-soft: rgba(150, 144, 255, 0.13);
+
+  --bg: #11111a;
+  --panel: rgba(30, 29, 44, 0.88);
+  --panel-2: rgba(38, 36, 54, 0.92);
+  --panel-hover: rgba(53, 50, 73, 0.94);
+  --input: rgba(37, 35, 53, 0.9);
+
+  --text: #f4f2ff;
+  --muted: #aaa7bd;
+  --muted-2: #77738d;
+
+  --border: rgba(190, 182, 255, 0.12);
+  --border-strong: rgba(150, 144, 255, 0.28);
+
+  --shadow-sm: 0 3px 12px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 9px 28px rgba(0, 0, 0, 0.23);
+  --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.34);
+}
+
+/* Global appearance */
+
+body {
+  font-family:
+    Inter,
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  letter-spacing: -0.12px;
+}
+
+.app-shell {
+  background:
+    radial-gradient(
+      circle at 12% 5%,
+      rgba(119, 112, 255, 0.075),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 90% 85%,
+      rgba(169, 137, 255, 0.055),
+      transparent 30%
+    ),
+    var(--bg);
+}
+
+/* Glass surfaces */
+
+.topbar,
+.welcome-section,
+.composer-card,
+.post-card,
+.person-card,
+.notification-item,
+.empty-state,
+.profile-page,
+.profile-edit-form,
+.messages-layout,
+.conversation-panel,
+.chat-panel,
+.panel-heading,
+.chat-header,
+.message-composer,
+.message-file-preview,
+.app-shell [role="menu"],
+.app-shell [role="listbox"],
+.app-shell .dropdown-menu,
+.app-shell .popover-content,
+.app-shell .menu-dropdown {
+  border-color: var(--border);
+  background-color: var(--panel);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+
+.welcome-section,
+.composer-card,
+.post-card,
+.person-card,
+.notification-item,
+.profile-page,
+.profile-edit-form,
+.messages-layout {
+  border-radius: var(--radius-lg);
+}
+
+/* Top navigation */
+
+.topbar {
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(30, 25, 70, 0.035);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+}
+
+/* Buttons */
+
+.primary-button,
+.secondary-button,
+.comment-send-button {
+  min-height: 42px;
+  border-radius: 13px;
+  font-weight: 700;
+  transition:
+    transform .2s ease,
+    box-shadow .2s ease,
+    background .2s ease,
+    border-color .2s ease;
+}
+
+.primary-button {
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  box-shadow: 0 5px 15px rgba(119, 112, 255, 0.2);
+}
+
+.primary-button:hover:not(:disabled) {
+  box-shadow: 0 8px 22px rgba(119, 112, 255, 0.27);
+  transform: translateY(-2px);
+}
+
+.secondary-button {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+}
+
+.secondary-button:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--panel-hover);
+  transform: translateY(-1px);
+}
+
+/* Inputs */
+
+.app-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.app-shell textarea,
+.app-shell select {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--input);
+  transition:
+    border-color .2s ease,
+    box-shadow .2s ease,
+    background .2s ease;
+}
+
+.app-shell input:focus,
+.app-shell textarea:focus,
+.app-shell select:focus {
+  border-color: var(--accent);
+  background: var(--panel);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* Feed cards */
+
+.post-card,
+.person-card,
+.composer-card {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.post-card {
+  border-radius: 21px;
+  padding: 21px;
+  transition:
+    transform .22s ease,
+    box-shadow .22s ease,
+    border-color .22s ease;
+}
+
+.post-card:hover,
+.person-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.post-actions button {
+  min-height: 42px;
+  border-radius: 12px;
+}
+
+.post-actions button:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Stories */
+
+.story-ring {
+  border: 2px solid var(--accent);
+  box-shadow: 0 3px 12px rgba(119, 112, 255, 0.13);
+}
+
+/* Profile */
+
+.profile-page {
+  overflow: hidden;
+  border-radius: 25px;
+}
+
+.profile-avatar-wrap .avatar-profile {
+  border-color: var(--panel);
+  box-shadow: 0 8px 25px rgba(25, 20, 60, 0.13);
+}
+
+/* Notifications */
+
+.notification-item {
+  border-radius: 17px;
+  transition:
+    transform .2s ease,
+    background .2s ease,
+    border-color .2s ease;
+}
+
+.notification-item:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.notification-item.unread {
+  background: var(--accent-soft);
+}
+
+/* Private chat */
+
+.messages-layout {
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.conversation-panel,
+.chat-panel {
+  background: transparent;
+}
+
+.panel-heading,
+.chat-header {
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.conversation-item {
+  border-bottom-color: var(--border);
+  transition: background .2s ease;
+}
+
+.conversation-item:hover,
+.conversation-item.active {
+  background: var(--accent-soft);
+}
+
+.chat-history {
+  background:
+    radial-gradient(
+      circle at 15% 10%,
+      rgba(119, 112, 255, 0.07),
+      transparent 38%
+    ),
+    var(--bg);
+}
+
+.message-bubble {
+  border-radius: 19px;
+  box-shadow: 0 3px 12px rgba(20, 20, 45, 0.055);
+  overflow-wrap: anywhere;
+}
+
+.message-bubble.mine {
+  border: 1px solid transparent;
+  border-end-end-radius: 6px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  box-shadow: 0 5px 15px rgba(119, 112, 255, 0.17);
+}
+
+.message-bubble.theirs {
+  border: 1px solid var(--border);
+  border-end-start-radius: 6px;
+  background: var(--panel);
+}
+
+.message-composer {
+  border: 1px solid var(--border-strong);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.message-composer:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 11%, transparent);
+}
+
+/* Dropdowns and menus */
+
+.app-shell [role="menu"],
+.app-shell [role="listbox"],
+.app-shell .dropdown-menu,
+.app-shell .popover-content,
+.app-shell .menu-dropdown {
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+/* Scrollbars */
+
+.app-shell *::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 35%, var(--muted-2));
+}
+
+.app-shell *::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Mobile refinement */
+
+@media (max-width: 760px) {
+  .topbar {
+    background: color-mix(in srgb, var(--panel) 88%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .messages-layout {
+    border: 1px solid var(--border);
+    border-radius: 19px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .chat-header {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .chat-history {
+    padding: 16px 12px;
+  }
+
+  .message-bubble {
+    max-width: 90%;
+  }
+
+  .message-composer {
+    border-radius: 18px;
+  }
+
+  .post-card {
+    border-radius: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-card,
+  .person-card,
+  .primary-button,
+  .secondary-button,
+  .notification-item,
+  .conversation-item {
+    transition: none !important;
+  }
+}
+
+/* =========================================
+   LOLZ — PRIVATE CHAT MOBILE EXPERIENCE
+   Modern Glass • Mobile First
+========================================= */
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 68px;
+  padding: 12px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.chat-back-button {
+  display: none;
+  flex: 0 0 40px;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+.chat-back-button:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--border-strong);
+}
+
+.chat-header .chat-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-history {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.message-bubble {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.message-composer {
+  flex-shrink: 0;
+}
+
+@media (max-width: 760px) {
+  .messages-layout {
+    height: calc(100dvh - 155px);
+    min-height: 400px;
+    overflow: hidden;
+  }
+
+  .chat-back-button {
+    display: inline-flex;
+  }
+
+  .chat-header {
+    min-height: 62px;
+    gap: 9px;
+    padding: 9px 11px;
+  }
+
+  .chat-history {
+    flex: 1;
+    min-height: 0;
+    padding: 15px 11px;
+  }
+
+  .message-bubble {
+    max-width: 88%;
+  }
+
+  .message-composer {
+    margin: 8px;
+    padding: 6px;
+    border-radius: 16px;
+  }
+
+  .messages-layout:has(.chat-header) .conversation-panel {
+    display: none;
+  }
+
+  .messages-layout:has(.chat-header) .chat-panel {
+    display: flex;
+  }
+}
+
+@media (max-width: 380px) {
+  .chat-back-button {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+  }
+
+  .chat-header {
+    padding-inline: 8px;
+  }
+
+  .message-bubble {
+    max-width: 92%;
+  }
+}
+
+/* =========================================
+   LOLZ — MODERN GLASS GLOBAL POLISH
+   Unified typography, controls and surfaces
+========================================= */
+
+:root {
+  --accent: #7770ff;
+  --accent-hover: #6259e8;
+  --accent-soft: rgba(119, 112, 255, .10);
+  --radius-sm: 11px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 27px;
+}
+
+:root[data-theme="dark"],
+[data-theme="dark"],
+.app-shell[data-theme="dark"] {
+  --accent: #9690ff;
+  --accent-hover: #aaa5ff;
+  --accent-soft: rgba(150, 144, 255, .14);
+}
+
+/* Typography */
+.app-shell {
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  letter-spacing: -.15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-shell h1,
+.app-shell h2,
+.app-shell h3,
+.app-shell h4 {
+  letter-spacing: -.45px;
+  line-height: 1.35;
+}
+
+/* Unified buttons */
+.app-shell button {
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-shell .primary-button,
+.app-shell .secondary-button,
+.app-shell .comment-send-button {
+  min-height: 42px;
+  border-radius: 13px;
+  font-weight: 700;
+  transition: background .2s ease, border-color .2s ease,
+    color .2s ease, box-shadow .2s ease, transform .2s ease;
+}
+
+.app-shell .primary-button {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  border-color: transparent;
+  box-shadow: 0 5px 16px rgba(119, 112, 255, .18);
+}
+
+.app-shell .primary-button:hover:not(:disabled) {
+  box-shadow: 0 8px 22px rgba(119, 112, 255, .25);
+  transform: translateY(-1px);
+}
+
+.app-shell .secondary-button {
+  border-color: var(--border);
+  border-radius: 13px;
+  background: var(--panel);
+}
+
+/* Unified fields */
+.app-shell input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.app-shell textarea,
+.app-shell select {
+  border-radius: 13px;
+  font-family: inherit;
+}
+
+.app-shell input:focus,
+.app-shell textarea:focus,
+.app-shell select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+/* Unified glass surfaces */
+.app-shell .welcome-section,
+.app-shell .composer-card,
+.app-shell .post-card,
+.app-shell .person-card,
+.app-shell .notification-item,
+.app-shell .profile-page,
+.app-shell .profile-edit-form,
+.app-shell .messages-layout {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(18px) saturate(145%);
+  -webkit-backdrop-filter: blur(18px) saturate(145%);
+}
+
+/* Navigation */
+.app-shell .topbar {
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+}
+
+/* Feed interaction */
+.app-shell .post-card,
+.app-shell .person-card,
+.app-shell .notification-item {
+  transition: border-color .2s ease, box-shadow .2s ease,
+    transform .2s ease;
+}
+
+.app-shell .post-card:hover,
+.app-shell .person-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.app-shell .post-actions button {
+  border-radius: 12px;
+}
+
+/* Dropdowns */
+.app-shell [role="menu"],
+.app-shell [role="listbox"],
+.app-shell .dropdown-menu,
+.app-shell .popover-content,
+.app-shell .menu-dropdown {
+  border: 1px solid var(--border-strong);
+  border-radius: 16px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Mobile refinement */
+@media (max-width: 760px) {
+  .app-shell .topbar {
+    min-height: 60px;
+    padding-inline: 13px;
+  }
+
+  .app-shell .page-content {
+    padding-inline: 13px;
+  }
+
+  .app-shell .post-card {
+    border-radius: 18px;
+  }
+
+  .app-shell .primary-button,
+  .app-shell .secondary-button {
+    min-height: 40px;
+  }
+}
+
+/* =========================================
+   LOLZ — PRIVATE CHAT MODERN GLASS
+   Modern WhatsApp / Telegram inspired UI
+========================================= */
+
+.app-shell .messages-layout {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--panel);
+  box-shadow: var(--shadow-md);
+}
+
+/* Chat panel */
+.app-shell .chat-panel {
+  min-width: 0;
+  min-height: 620px;
+  background:
+    radial-gradient(
+      circle at 15% 10%,
+      rgba(119, 112, 255, .055),
+      transparent 35%
+    ),
+    var(--panel);
+}
+
+/* Chat header */
+.app-shell .chat-header {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 84%, transparent);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+}
+
+.app-shell .chat-header .avatar {
+  flex-shrink: 0;
+  border: 2px solid var(--accent-soft);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .08);
+}
+
+.app-shell .chat-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.app-shell .chat-user-info strong {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.app-shell .chat-user-info small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Back button */
+.app-shell .chat-back-button {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 21px;
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+.app-shell .chat-back-button:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* Message history */
+.app-shell .chat-history {
+  min-height: 390px;
+  padding: 22px clamp(12px, 3vw, 30px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+/* Message bubbles */
+.app-shell .message-bubble {
+  width: fit-content;
+  max-width: min(76%, 520px);
+  min-width: 65px;
+  padding: 11px 14px 8px;
+  border: 1px solid var(--border);
+  border-radius: 19px;
+  overflow-wrap: anywhere;
+  line-height: 1.55;
+  font-size: 14px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, .045);
+  animation: lolz-message-in .2s ease-out;
+}
+
+.app-shell .message-bubble.mine {
+  align-self: flex-end;
+  border-color: rgba(119, 112, 255, .22);
+  border-end-end-radius: 6px;
+  background: linear-gradient(
+    135deg,
+    rgba(119, 112, 255, .17),
+    rgba(119, 112, 255, .09)
+  );
+  color: var(--text);
+}
+
+.app-shell .message-bubble.theirs {
+  align-self: flex-start;
+  border-end-start-radius: 6px;
+  background: color-mix(in srgb, var(--panel) 92%, var(--accent-soft));
+  color: var(--text);
+}
+
+.app-shell .message-bubble > div {
+  white-space: pre-wrap;
+}
+
+.app-shell .message-bubble small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 10px;
+  text-align: end;
+}
+
+/* Images and videos */
+.app-shell .message-bubble img,
+.app-shell .message-bubble video {
+  display: block;
+  max-width: 100%;
+  max-height: 340px;
+  border-radius: 13px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, .06);
+}
+
+/* Audio player */
+.app-shell .message-bubble audio {
+  display: block;
+  width: min(290px, 100%);
+  min-width: 210px;
+  max-width: 100%;
+  margin: 4px 0;
+}
+
+/* Message composer */
+.app-shell .message-composer {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+}
+
+.app-shell .message-composer input:not([type="file"]) {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  outline: none;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  transition: .2s ease;
+}
+
+.app-shell .message-composer input:not([type="file"]):focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.app-shell .message-composer button {
+  min-width: 42px;
+  min-height: 42px;
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+
+.app-shell .message-composer .primary-button {
+  padding-inline: 18px;
+}
+
+/* File preview */
+.app-shell .message-file-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--accent-soft);
+}
+
+.app-shell .message-file-preview img,
+.app-shell .message-file-preview video {
+  width: 58px;
+  height: 58px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.app-shell .preview-file-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.app-shell .preview-file-info small {
+  color: var(--muted);
+}
+
+/* Empty state */
+.app-shell .chat-empty,
+.app-shell .chat-placeholder {
+  color: var(--muted);
+  text-align: center;
+}
+
+.app-shell .upload-hint {
+  display: block;
+  padding: 0 16px 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* Message entrance */
+@keyframes lolz-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile chat */
+@media (max-width: 760px) {
+  .app-shell .messages-layout {
+    display: block;
+    min-height: 70vh;
+    border-radius: 18px;
+  }
+
+  .app-shell .chat-panel {
+    min-height: 68vh;
+    width: 100%;
+  }
+
+  .app-shell .chat-header {
+    min-height: 64px;
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .app-shell .chat-back-button {
+    display: flex;
+  }
+
+  .app-shell .chat-history {
+    min-height: 45vh;
+    max-height: 58vh;
+    padding: 16px 11px;
+    gap: 10px;
+  }
+
+  .app-shell .message-bubble {
+    max-width: 86%;
+    padding: 10px 12px 7px;
+    font-size: 14px;
+  }
+
+  .app-shell .message-composer {
+    gap: 6px;
+    padding: 10px 8px;
+  }
+
+  .app-shell .message-composer input:not([type="file"]) {
+    min-height: 43px;
+    padding-inline: 11px;
+    font-size: 13px;
+  }
+
+  .app-shell .message-composer button {
+    min-width: 36px;
+    min-height: 38px;
+    padding: 5px;
+  }
+
+  .app-shell .message-composer .primary-button {
+    padding-inline: 10px;
+  }
+
+  .app-shell .message-bubble img,
+  .app-shell .message-bubble video {
+    max-height: 260px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .message-bubble {
+    animation: none;
+  }
+}
+
+/* =========================================
+   LOLZ — MODERN CONVERSATION LIST
+   Glass cards • RTL • Mobile
+========================================= */
+
+.app-shell .conversation-panel {
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
+.app-shell .conversation-panel .panel-heading {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  min-height: 76px;
+  padding: 16px 17px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+}
+
+.app-shell .conversation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-shell .conversation-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  min-height: 76px;
+  padding: 11px 13px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--text);
+  text-align: start;
+  transition:
+    background .18s ease,
+    border-color .18s ease,
+    transform .18s ease;
+}
+
+.app-shell .conversation-item::before {
+  content: "";
+  position: absolute;
+  inset-block: 14px;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: 8px;
+  background: transparent;
+  transition: background .18s ease;
+}
+
+.app-shell .conversation-item:hover {
+  border-color: var(--border);
+  background: var(--panel-hover);
+}
+
+.app-shell .conversation-item.active {
+  border-color: var(--border-strong);
+  background: var(--accent-soft);
+}
+
+.app-shell .conversation-item.active::before {
+  background: var(--accent);
+}
+
+.app-shell .conversation-item .avatar {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+  border: 2px solid var(--panel);
+  box-shadow: 0 3px 12px rgba(20, 20, 45, .08);
+}
+
+.app-shell .conversation-person {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 6px;
+}
+
+.app-shell .conversation-person strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell .conversation-person small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  .app-shell .conversation-list {
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .app-shell .conversation-item {
+    min-height: 73px;
+    padding: 10px 12px;
+    border-radius: 15px;
+  }
+
+  .app-shell .conversation-item .avatar {
+    width: 46px !important;
+    height: 46px !important;
+    min-width: 46px !important;
+    min-height: 46px !important;
+  }
+
+  .app-shell .conversation-panel .panel-heading {
+    min-height: 65px;
+    padding: 12px 14px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 380px) {
+  .app-shell .conversation-item {
+    gap: 10px;
+    min-height: 69px;
+    padding-inline: 9px;
+  }
+
+  .app-shell .conversation-person strong {
+    font-size: 13px;
+  }
+
+  .app-shell .conversation-person small {
+    font-size: 11px;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .conversation-item,
+  .app-shell .conversation-item::before {
+    transition: none !important;
+  }
+}
+
+/* =========================================
+   LOLZ — MODERN GLASS CHAT HEADER
+========================================= */
+
+.app-shell .chat-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 76px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  backdrop-filter: blur(22px) saturate(155%);
+  -webkit-backdrop-filter: blur(22px) saturate(155%);
+}
+
+.app-shell .chat-header .chat-back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--panel-hover);
+  color: var(--text);
+  cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+
+.app-shell .chat-header .chat-back-button:hover {
+  background: var(--accent-soft);
+  transform: translateX(-2px);
+}
+
+.app-shell .chat-header .avatar {
+  width: 46px !important;
+  height: 46px !important;
+  min-width: 46px !important;
+  min-height: 46px !important;
+  border: 2px solid var(--panel);
+  box-shadow: 0 3px 12px rgba(20, 20, 45, .10);
+}
+
+.app-shell .chat-header .chat-user-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  gap: 4px;
+}
+
+.app-shell .chat-header .chat-user-info strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell .chat-header .chat-user-info small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.app-shell .chat-header button:not(.chat-back-button) {
+  border-radius: 12px;
+  transition: background .2s ease, transform .2s ease;
+}
+
+.app-shell .chat-header button:not(.chat-back-button):hover {
+  transform: translateY(-1px);
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  .app-shell .chat-header {
+    min-height: 66px;
+    gap: 9px;
+    padding: 9px 12px;
+  }
+
+  .app-shell .chat-header .chat-back-button {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+
+  .app-shell .chat-header .avatar {
+    width: 41px !important;
+    height: 41px !important;
+    min-width: 41px !important;
+    min-height: 41px !important;
+  }
+
+  .app-shell .chat-header .chat-user-info strong {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .chat-header button {
+    transition: none !important;
+  }
+}
+
+/* =========================================
+   LOLZ — MODERN GLASS MESSAGE COMPOSER
+========================================= */
+
+.app-shell .message-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 13px 16px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+}
+
+.app-shell .message-composer textarea,
+.app-shell .message-composer input {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  outline: none;
+  background: var(--panel-hover);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+.app-shell .message-composer textarea:focus,
+.app-shell .message-composer input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.app-shell .message-composer textarea {
+  resize: none;
+  max-height: 130px;
+}
+
+.app-shell .message-composer button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-hover);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform .18s ease, background .18s ease;
+}
+
+.app-shell .message-composer button:hover {
+  background: var(--accent-soft);
+  transform: translateY(-2px);
+}
+
+.app-shell .message-composer button:active {
+  transform: scale(.96);
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  .app-shell .message-composer {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .app-shell .message-composer textarea,
+  .app-shell .message-composer input {
+    min-height: 43px;
+    padding: 10px 13px;
+    border-radius: 15px;
+    font-size: 14px;
+  }
+
+  .app-shell .message-composer button {
+    min-width: 41px;
+    min-height: 41px;
+    border-radius: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .message-composer button,
+  .app-shell .message-composer textarea,
+  .app-shell .message-composer input {
+    transition: none !important;
+  }
+}
+
+/* =========================================
+   LOLZ — MODERN GLASS MESSAGE BUBBLES
+========================================= */
+
+.app-shell .chat-history {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+.app-shell .message-bubble {
+  position: relative;
+  width: fit-content;
+  max-width: min(76%, 560px);
+  padding: 11px 15px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+  color: var(--text);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  box-shadow: 0 3px 12px rgba(20, 20, 45, .045);
+  animation: lolz-message-in .2s ease-out;
+}
+
+.app-shell .message-bubble.mine {
+  align-self: flex-end;
+  border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+  border-end-end-radius: 6px;
+  background: var(--accent-soft);
+}
+
+.app-shell .message-bubble.theirs {
+  align-self: flex-start;
+  border-end-start-radius: 6px;
+}
+
+.app-shell .message-bubble img,
+.app-shell .message-bubble video {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  border-radius: 13px;
+  object-fit: cover;
+}
+
+.app-shell .message-bubble audio {
+  display: block;
+  max-width: 100%;
+}
+
+@keyframes lolz-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  .app-shell .chat-history {
+    gap: 10px;
+    padding: 14px 11px;
+  }
+
+  .app-shell .message-bubble {
+    max-width: 86%;
+    padding: 10px 13px;
+    border-radius: 16px;
+    font-size: 14px;
+  }
+
+  .app-shell .message-bubble img,
+  .app-shell .message-bubble video {
+    max-height: 280px;
+    border-radius: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .message-bubble {
+    animation: none !important;
+  }
+}
+
+/* =========================================
+   LOLZ — EMPTY CHAT STATE
+========================================= */
+
+.app-shell .chat-empty,
+.app-shell .empty-chat,
+.app-shell .chat-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 100%;
+  padding: 35px 22px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.app-shell .chat-empty h2,
+.app-shell .empty-chat h2,
+.app-shell .chat-placeholder h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.app-shell .chat-empty p,
+.app-shell .empty-chat p,
+.app-shell .chat-placeholder p {
+  max-width: 340px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.app-shell .chat-empty svg,
+.app-shell .empty-chat svg,
+.app-shell .chat-placeholder svg {
+  width: 58px;
+  height: 58px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+  .app-shell .chat-empty,
+  .app-shell .empty-chat,
+  .app-shell .chat-placeholder {
+    padding: 25px 16px;
+  }
+
+  .app-shell .chat-empty h2,
+  .app-shell .empty-chat h2,
+  .app-shell .chat-placeholder h2 {
+    font-size: 19px;
+  }
+}
+
+/* LOLZ — True Full Screen Chat (Mobile Only) */
+
+@media (max-width: 768px) {
+  .app-shell.private-chat-open .messages-page.conversation-open {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2147483000 !important;
+    display: block !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell.private-chat-open .messages-page.conversation-open .messages-layout {
+    display: block !important;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+  }
+
+  .app-shell.private-chat-open .messages-page.conversation-open .conversation-panel {
+    display: none !important;
+  }
+
+  .app-shell.private-chat-open .messages-page.conversation-open .chat-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+  }
+
+  .app-shell.private-chat-open .messages-page.conversation-open .chat-header {
+    flex: 0 0 auto !important;
+    padding-top: max(12px, env(safe-area-inset-top)) !important;
+    border-radius: 0 !important;
+  }
+
+  .app-shell.private-chat-open .messages-page.conversation-open .chat-history {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+    border-radius: 0 !important;
+  }
+
+  .app-shell.private-chat-open .messages-page.conversation-open .message-composer {
+    flex: 0 0 auto !important;
+    position: relative !important;
+    bottom: auto !important;
+    margin: 0 !important;
+    padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    border-radius: 0 !important;
+  }
+}
+/* LOLZ — GLOBAL GROUP & CHANNEL CALL DOCK */
+.lolz-call-dock {
+  position: fixed;
+  z-index: 100000;
+  inset-inline-end: 18px;
+  bottom: 18px;
+  width: min(420px, calc(100vw - 36px));
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+@media (max-width: 760px) {
+  .lolz-call-dock {
+    inset-inline: 10px;
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: calc(100dvh - 120px);
+  }
+}

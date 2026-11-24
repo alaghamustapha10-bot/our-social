@@ -1,5 +1,6 @@
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
 import {
   Radio,
   Plus,
@@ -11,255 +12,660 @@ import {
   ArrowLeft,
   LogOut,
   RefreshCw,
+  X,
+  Sparkles,
+  Mic,
+  Square,
+  Trash2,
+  Loader2,
 } from "lucide-react";
+
 import { supabase } from "./supabase";
 import Calls from "./Calls";
+
 import "./Channels.css";
 
-export default function Channels({ user }) {
+export default function Channels({ user, onCallContextChange }) {
   const [channels, setChannels] = useState([]);
   const [selected, setSelected] = useState(null);
   const [posts, setPosts] = useState([]);
   const [members, setMembers] = useState([]);
   const [role, setRole] = useState(null);
+
   const [search, setSearch] = useState("");
   const [content, setContent] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(true);
   const [inviteCode, setInviteCode] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Voice message state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [voiceFile, setVoiceFile] = useState(null);
+  const [voicePreviewUrl, setVoicePreviewUrl] = useState("");
+  const [uploadingVoice, setUploadingVoice] = useState(false);
+
+  const postsContainerRef = useRef(null);
+  const scrollToBottomRef = useRef(false);
+
+  const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const recordingChunksRef = useRef([]);
+  const recordingChannelIdRef = useRef(null);
+  const recordingCancelledRef = useRef(false);
+  const recordingStartedAtRef = useRef(null);
+
+  const isNearBottom = () => {
+    const container = postsContainerRef.current;
+    if (!container) return true;
+
+    return (
+      container.scrollHeight -
+        container.scrollTop -
+        container.clientHeight <
+      120
+    );
+  };
 
   const loadChannels = useCallback(async () => {
     if (!user?.id) return;
 
-    const { data, error } = await supabase
+    const { data, error: loadError } = await supabase
       .from("channels")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      setError(error.message);
+    if (loadError) {
+      setError(loadError.message);
       return;
     }
 
     setChannels(data || []);
   }, [user?.id]);
 
-  const loadPosts = useCallback(async (channel) => {
-    if (!channel?.id) return;
+  const loadPosts = useCallback(
+    async (channel, stickToBottom = isNearBottom()) => {
+      if (!channel?.id) return;
 
-    const { data, error } = await supabase
-      .from("channel_posts")
-      .select("*")
-      .eq("channel_id", channel.id)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      setError(error.message);
-      return;
-    }
-
-    setPosts(data || []);
-
-    const { data: memberData, error: memberError } =
-      await supabase
-        .from("channel_members")
+      const { data, error: postsError } = await supabase
+        .from("channel_posts")
         .select("*")
-        .eq("channel_id", channel.id);
+        .eq("channel_id", channel.id)
+        .order("created_at", { ascending: true });
 
-    if (memberError) {
-      setError(memberError.message);
-      return;
-    }
+      if (postsError) {
+        setError(postsError.message);
+        return;
+      }
 
-    setMembers(memberData || []);
+      const { data: memberData, error: memberError } =
+        await supabase
+          .from("channel_members")
+          .select("*")
+          .eq("channel_id", channel.id);
 
-    const myMembership = (memberData || []).find(
-      (member) => member.user_id === user?.id
-    );
+      if (memberError) {
+        setError(memberError.message);
+        return;
+      }
 
-    setRole(myMembership?.role || null);
-  }, [user?.id]);
+      scrollToBottomRef.current = stickToBottom;
+      setPosts(data || []);
+      setMembers(memberData || []);
+
+      const membership = (memberData || []).find(
+        (member) => member.user_id === user?.id
+      );
+
+      setRole(membership?.role || null);
+    },
+    [user?.id]
+  );
+
+  useEffect(() => {
+    if (!scrollToBottomRef.current) return;
+
+    const frame = requestAnimationFrame(() => {
+      const container = postsContainerRef.current;
+
+      container?.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth",
+      });
+
+      scrollToBottomRef.current = false;
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [posts]);
 
   useEffect(() => {
     loadChannels();
   }, [loadChannels]);
 
   useEffect(() => {
-    if (selected) {
-      loadPosts(selected);
-    } else {
+    if (!selected) {
       setPosts([]);
       setMembers([]);
       setRole(null);
+      scrollToBottomRef.current = false;
+      return;
     }
+
+    loadPosts(selected, true);
   }, [selected, loadPosts]);
+
+  // Release microphone tracks
+  const stopMediaStream = useCallback(() => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => {
+        track.stop();
+      });
+
+      mediaStreamRef.current = null;
+    }
+  }, []);
+
+  // Clear voice preview
+  const clearVoicePreview = useCallback(() => {
+    setVoiceFile(null);
+
+    setVoicePreviewUrl((previousUrl) => {
+      if (previousUrl) {
+        URL.revokeObjectURL(previousUrl);
+      }
+
+      return "";
+    });
+  }, []);
+
+  // Cancel current recording
+  const cancelRecording = useCallback(() => {
+    recordingCancelledRef.current = true;
+
+    const recorder = mediaRecorderRef.current;
+
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    }
+
+    mediaRecorderRef.current = null;
+    recordingChunksRef.current = [];
+    recordingChannelIdRef.current = null;
+    recordingStartedAtRef.current = null;
+
+    stopMediaStream();
+
+    setIsRecording(false);
+    setRecordingSeconds(0);
+
+    clearVoicePreview();
+  }, [clearVoicePreview, stopMediaStream]);
+
+  // Recording timer
+  useEffect(() => {
+    if (!isRecording) return;
+
+    const interval = window.setInterval(() => {
+      if (!recordingStartedAtRef.current) return;
+
+      setRecordingSeconds(
+        Math.floor(
+          (Date.now() - recordingStartedAtRef.current) / 1000
+        )
+      );
+    }, 500);
+
+    return () => window.clearInterval(interval);
+  }, [isRecording]);
+
+  // Cancel recording if the user switches channels
+  useEffect(() => {
+    if (
+      recordingChannelIdRef.current &&
+      recordingChannelIdRef.current !== selected?.id
+    ) {
+      cancelRecording();
+    }
+  }, [selected?.id, cancelRecording]);
+
+  // Release microphone and preview URL when leaving the component
+  useEffect(() => {
+    return () => {
+      const recorder = mediaRecorderRef.current;
+
+      if (recorder && recorder.state !== "inactive") {
+        recordingCancelledRef.current = true;
+        recorder.stop();
+      }
+
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => {
+          track.stop();
+        });
+      }
+
+      if (voicePreviewUrl) {
+        URL.revokeObjectURL(voicePreviewUrl);
+      }
+    };
+  }, [voicePreviewUrl]);
+
+  // Start voice recording
+  const startVoiceRecording = async () => {
+    if (
+      !selected?.id ||
+      !isAdmin ||
+      loading ||
+      uploadingVoice ||
+      isRecording ||
+      mediaRecorderRef.current
+    ) {
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      setError("Voice recording is not supported by this browser.");
+      return;
+    }
+
+    try {
+      clearVoicePreview();
+      setError("");
+
+      recordingCancelledRef.current = false;
+      recordingChunksRef.current = [];
+      recordingChannelIdRef.current = selected.id;
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
+
+      mediaStreamRef.current = stream;
+
+      const mimeTypes = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/ogg",
+      ];
+
+      const supportedMimeType = mimeTypes.find((type) =>
+        MediaRecorder.isTypeSupported(type)
+      );
+
+      const recorder = supportedMimeType
+        ? new MediaRecorder(stream, { mimeType: supportedMimeType })
+        : new MediaRecorder(stream);
+
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordingChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onerror = () => {
+        recordingCancelledRef.current = true;
+        stopMediaStream();
+        mediaRecorderRef.current = null;
+        recordingChannelIdRef.current = null;
+        setIsRecording(false);
+        setError("An error occurred while recording audio.");
+      };
+
+      recorder.onstop = () => {
+        const wasCancelled = recordingCancelledRef.current;
+        const chunks = recordingChunksRef.current;
+
+        mediaRecorderRef.current = null;
+        recordingChunksRef.current = [];
+
+        stopMediaStream();
+
+        if (wasCancelled || !chunks.length) {
+          recordingChannelIdRef.current = null;
+          return;
+        }
+
+        const mimeType =
+          recorder.mimeType || "audio/webm";
+
+        const extension = mimeType.includes("ogg")
+          ? "ogg"
+          : mimeType.includes("mp4")
+            ? "m4a"
+            : "webm";
+
+        const audioBlob = new Blob(chunks, { type: mimeType });
+
+        if (!audioBlob.size) {
+          recordingChannelIdRef.current = null;
+          setError("The recording is empty. Please try again.");
+          return;
+        }
+
+        const file = new File(
+          [audioBlob],
+          `voice-${Date.now()}.${extension}`,
+          { type: mimeType }
+        );
+
+        const previewUrl = URL.createObjectURL(file);
+
+        setVoiceFile(file);
+        setVoicePreviewUrl(previewUrl);
+        recordingChannelIdRef.current = null;
+      };
+
+      recordingStartedAtRef.current = Date.now();
+
+      recorder.start(250);
+
+      setRecordingSeconds(0);
+      setIsRecording(true);
+    } catch (err) {
+      stopMediaStream();
+      mediaRecorderRef.current = null;
+      recordingChannelIdRef.current = null;
+      recordingStartedAtRef.current = null;
+
+      setIsRecording(false);
+      setError(
+        err.message || "Could not access your microphone."
+      );
+    }
+  };
+
+  // Stop recording and prepare preview
+  const stopVoiceRecording = () => {
+    const recorder = mediaRecorderRef.current;
+
+    if (!recorder || recorder.state === "inactive") return;
+
+    setIsRecording(false);
+
+    if (recorder.state === "recording") {
+      recorder.stop();
+    }
+  };
 
   const createChannel = async (event) => {
     event.preventDefault();
 
-    if (!name.trim() || !user?.id) return;
+    if (!name.trim() || !user?.id || loading) return;
 
     setLoading(true);
     setError("");
 
-    const code = isPublic
-      ? null
-      : crypto.randomUUID().replaceAll("-", "");
+    try {
+      const code = isPublic
+        ? null
+        : crypto.randomUUID().replaceAll("-", "");
 
-    const { data, error } = await supabase
-      .from("channels")
-      .insert({
-        name: name.trim(),
-        description: description.trim(),
-        created_by: user.id,
-        is_public: isPublic,
-        invite_code: code,
-      })
-      .select()
-      .single();
+      const { data, error: createError } = await supabase
+        .from("channels")
+        .insert({
+          name: name.trim(),
+          description: description.trim(),
+          created_by: user.id,
+          is_public: isPublic,
+          invite_code: code,
+        })
+        .select()
+        .single();
 
-    setLoading(false);
+      if (createError) throw createError;
 
-    if (error) {
-      setError(error.message);
-      return;
+      setShowCreate(false);
+      setName("");
+      setDescription("");
+      setIsPublic(true);
+
+      await loadChannels();
+      setSelected(data);
+    } catch (err) {
+      setError(err.message || "Could not create channel.");
+    } finally {
+      setLoading(false);
     }
-
-    setShowCreate(false);
-    setName("");
-    setDescription("");
-    setIsPublic(true);
-
-    await loadChannels();
-    setSelected(data);
   };
 
   const joinChannel = async (channel) => {
+    if (loading) return;
+
     setLoading(true);
     setError("");
 
-    const { error } = await supabase
-      .from("channel_members")
-      .insert({
-        channel_id: channel.id,
-        user_id: user.id,
-        role: "subscriber",
-      });
+    try {
+      const { error: joinError } = await supabase
+        .from("channel_members")
+        .insert({
+          channel_id: channel.id,
+          user_id: user.id,
+          role: "subscriber",
+        });
 
-    setLoading(false);
+      if (joinError && joinError.code !== "23505") {
+        throw joinError;
+      }
 
-    if (error && error.code !== "23505") {
-      setError(error.message);
-      return;
+      await loadPosts(channel);
+    } catch (err) {
+      setError(err.message || "Could not join channel.");
+    } finally {
+      setLoading(false);
     }
-
-    await loadPosts(channel);
   };
 
   const joinPrivateChannel = async (event) => {
     event.preventDefault();
 
-    if (!inviteCode.trim()) return;
+    if (!inviteCode.trim() || loading) return;
 
     setLoading(true);
     setError("");
 
-    const { data, error } = await supabase.rpc(
-      "join_channel_by_invite",
-      { p_invite_code: inviteCode.trim() }
-    );
+    try {
+      const { data, error: joinError } = await supabase.rpc(
+        "join_channel_by_invite",
+        { p_invite_code: inviteCode.trim() }
+      );
 
-    setLoading(false);
+      if (joinError) throw joinError;
 
-    if (error) {
-      setError(error.message);
-      return;
+      setInviteCode("");
+      await loadChannels();
+
+      const { data: found, error: findError } = await supabase
+        .from("channels")
+        .select("*")
+        .eq("id", data)
+        .single();
+
+      if (findError) throw findError;
+
+      setSelected(found);
+    } catch (err) {
+      setError(err.message || "Invalid invitation code.");
+    } finally {
+      setLoading(false);
     }
-
-    setInviteCode("");
-    await loadChannels();
-
-    const { data: found, error: findError } = await supabase
-      .from("channels")
-      .select("*")
-      .eq("id", data)
-      .single();
-
-    if (findError) {
-      setError(findError.message);
-      return;
-    }
-
-    if (found) setSelected(found);
   };
 
   const publishPost = async (event) => {
     event.preventDefault();
 
-    if (!content.trim() || !selected || !role) return;
+    if (!content.trim() || !selected || !role || loading) return;
+
+    const stickToBottom = isNearBottom();
 
     setLoading(true);
     setError("");
 
-    const { error } = await supabase
-      .from("channel_posts")
-      .insert({
-        channel_id: selected.id,
-        sender_id: user.id,
-        content: content.trim(),
-        message_type: "text",
-      });
+    try {
+      const { error: publishError } = await supabase
+        .from("channel_posts")
+        .insert({
+          channel_id: selected.id,
+          sender_id: user.id,
+          content: content.trim(),
+          message_type: "text",
+        });
 
-    setLoading(false);
+      if (publishError) throw publishError;
 
-    if (error) {
-      setError(error.message);
+      setContent("");
+      await loadPosts(selected, stickToBottom);
+    } catch (err) {
+      setError(err.message || "Could not publish post.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Upload and publish voice message
+  const publishVoiceMessage = async () => {
+    if (
+      !voiceFile ||
+      !selected?.id ||
+      !isAdmin ||
+      loading ||
+      uploadingVoice
+    ) {
       return;
     }
 
-    setContent("");
-    await loadPosts(selected);
+    const channelAtUpload = selected;
+    const stickToBottom = isNearBottom();
+
+    setUploadingVoice(true);
+    setError("");
+
+    try {
+      const fileName = `voice-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}.${voiceFile.name.split(".").pop() || "webm"}`;
+
+      const filePath = `${user.id}/messages/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("social-media")
+        .upload(filePath, voiceFile, {
+          contentType: voiceFile.type || "audio/webm",
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from("social-media")
+        .getPublicUrl(filePath);
+
+      const mediaUrl = publicUrlData?.publicUrl;
+
+      if (!mediaUrl) {
+        throw new Error("Could not generate the audio URL.");
+      }
+
+      const { error: publishError } = await supabase
+        .from("channel_posts")
+        .insert({
+          channel_id: channelAtUpload.id,
+          sender_id: user.id,
+          content: "",
+          message_type: "audio",
+          media_url: mediaUrl,
+          file_name: fileName,
+          mime_type: voiceFile.type || "audio/webm",
+        });
+
+      if (publishError) throw publishError;
+
+      clearVoicePreview();
+
+      if (selected?.id === channelAtUpload.id) {
+        await loadPosts(channelAtUpload, stickToBottom);
+      }
+    } catch (err) {
+      setError(err.message || "Could not publish voice message.");
+    } finally {
+      setUploadingVoice(false);
+    }
   };
 
   const leaveChannel = async () => {
-    if (!selected) return;
+    if (!selected || loading) return;
 
     if (!window.confirm("هل تريد مغادرة هذه القناة؟")) return;
 
     setLoading(true);
     setError("");
 
-    const { error } = await supabase.rpc("leave_channel", {
-      p_channel_id: selected.id,
-    });
+    try {
+      const { error: leaveError } = await supabase.rpc(
+        "leave_channel",
+        { p_channel_id: selected.id }
+      );
 
-    setLoading(false);
+      if (leaveError) throw leaveError;
 
-    if (error) {
-      setError(error.message);
-      return;
+      cancelRecording();
+      setSelected(null);
+      await loadChannels();
+    } catch (err) {
+      setError(err.message || "Could not leave channel.");
+    } finally {
+      setLoading(false);
     }
-
-    setSelected(null);
-    await loadChannels();
   };
 
   const filteredChannels = channels.filter((channel) =>
-    channel.name.toLowerCase().includes(search.toLowerCase())
+    channel.name?.toLowerCase().includes(search.toLowerCase())
   );
 
   const isAdmin = role === "owner" || role === "admin";
 
+  // Clear the old floating call context.
+  // Calls are now rendered inside the selected channel.
+  useEffect(() => {
+    onCallContextChange?.(null);
+  }, [onCallContextChange]);
+
+  const formatDate = (value) => {
+    if (!value) return "";
+
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  };
+
+  const formatRecordingTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+
+    return `${String(minutes).padStart(2, "0")}:${String(
+      remainingSeconds
+    ).padStart(2, "0")}`;
+  };
+
   return (
-    <div className="channels-page">
+    <section className={`channels-page ${selected ? "channel-chat-open" : ""}`}>
       <aside className={`channels-sidebar ${selected ? "mobile-hidden" : ""}`}>
         <div className="channels-heading">
           <div className="channels-brand">
-            <Radio size={24} />
+            <div className="channels-brand-icon">
+              <Radio size={22} />
+            </div>
+
             <div>
               <h2>Channels</h2>
               <span>LOLZ broadcasting</span>
@@ -272,36 +678,29 @@ export default function Channels({ user }) {
             onClick={() => setShowCreate(true)}
             title="Create channel"
             aria-label="Create channel"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "44px",
-              height: "44px",
-              minWidth: "44px",
-              flexShrink: 0,
-              visibility: "visible",
-              opacity: 1,
-              position: "relative",
-              zIndex: 100,
-              backgroundColor: "#6c5ce7",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: "12px",
-              cursor: "pointer",
-            }}
           >
-            <Plus size={24} />
+            <Plus size={22} />
           </button>
         </div>
 
         <div className="channels-search">
           <Search size={18} />
+
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search channels..."
           />
+
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              aria-label="Clear search"
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
 
         <form className="channels-join-code" onSubmit={joinPrivateChannel}>
@@ -310,6 +709,7 @@ export default function Channels({ user }) {
             onChange={(event) => setInviteCode(event.target.value)}
             placeholder="Private channel code"
           />
+
           <button disabled={loading || !inviteCode.trim()}>
             Join
           </button>
@@ -328,7 +728,7 @@ export default function Channels({ user }) {
                 {channel.avatar_url ? (
                   <img src={channel.avatar_url} alt="" />
                 ) : (
-                  <Radio size={22} />
+                  <Radio size={21} />
                 )}
               </div>
 
@@ -362,13 +762,22 @@ export default function Channels({ user }) {
             <header className="channel-chat-header">
               <button
                 className="channel-back-button"
-                onClick={() => setSelected(null)}
+                onClick={() => {
+                  cancelRecording();
+                  setSelected(null);
+                }}
+                title="Back to channels"
+                aria-label="Back to channels"
               >
                 <ArrowLeft size={20} />
               </button>
 
               <div className="channel-avatar">
-                <Radio size={22} />
+                {selected.avatar_url ? (
+                  <img src={selected.avatar_url} alt="" />
+                ) : (
+                  <Radio size={21} />
+                )}
               </div>
 
               <div className="channel-header-details">
@@ -380,6 +789,7 @@ export default function Channels({ user }) {
                 className="channel-refresh"
                 onClick={() => loadPosts(selected)}
                 title="Refresh"
+                aria-label="Refresh channel"
               >
                 <RefreshCw size={18} />
               </button>
@@ -389,33 +799,38 @@ export default function Channels({ user }) {
               {selected.description || "Welcome to this channel."}
             </div>
 
+            {/* CHANNEL CALLS — INSIDE THE CHANNEL */}
+            {role && (
+              <div className="channel-call-section">
+                <Calls
+                  supabase={supabase}
+                  user={user}
+                  conversation={null}
+                  callType="channel"
+                  channelId={selected.id}
+                  canStart={isAdmin}
+                  canEnd={isAdmin}
+                />
+              </div>
+            )}
+
             {!role && (
               <div className="channel-join-banner">
                 <span>You are viewing this channel as a visitor.</span>
+
                 {selected.is_public && (
                   <button
                     onClick={() => joinChannel(selected)}
                     disabled={loading}
                   >
+                    <Users size={16} />
                     Join channel
                   </button>
                 )}
               </div>
             )}
 
-            {/* CHANNEL CALLS */}
-            {role && (
-              <Calls
-                supabase={supabase}
-                user={user}
-                callType="channel"
-                channelId={selected.id}
-                canStart={isAdmin}
-                canEnd={isAdmin}
-              />
-            )}
-
-            <div className="channel-posts">
+            <div className="channel-posts" ref={postsContainerRef}>
               {posts.map((post) => (
                 <article className="channel-post" key={post.id}>
                   <div className="channel-post-avatar">
@@ -429,12 +844,28 @@ export default function Channels({ user }) {
                           ? selected.name
                           : "Channel admin"}
                       </strong>
-                      <time>
-                        {new Date(post.created_at).toLocaleString()}
-                      </time>
+
+                      <time>{formatDate(post.created_at)}</time>
                     </div>
 
-                    <p>{post.content}</p>
+                    {post.message_type === "audio" && post.media_url ? (
+                      <div className="channel-audio-message">
+                        <div className="channel-audio-label">
+                          <Mic size={16} />
+                          <span>Voice message</span>
+                        </div>
+
+                        <audio
+                          controls
+                          preload="metadata"
+                          src={post.media_url}
+                        >
+                          Your browser does not support audio playback.
+                        </audio>
+                      </div>
+                    ) : (
+                      <p>{post.content}</p>
+                    )}
                   </div>
                 </article>
               ))}
@@ -449,16 +880,137 @@ export default function Channels({ user }) {
             </div>
 
             {isAdmin && (
-              <form className="channel-composer" onSubmit={publishPost}>
-                <input
-                  value={content}
-                  onChange={(event) => setContent(event.target.value)}
-                  placeholder="Write a channel post..."
-                />
-                <button disabled={loading || !content.trim()}>
-                  <Send size={19} />
-                </button>
-              </form>
+              <div className="channel-composer-area">
+                {isRecording && (
+                  <div className="channel-recording-indicator">
+                    <span className="channel-recording-dot" />
+                    <span>Recording voice message</span>
+                    <strong>
+                      {formatRecordingTime(recordingSeconds)}
+                    </strong>
+
+                    <button
+                      type="button"
+                      onClick={cancelRecording}
+                      title="Cancel recording"
+                      aria-label="Cancel recording"
+                    >
+                      <X size={17} />
+                    </button>
+                  </div>
+                )}
+
+                {voicePreviewUrl && voiceFile && !isRecording && (
+                  <div className="channel-voice-preview">
+                    <div className="channel-voice-preview-heading">
+                      <Mic size={18} />
+                      <span>Voice message preview</span>
+                    </div>
+
+                    <audio
+                      controls
+                      src={voicePreviewUrl}
+                      preload="metadata"
+                    />
+
+                    <div className="channel-voice-preview-actions">
+                      <button
+                        type="button"
+                        className="channel-voice-delete"
+                        onClick={clearVoicePreview}
+                        disabled={uploadingVoice}
+                      >
+                        <Trash2 size={16} />
+                        Delete
+                      </button>
+
+                      <button
+                        type="button"
+                        className="channel-voice-send"
+                        onClick={publishVoiceMessage}
+                        disabled={uploadingVoice || loading}
+                      >
+                        {uploadingVoice ? (
+                          <>
+                            <Loader2 size={17} className="channel-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Send size={17} />
+                            Publish voice message
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!voicePreviewUrl && (
+                  <form className="channel-composer" onSubmit={publishPost}>
+                    <input
+                      value={content}
+                      onChange={(event) => setContent(event.target.value)}
+                      placeholder="Write a channel post..."
+                      disabled={loading || isRecording || uploadingVoice}
+                    />
+
+                    <button
+                      type="submit"
+                      disabled={loading || !content.trim() || isRecording}
+                      title="Publish post"
+                      aria-label="Publish post"
+                    >
+                      <Send size={19} />
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`channel-voice-button ${
+                        isRecording ? "recording" : ""
+                      }`}
+                      disabled={loading || uploadingVoice}
+                      onPointerDown={(event) => {
+                        event.preventDefault();
+
+                        if (!isRecording) {
+                          event.currentTarget.setPointerCapture?.(
+                            event.pointerId
+                          );
+                          startVoiceRecording();
+                        }
+                      }}
+                      onPointerUp={(event) => {
+                        event.preventDefault();
+
+                        if (isRecording) {
+                          stopVoiceRecording();
+                        }
+                      }}
+                      onPointerLeave={() => {
+                        if (isRecording) {
+                          stopVoiceRecording();
+                        }
+                      }}
+                      onPointerCancel={cancelRecording}
+                      onContextMenu={(event) => event.preventDefault()}
+                      title="Hold to record a voice message"
+                      aria-label="Hold to record a voice message"
+                    >
+                      {isRecording ? (
+                        <Square size={19} />
+                      ) : (
+                        <Mic size={20} />
+                      )}
+                    </button>
+                  </form>
+                )}
+
+                <div className="channel-voice-hint">
+                  <Mic size={13} />
+                  Hold the microphone button to record a voice message.
+                </div>
+              </div>
             )}
 
             {role === "subscriber" && (
@@ -469,66 +1021,96 @@ export default function Channels({ user }) {
             )}
 
             {role && role !== "owner" && (
-              <button className="channel-leave-button" onClick={leaveChannel}>
-                <LogOut size={16} /> Leave channel
+              <button
+                className="channel-leave-button"
+                onClick={leaveChannel}
+                disabled={loading}
+              >
+                <LogOut size={16} />
+                Leave channel
               </button>
             )}
           </>
         ) : (
           <div className="channels-welcome">
             <div className="channels-welcome-icon">
-              <Radio size={48} />
+              <Sparkles size={43} />
             </div>
 
             <h2>LOLZ Channels</h2>
+
             <p>
-              Follow channels, discover updates, and stay connected.
+              Follow channels, discover updates, and stay connected
+              with the communities you love.
             </p>
 
             <button onClick={() => setShowCreate(true)}>
-              <Plus size={18} /> Create your channel
+              <Plus size={18} />
+              Create your channel
             </button>
           </div>
         )}
       </main>
 
       {error && (
-        <div className="channels-error">
-          {error}
-          <button onClick={() => setError("")}>×</button>
+        <div className="channels-error" role="alert">
+          <span>{error}</span>
+          <button onClick={() => setError("")} aria-label="Close error">
+            <X size={18} />
+          </button>
         </div>
       )}
 
       {showCreate && (
         <div
           className="channel-modal-backdrop"
-          onClick={() => setShowCreate(false)}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setShowCreate(false);
+            }
+          }}
         >
-          <form
-            className="channel-create-modal"
-            onSubmit={createChannel}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h2>Create a channel</h2>
-            <p>Build your own broadcasting space on LOLZ.</p>
+          <form className="channel-create-modal" onSubmit={createChannel}>
+            <div className="channel-modal-heading">
+              <div>
+                <span className="channels-modal-eyebrow">NEW COMMUNITY</span>
+                <h2>Create a channel</h2>
+                <p>Build your own broadcasting space on LOLZ.</p>
+              </div>
 
-            <label>Channel name</label>
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Enter channel name"
-              required
-              maxLength={60}
-            />
+              <button
+                type="button"
+                className="channel-modal-close"
+                onClick={() => setShowCreate(false)}
+                aria-label="Close"
+              >
+                <X size={19} />
+              </button>
+            </div>
 
-            <label>Description</label>
-            <textarea
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Describe your channel..."
-              rows={3}
-              maxLength={500}
-            />
+            <label>
+              Channel name
+
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Enter channel name"
+                required
+                maxLength={60}
+              />
+            </label>
+
+            <label>
+              Description
+
+              <textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Describe your channel..."
+                rows={3}
+                maxLength={500}
+              />
+            </label>
 
             <label>Privacy</label>
 
@@ -536,17 +1118,23 @@ export default function Channels({ user }) {
               <button
                 type="button"
                 className={isPublic ? "selected" : ""}
+                aria-pressed={isPublic}
                 onClick={() => setIsPublic(true)}
               >
-                <Globe size={17} /> Public
+                <Globe size={18} />
+                <span>Public</span>
+                <small>Discoverable by everyone</small>
               </button>
 
               <button
                 type="button"
                 className={!isPublic ? "selected" : ""}
+                aria-pressed={!isPublic}
                 onClick={() => setIsPublic(false)}
               >
-                <Lock size={17} /> Private
+                <Lock size={18} />
+                <span>Private</span>
+                <small>Invite code required</small>
               </button>
             </div>
 
@@ -570,6 +1158,6 @@ export default function Channels({ user }) {
           </form>
         </div>
       )}
-    </div>
+    </section>
   );
 }

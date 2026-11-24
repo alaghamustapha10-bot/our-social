@@ -1,12 +1,21 @@
 import Groups from "./Groups";
 import Channels from "./Channels";
 import PreferencesSettings from "./PreferencesSettings";
-import { useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { supabase } from "./supabase";
 import Navigation from "./Navigation";
 import Lolz from "./Lolz";
 import "./App.css";
 import Calls from "./Calls";
+import Premium from "./Premium";
+import { Capacitor } from "@capacitor/core";
+import { PushNotifications } from "@capacitor/push-notifications";
+import { Room, RoomEvent } from "livekit-client";
 const translations = {
 "Please sign in to continue.": "يرجى تسجيل الدخول للمتابعة.",
 "Recently": "مؤخراً",
@@ -188,10 +197,70 @@ return (
  
 export default function App() {
 const { t, isArabic } = useTranslation();
- 
+ const [isPremium, setIsPremium] = useState(false);
 const [user, setUser] = useState(null);
 const [profile, setProfile] = useState(null);
  
+useEffect(() => {
+  if (!user?.id || !Capacitor.isNativePlatform()) return;
+
+  let active = true;
+  const listeners = [];
+
+  async function setupPushNotifications() {
+    try {
+      let permission = await PushNotifications.checkPermissions();
+
+      if (permission.receive !== "granted") {
+        permission = await PushNotifications.requestPermissions();
+      }
+
+      if (permission.receive !== "granted") {
+        console.log("Push notification permission denied");
+        return;
+      }
+
+      listeners.push(
+        await PushNotifications.addListener("registration", async (token) => {
+          if (!active) return;
+
+          const { error } = await supabase
+            .from("push_tokens")
+            .upsert(
+              {
+                user_id: user.id,
+                token: token.value,
+                platform: "android",
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "token" }
+            );
+
+          if (error) console.error("Saving push token failed:", error);
+          else console.log("LOLZ device registered for notifications");
+        })
+      );
+
+      listeners.push(
+        await PushNotifications.addListener("registrationError", (error) => {
+          console.error("Push registration error:", error);
+        })
+      );
+
+      await PushNotifications.register();
+    } catch (error) {
+      console.error("Push setup failed:", error);
+    }
+  }
+
+  setupPushNotifications();
+
+  return () => {
+    active = false;
+    listeners.forEach((listener) => listener.remove());
+  };
+}, [user?.id]);
+
 const [posts, setPosts] = useState([]);
 const [stories, setStories] = useState([]);
 const [likedPosts, setLikedPosts] = useState([]);
@@ -227,15 +296,42 @@ const [conversationMessages, setConversationMessages] = useState([]);
 const [messageText, setMessageText] = useState("");
 const [messagesLoading, setMessagesLoading] = useState(false);
 const [messageSending, setMessageSending] = useState(false);
- 
+ // CENTRAL CALL CONTEXT
+const [selectedCallContext, setSelectedCallContext] =
+  useState(null);
 
+const [activeCallContext, setActiveCallContext] = useState(null);
+
+const handleCallContextChange = useCallback((context) => {
+  console.log("[LOLZ CALL CONTEXT]", context);
+  setSelectedCallContext(context);
+}, []);
+
+const handleCallStateChange = useCallback(({ status, context }) => {
+  if (status === "connecting" || status === "active") {
+    setActiveCallContext(context);
+  }
+
+  if (status === "ended") {
+    setActiveCallContext(null);
+  }
+}, []);
+
+const currentCallContext = activeCallContext || selectedCallContext;
+const voicePressActiveRef = useRef(false);
 const [messageFile, setMessageFile] = useState(null);
 const [messageFilePreview, setMessageFilePreview] = useState("");
-
+const [voiceFile, setVoiceFile] = useState(null);
+const [isRecording, setIsRecording] = useState(false);
+const [recordingSeconds, setRecordingSeconds] = useState(0);
+const [voiceFilePreview, setVoiceFilePreview] = useState("");
+const mediaRecorderRef = useRef(null);
+const audioChunksRef = useRef([]);
 const [notifications, setNotifications] = useState([]);
 const [notificationLoading, setNotificationLoading] = useState(false);
-
+const voiceCancelledRef = useRef(false);
 const [followStats, setFollowStats] = useState({
+
   followers: 0,
   following: 0,
 });
@@ -267,8 +363,32 @@ const storyInput = useRef(null);
 const imageInput = useRef(null);
 const messageMediaInput = useRef(null);
 const messagesEndRef = useRef(null);
+const shouldAutoScrollRef = useRef(true);
+useEffect(() => {
+  if (!isRecording) {
+    setRecordingSeconds(0);
+    return;
+  }
 
- 
+  const timer = setInterval(() => {
+    setRecordingSeconds((seconds) => seconds + 1);
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, [isRecording]);
+ useEffect(() => {
+  if (!voiceFile) {
+    setVoiceFilePreview("");
+    return;
+  }
+
+  const previewUrl = URL.createObjectURL(voiceFile);
+  setVoiceFilePreview(previewUrl);
+
+  return () => {
+    URL.revokeObjectURL(previewUrl);
+  };
+}, [voiceFile]);
 async function startPrivateCall(withVideo = false) {
 if (!user || !activeConversation || callConnecting || callActive) {
 return;
@@ -278,21 +398,36 @@ setCallConnecting(true);
 setCallError("");
  
 try {
-const { data, error } = await supabase.functions.invoke(
-"livekit-token",
-{
-body: {
-action: "create",
-call_type: "private",
-conversation_id: activeConversation.id,
-},
-}
-);
- 
-if (error) throw error;
-if (!data?.success || !data.token || !data.server_url) {
-throw new Error(data?.error || "Could not create call");
-}
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError) throw sessionError;
+
+  if (!session?.access_token) {
+    throw new Error("Your session has expired. Please sign in again.");
+  }
+
+  const { data, error } = await supabase.functions.invoke(
+    "livekit-token",
+    {
+      body: {
+        action: "create",
+        call_type: "private",
+        conversation_id: activeConversation.id,
+      },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    }
+  );
+
+  if (error) throw error;
+
+  if (!data?.success || !data.token || !data.server_url) {
+    throw new Error(data?.error || "Could not create call");
+  }
 setCallId(data.call.id);
 const room = new Room();
  
@@ -331,12 +466,26 @@ const room = callRoomRef.current;
 if (!room) return;
  
 try {
-await supabase.functions.invoke("livekit-token", {
-body: {
-action: "leave",
-call_id: callId,
-},
-});
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError) throw sessionError;
+
+  if (!session?.access_token) {
+    throw new Error("Your session has expired. Please sign in again.");
+  }
+
+  await supabase.functions.invoke("livekit-token", {
+    body: {
+      action: "leave",
+      call_id: callId,
+    },
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
 } catch (error) {
 console.error("Leave call error:", error);
 }
@@ -380,7 +529,7 @@ return;
  
 const currentUser = authData.user;
 setUser(currentUser);
- 
+ await loadPremiumStatus(currentUser.id);
 const { data: profileData } = await supabase
 .from("profiles")
 .select("*")
@@ -1016,49 +1165,49 @@ setProfileLoading(false);
 // NOTIFICATIONS
  
 async function loadNotifications(userId = user?.id) {
-if (!userId) return;
- 
-setNotificationLoading(true);
- 
-try {
-const { data, error } = await supabase
-.from("notifications")
-.select("*")
-.eq("recipient_id", userId)
-.order("created_at", { ascending: false })
-.limit(50);
- 
-if (error) throw error;
- 
-const rows = data || [];
-const actorIds = [
-...new Set(rows.map((item) => item.actor_id).filter(Boolean)),
-];
- 
-let profileMap = {};
- 
-if (actorIds.length) {
-const { data: profiles } = await supabase
-.from("profiles")
-.select("*")
-.in("id", actorIds);
- 
-(profiles || []).forEach((item) => {
-profileMap[item.id] = item;
-});
-}
- 
-setNotifications(
-rows.map((item) => ({
-...item,
-actor: profileMap[item.actor_id] || {},
-}))
-);
-} catch (error) {
-setNotice(t("Could not load notifications: ") + error.message);
-}
- 
-setNotificationLoading(false);
+  if (!userId) return;
+
+  setNotificationLoading(true);
+
+  try {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("recipient_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    const rows = data || [];
+    const actorIds = [...new Set(rows.map((item) => item.actor_id))];
+
+    let profileMap = {};
+
+    if (actorIds.length) {
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .in("id", actorIds);
+
+      if (profilesError) throw profilesError;
+
+      (profiles || []).forEach((item) => {
+        profileMap[item.id] = item;
+      });
+    }
+
+    setNotifications(
+      rows.map((item) => ({
+        ...item,
+        actor: profileMap[item.actor_id] || {},
+      }))
+    );
+  } catch (error) {
+    setNotice(t("Could not load notifications: ") + error.message);
+  } finally {
+    setNotificationLoading(false);
+  }
 }
  
 async function markNotificationRead(notificationId) {
@@ -1097,6 +1246,70 @@ current.map((item) => ({ ...item, is_read: true }))
 );
 }
  
+async function deleteConversationForMe(conversation) {
+  if (!conversation || !user?.id) return;
+
+  const confirmed = window.confirm(
+    "هل تريد إخفاء هذه المحادثة من حسابك فقط؟ ستبقى ظاهرة للطرف الآخر."
+  );
+
+  if (!confirmed) return;
+
+  const { error } = await supabase
+    .from("conversation_user_settings")
+    .upsert(
+      {
+        conversation_id: conversation.id,
+        user_id: user.id,
+        hidden_at: new Date().toISOString(),
+      },
+      { onConflict: "conversation_id,user_id" }
+    );
+
+  if (error) {
+    setNotice("تعذر إخفاء المحادثة: " + error.message);
+    return;
+  }
+
+  if (activeConversation?.id === conversation.id) {
+    setActiveConversation(null);
+    setConversationMessages([]);
+  }
+
+  await loadConversations();
+  setNotice("تم إخفاء المحادثة من حسابك.");
+}
+
+async function deleteConversationForEveryone(conversation) {
+  if (!conversation || !user?.id) return;
+
+  const confirmed = window.confirm(
+    "هل أنت متأكد؟ ستختفي هذه المحادثة من قائمة الطرفين، ولن تظهر رسائلها لهما."
+  );
+
+  if (!confirmed) return;
+
+  const { error } = await supabase
+    .from("conversation_deletions")
+    .insert({
+      conversation_id: conversation.id,
+      deleted_by: user.id,
+    });
+
+  if (error) {
+    setNotice("تعذر حذف المحادثة: " + error.message);
+    return;
+  }
+
+  if (activeConversation?.id === conversation.id) {
+    setActiveConversation(null);
+    setConversationMessages([]);
+  }
+
+  await loadConversations();
+  setNotice("تم إخفاء المحادثة من حساب الطرفين.");
+}
+
 useEffect(() => {
 if (activePage === "activity" && user) {
 loadNotifications(user.id);
@@ -1106,131 +1319,128 @@ loadNotifications(user.id);
 // MESSAGING
  
 async function loadConversations() {
-if (!user) return;
- 
-setMessagesLoading(true);
- 
-try {
-const { data, error } = await supabase
-.from("conversations")
-.select("*")
-.or(`user_one.eq.${user.id},user_two.eq.${user.id}`)
-.order("created_at", { ascending: false });
- 
-if (error) throw error;
- 
-const rows = data || [];
- 
-if (!rows.length) {
-setConversations([]);
-setMessagesLoading(false);
-return;
+  if (!user) return;
+
+  try {
+    const { data, error } = await supabase
+      .from("conversations")
+      .select("*")
+      .or(`user_one.eq.${user.id},user_two.eq.${user.id}`)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    const rows = data || [];
+
+    if (!rows.length) {
+      setConversations([]);
+      return;
+    }
+
+    const otherIds = rows.map((conversation) =>
+      conversation.user_one === user.id
+        ? conversation.user_two
+        : conversation.user_one
+    );
+
+    const uniqueIds = [...new Set(otherIds)];
+
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("*")
+      .in("id", uniqueIds);
+
+    if (profilesError) throw profilesError;
+
+    const profileMap = {};
+
+    (profiles || []).forEach((item) => {
+      profileMap[item.id] = item;
+    });
+
+    const results = await Promise.all(
+      rows.map(async (conversation) => {
+        const otherId =
+          conversation.user_one === user.id
+            ? conversation.user_two
+            : conversation.user_one;
+
+        const { data: lastMessages } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("conversation_id", conversation.id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        return {
+          ...conversation,
+          otherProfile: profileMap[otherId] || {},
+          lastMessage: lastMessages?.[0] || null,
+        };
+      })
+    );
+
+    setConversations(results);
+
+    setActiveConversation((current) => {
+      if (!current) return null;
+    return results.find((item) => item.id === current.id) || null;
+    });
+  } catch (error) {
+    setNotice(t("Could not load conversations: ") + error.message);
+  }
 }
- 
-const otherIds = rows.map((conversation) =>
-conversation.user_one === user.id
-? conversation.user_two
-: conversation.user_one
-);
- 
-const uniqueIds = [...new Set(otherIds)];
- 
-const { data: profiles, error: profilesError } = await supabase
-.from("profiles")
-.select("*")
-.in("id", uniqueIds);
- 
-if (profilesError) throw profilesError;
- 
-const profileMap = {};
-(profiles || []).forEach((item) => {
-profileMap[item.id] = item;
-});
- 
-const results = await Promise.all(
-rows.map(async (conversation) => {
-const otherId =
-conversation.user_one === user.id
-? conversation.user_two
-: conversation.user_one;
- 
-const { data: lastMessages } = await supabase
-.from("messages")
-.select("*")
-.eq("conversation_id", conversation.id)
-.order("created_at", { ascending: false })
-.limit(1);
- 
-return {
-...conversation,
-otherProfile: profileMap[otherId] || {},
-lastMessage: lastMessages?.[0] || null,
-};
-})
-);
- 
-setConversations(results);
- 
-setActiveConversation((current) => {
-if (!current) return null;
-return results.find((item) => item.id === current.id) || current;
-});
-} catch (error) {
-setNotice(t("Could not load conversations: ") + error.message);
-}
- 
-setMessagesLoading(false);
-}
- 
+
 async function loadMessages(conversationId) {
-if (!conversationId) return;
- 
-setMessagesLoading(true);
- 
-try {
-const { data, error } = await supabase
-.from("messages")
-.select("*")
-.eq("conversation_id", conversationId)
-.order("created_at", { ascending: true });
- 
-if (error) throw error;
-setConversationMessages(data || []);
-} catch (error) {
-setNotice(t("Could not load messages: ") + error.message);
+  if (!conversationId) return;
+
+  setMessagesLoading(true);
+
+  try {
+    const { data, error } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    setConversationMessages(data || []);
+  } catch (error) {
+    setNotice(t("Could not load messages: ") + error.message);
+  } finally {
+    setMessagesLoading(false);
+  }
 }
- 
-setMessagesLoading(false);
-}
- 
+
 useEffect(() => {
-if (!user || !activeConversation?.id) return;
- 
-const channel = supabase
-.channel(`messages-${activeConversation.id}`)
-.on(
-"postgres_changes",
-{
-event: "INSERT",
-schema: "public",
-table: "messages",
-filter: `conversation_id=eq.${activeConversation.id}`,
-},
-(payload) => {
-const newMessage = payload.new;
- 
-setConversationMessages((current) =>
-current.some((message) => message.id === newMessage.id)
-? current
-: [...current, newMessage]
-);
- 
-loadConversations();
-}
-)
-.subscribe();
- 
-return () => supabase.removeChannel(channel);
+  if (!user || !activeConversation?.id) return;
+
+  const channel = supabase
+    .channel(`messages-${activeConversation.id}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `conversation_id=eq.${activeConversation.id}`,
+      },
+      (payload) => {
+        const newMessage = payload.new;
+
+        setConversationMessages((current) =>
+          current.some((message) => message.id === newMessage.id)
+            ? current
+            : [...current, newMessage]
+        );
+
+        loadConversations();
+      }
+    )
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
 }, [activeConversation?.id, user?.id]);
  
 async function openConversationWith(person) {
@@ -1319,77 +1529,231 @@ messageMediaInput.current.value = "";
 }
 }
  
+async function startVoiceRecording() {
+  try {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      alert("Voice recording is not supported in this browser.");
+      return;
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+    });
+// إذا رفع المستخدم إصبعه قبل منح إذن الميكروفون، لا تبدأ التسجيل
+if (!voicePressActiveRef.current) {
+  stream.getTracks().forEach((track) => track.stop());
+  return;
+}
+    const mimeTypes = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/ogg;codecs=opus",
+      "audio/ogg",
+    ];
+
+    const mimeType = mimeTypes.find((type) =>
+      MediaRecorder.isTypeSupported(type)
+    );
+
+    const recorder = mimeType
+      ? new MediaRecorder(stream, { mimeType })
+      : new MediaRecorder(stream);
+
+    mediaRecorderRef.current = recorder;
+    audioChunksRef.current = [];
+    voiceCancelledRef.current = false;
+
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        audioChunksRef.current.push(event.data);
+      }
+    };
+
+    
+recorder.onstop = () => {
+  stream.getTracks().forEach((track) => track.stop());
+
+  const blob = new Blob(audioChunksRef.current, {
+    type: recorder.mimeType || "audio/webm",
+  });
+
+  alert(
+    `Audio size: ${blob.size} bytes\nAudio type: ${blob.type || "unknown"}`
+  );
+
+  if (!voiceCancelledRef.current && blob.size > 0) {
+    const extension = blob.type.includes("ogg") ? "ogg" : "webm";
+
+    const file = new File(
+      [blob],
+      `voice-${Date.now()}.${extension}`,
+      { type: blob.type || "audio/webm" }
+    );
+
+    setVoiceFile(file);
+  }
+
+  audioChunksRef.current = [];
+  mediaRecorderRef.current = null;
+  setIsRecording(false);
+};
+
+
+  recorder.start(250);
+    setIsRecording(true);
+  } catch (error) {
+    console.error("Voice recording error:", error);
+    alert("Microphone permission is required to record a voice message.");
+  }
+}
+
+
+function stopVoiceRecording() {
+  voicePressActiveRef.current = false;
+
+  if (mediaRecorderRef.current?.state === "recording") {
+    mediaRecorderRef.current.stop();
+  }
+}
+
+function cancelVoiceRecording() {
+  voicePressActiveRef.current = false;
+  voiceCancelledRef.current = true;
+
+  if (mediaRecorderRef.current?.state === "recording") {
+    mediaRecorderRef.current.stop();
+  }
+
+  setVoiceFile(null);
+  setIsRecording(false);
+}
+
+function handleVoicePointerDown(event) {
+  if (event.button !== undefined && event.button !== 0) return;
+
+  event.preventDefault();
+
+  if (isRecording || voiceFile || messageSending || messageFile) return;
+
+  try {
+    event.currentTarget.setPointerCapture(event.pointerId);
+  } catch {}
+
+  voicePressActiveRef.current = true;
+  startVoiceRecording();
+}
+
+function handleVoicePointerUp(event) {
+  event.preventDefault();
+  stopVoiceRecording();
+}
+
+function handleVoicePointerCancel() {
+  cancelVoiceRecording();
+}
+
+
 async function sendMessage(event) {
-event.preventDefault();
- 
-if (!user || !activeConversation) return;
- 
-const content = messageText.trim();
-const file = messageFile;
- 
-if (!content && !file) return;
- 
-setMessageSending(true);
-setNotice("");
- 
-try {
-let mediaUrl = null;
-let messageType = "text";
- 
-if (file) {
-if (
-!file.type.startsWith("image/") &&
-!file.type.startsWith("video/")
-) {
-throw new Error(t("Only images and videos are allowed."));
+  event.preventDefault();
+
+  if (!user || !activeConversation) return;
+
+  const content = messageText.trim();
+  const file = messageFile;
+  const audioFile = voiceFile;
+
+  if (!content && !file && !audioFile) return;
+
+  if (file && audioFile) {
+    setNotice("Send the photo/video and voice message separately.");
+    return;
+  }
+
+  setMessageSending(true);
+  setNotice("");
+
+  try {
+    let mediaUrl = null;
+    let messageType = "text";
+    let uploadedFile = null;
+
+    if (audioFile) {
+      if (!audioFile.type.startsWith("audio/")) {
+        throw new Error("Invalid audio file.");
+      }
+
+      if (audioFile.size > 100 * 1024 * 1024) {
+        throw new Error(t("Maximum file size is 100 MB."));
+      }
+
+      messageType = "audio";
+      uploadedFile = audioFile;
+      mediaUrl = await uploadMedia(audioFile, "messages");
+
+      if (!mediaUrl) {
+        throw new Error(t("Could not upload the media file."));
+      }
+    } else if (file) {
+      if (
+        !file.type.startsWith("image/") &&
+        !file.type.startsWith("video/")
+      ) {
+        throw new Error(t("Only images and videos are allowed."));
+      }
+
+      if (file.size > 100 * 1024 * 1024) {
+        throw new Error(t("Maximum file size is 100 MB."));
+      }
+
+      messageType = file.type.startsWith("image/")
+        ? "image"
+        : "video";
+
+      uploadedFile = file;
+      mediaUrl = await uploadMedia(file, "messages");
+
+      if (!mediaUrl) {
+        throw new Error(t("Could not upload the media file."));
+      }
+    }
+
+    const { error } = await supabase.from("messages").insert({
+      conversation_id: activeConversation.id,
+      sender_id: user.id,
+      content:
+        content ||
+        (messageType === "image"
+          ? "Photo"
+          : messageType === "video"
+          ? "Video"
+          : messageType === "audio"
+          ? "Voice message"
+          : ""),
+      message_type: messageType,
+      media_url: mediaUrl,
+      file_name: uploadedFile?.name || null,
+      mime_type: uploadedFile?.type || null,
+    });
+
+    if (error) throw error;
+
+    setMessageText("");
+    setMessageFile(null);
+    setVoiceFile(null);
+
+    if (messageMediaInput.current) {
+      messageMediaInput.current.value = "";
+    }
+
+    await loadMessages(activeConversation.id);
+    await loadConversations();
+  } catch (error) {
+    setNotice(t("Could not send message: ") + error.message);
+  } finally {
+    setMessageSending(false);
+  }
 }
- 
-if (file.size > 100 * 1024 * 1024) {
-throw new Error(t("Maximum file size is 100 MB."));
-}
- 
-messageType = file.type.startsWith("image/") ? "image" : "video";
-mediaUrl = await uploadMedia(file, "messages");
- 
-if (!mediaUrl) {
-throw new Error(t("Could not upload the media file."));
-}
-}
- 
-const { error } = await supabase.from("messages").insert({
-conversation_id: activeConversation.id,
-sender_id: user.id,
-content:
-content ||
-(messageType === "image"
-? "Photo"
-: messageType === "video"
-? "Video"
-: ""),
-message_type: messageType,
-media_url: mediaUrl,
-file_name: file?.name || null,
-mime_type: file?.type || null,
-});
- 
-if (error) throw error;
- 
-setMessageText("");
-setMessageFile(null);
- 
-if (messageMediaInput.current) {
-messageMediaInput.current.value = "";
-}
- 
-await loadMessages(activeConversation.id);
-await loadConversations();
-} catch (error) {
-setNotice(t("Could not send message: ") + error.message);
-} finally {
-setMessageSending(false);
-}
-}
- 
+
  
 useEffect(() => {
 if (activePage === "messages" && user) {
@@ -1398,9 +1762,14 @@ loadConversations();
 }, [activePage, user?.id]);
  
 useEffect(() => {
-messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  const container = messagesEndRef.current?.parentElement;
+  if (!container || !shouldAutoScrollRef.current) return;
+
+  container.scrollTo({
+    top: container.scrollHeight,
+    behavior: "smooth",
+  });
 }, [conversationMessages]);
- 
 // PROFILE
  
 async function saveProfile(event) {
@@ -1466,14 +1835,71 @@ async function logout() {
 await supabase.auth.signOut();
 }
  
+
+
+
+// LOAD PREMIUM STATUS
+
+async function loadPremiumStatus(userId) {
+  if (!userId) return;
+
+  try {
+    const { data, error } = await supabase
+      .from("lolz_subscriptions")
+      .select("status")
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    setIsPremium(
+      String(data?.status || "").toLowerCase() === "active"
+    );
+  } catch (error) {
+    console.error("Premium status error:", error);
+    setIsPremium(false);
+  }
+}
+
+// PAYPAL PREMIUM CHECKOUT
+
+async function startPremiumCheckout() {
+  try {
+    setNotice("");
+
+    const { data, error } = await supabase.functions.invoke(
+      "paypal-subscription",
+      { body: {} }
+    );
+
+    if (error) throw error;
+
+    if (!data?.approval_url) {
+      throw new Error(
+        data?.error || "PayPal approval link was not returned."
+      );
+    }
+
+    window.location.assign(data.approval_url);
+  } catch (error) {
+    console.error("Premium checkout error:", error);
+    setNotice(
+      error.message || "Could not connect to PayPal. Please try again."
+    );
+  }
+}
+
+
 // NAVIGATION
- 
+
 const displayName =
 profile?.display_name ||
 profile?.full_name ||
 profile?.username ||
 t("Your profile");
- 
+
 const filteredPosts = posts.filter((post) => {
 const term = search.toLowerCase().trim();
 if (!term) return true;
@@ -1544,7 +1970,11 @@ return (
  
 return (
 <div
-className={`app-shell ${isArabic ? "is-arabic" : ""}`}
+className={`app-shell ${isArabic ? "is-arabic" : ""} ${
+  activePage === "messages" && activeConversation
+    ? "private-chat-open"
+    : ""
+}`}
 dir={isArabic ? "rtl" : "ltr"}
 >
 <Navigation
@@ -1592,15 +2022,23 @@ activePage === "people"
  
 {/* CHANNELS */}
 {activePage === "channels" && (
-<section className="other-page">
-<Channels user={user} />
+<section className={`other-page messages-page ${
+  activeConversation ? "conversation-open" : ""
+}`}>
+<Channels
+  user={user}
+  onCallContextChange={handleCallContextChange}
+/>
 </section>
 )}
  
 {/* GROUPS */}
 {activePage === "groups" && (
 <section className="other-page groups-outer-page">
-<Groups user={user} />
+<Groups
+  user={user}
+  onCallContextChange={handleCallContextChange}
+/>
 </section>
 )}
  
@@ -2052,61 +2490,109 @@ rel="noreferrer"
 </a>
 )}
  
+
 {editProfile && (
-<form className="profile-edit-form" onSubmit={saveProfile}>
-<label>{t("Display name")}</label>
-<input
-value={profileForm.display_name}
-onChange={(event) =>
-setProfileForm({
-...profileForm,
-display_name: event.target.value,
-})
-}
-placeholder={t("Your name")}
-/>
- 
-<label>{t("Username")}</label>
-<input
-value={profileForm.username}
-onChange={(event) =>
-setProfileForm({
-...profileForm,
-username: event.target.value,
-})
-}
-placeholder="username"
-/>
- 
-<label>{t("Bio")}</label>
-<textarea
-value={profileForm.bio}
-onChange={(event) =>
-setProfileForm({
-...profileForm,
-bio: event.target.value,
-})
-}
-placeholder={t("Write a little about yourself...")}
-/>
- 
-<label>{t("Website")}</label>
-<input
-value={profileForm.website}
-onChange={(event) =>
-setProfileForm({
-...profileForm,
-website: event.target.value,
-})
-}
-placeholder="https://example.com"
-/>
- 
-<button className="primary-button" disabled={busy}>
-{busy ? t("Saving...") : t("Save changes")}
-</button>
-</form>
+  <form className="profile-edit-form" onSubmit={saveProfile}>
+    <div className="edit-profile-heading">
+      <div>
+        <h2>Edit Profile</h2>
+        <p>Manage your personal information</p>
+      </div>
+    </div>
+
+    <div className="edit-profile-photo">
+      <Avatar
+        url={profile?.avatar_url}
+        name={displayName}
+        size="profile"
+      />
+
+      <div className="edit-profile-photo-info">
+        <strong>{displayName}</strong>
+        <span>@{profile?.username || "user"}</span>
+        <label htmlFor="avatar-upload" className="avatar-edit">
+          Change profile photo
+        </label>
+      </div>
+    </div>
+
+    <div className="edit-profile-fields">
+      <label>
+        Display name
+        <input
+          value={profileForm.display_name}
+          onChange={(event) =>
+            setProfileForm({
+              ...profileForm,
+              display_name: event.target.value,
+            })
+          }
+          placeholder="Your name"
+        />
+      </label>
+
+      <label>
+        Username
+        <input
+          value={profileForm.username}
+          onChange={(event) =>
+            setProfileForm({
+              ...profileForm,
+              username: event.target.value,
+            })
+          }
+          placeholder="username"
+        />
+      </label>
+
+      <label>
+        Bio
+        <textarea
+          value={profileForm.bio}
+          onChange={(event) =>
+            setProfileForm({
+              ...profileForm,
+              bio: event.target.value,
+            })
+          }
+          placeholder="Write a little about yourself..."
+          maxLength={150}
+        />
+        <small>{profileForm.bio.length}/150</small>
+      </label>
+
+      <label>
+        Website
+        <input
+          type="url"
+          value={profileForm.website}
+          onChange={(event) =>
+            setProfileForm({
+              ...profileForm,
+              website: event.target.value,
+            })
+          }
+          placeholder="https://example.com"
+        />
+      </label>
+    </div>
+
+    <div className="edit-profile-actions">
+      <button
+        type="button"
+        className="secondary-button"
+        onClick={() => setEditProfile(false)}
+      >
+        Cancel
+      </button>
+
+      <button className="primary-button" disabled={busy}>
+        {busy ? t("Saving...") : t("Save changes")}
+      </button>
+    </div>
+  </form>
 )}
+
  
 <div className="profile-stats">
 <div>
@@ -2137,7 +2623,9 @@ placeholder="https://example.com"
 {/* MESSAGES */}
 
 {activePage === "messages" && (
-  <section className="other-page">
+  <section className={`other-page messages-page ${
+  activeConversation ? "conversation-open" : ""
+}`}>
     <span className="eyebrow">{t("PRIVATE CONVERSATIONS")}</span>
     <h1>{t("Messages")}</h1>
 
@@ -2179,6 +2667,8 @@ placeholder="https://example.com"
                   ? `📷 ${t("Photo")}`
                   : lastMessage?.message_type === "video"
                   ? `🎥 ${t("Video message")}`
+                  : lastMessage?.message_type === "audio"
+                  ? `🎤 ${t("Voice message")}`
                   : lastMessage?.content ||
                     t("Start a conversation");
 
@@ -2220,25 +2710,45 @@ placeholder="https://example.com"
         {activeConversation ? (
           <>
             <div className="chat-header">
-              <Avatar
-                url={activeConversation.otherProfile?.avatar_url}
-                name={
-                  activeConversation.otherProfile?.display_name ||
-                  activeConversation.otherProfile?.username
-                }
-                size="large"
-              />
+  <button
+    type="button"
+    className="chat-back-button"
+    onClick={() => {
+      setActiveConversation(null);
+      setConversationMessages([]);
+      setMessageText("");
+      setMessageFile(null);
+      setVoiceFile(null);
 
-              <div>
-                <strong>
-                  {activeConversation.otherProfile?.display_name ||
-                    activeConversation.otherProfile?.full_name ||
-                    activeConversation.otherProfile?.username ||
-                    t("Member")}
-                </strong>
-                <small>{t("Private conversation")}</small>
-              </div>
-            </div>
+      if (messageMediaInput.current) {
+        messageMediaInput.current.value = "";
+      }
+    }}
+    aria-label={t("Back")}
+    title={t("Back")}
+  >
+    {isArabic ? "→" : "←"}
+  </button>
+
+  <Avatar
+    url={activeConversation.otherProfile?.avatar_url}
+    name={
+      activeConversation.otherProfile?.display_name ||
+      activeConversation.otherProfile?.username
+    }
+    size="large"
+  />
+
+  <div className="chat-user-info">
+    <strong>
+      {activeConversation.otherProfile?.display_name ||
+        activeConversation.otherProfile?.full_name ||
+        activeConversation.otherProfile?.username ||
+        t("Member")}
+    </strong>
+    <small>{t("Private conversation")}</small>
+  </div>
+</div>
 
             <Calls
               supabase={supabase}
@@ -2246,7 +2756,19 @@ placeholder="https://example.com"
               conversation={activeConversation}
             />
 
-            <div className="chat-history">
+            <div
+  className="chat-history"
+  onScroll={(event) => {
+    const container = event.currentTarget;
+
+    const distanceFromBottom =
+      container.scrollHeight -
+      container.scrollTop -
+      container.clientHeight;
+
+    shouldAutoScrollRef.current = distanceFromBottom < 150;
+  }}
+>
               {messagesLoading ? (
                 <p>{t("Loading messages...")}</p>
               ) : conversationMessages.length === 0 ? (
@@ -2256,13 +2778,19 @@ placeholder="https://example.com"
               ) : (
                 conversationMessages.map((message) => {
                   const mine = message.sender_id === user.id;
-                  const isImage =
-                    message.message_type === "image" &&
-                    message.media_url;
-                  const isVideo =
-                    message.message_type === "video" &&
-                    message.media_url;
-                  const isMedia = isImage || isVideo;
+                 const isImage =
+  message.message_type === "image" &&
+  message.media_url;
+
+const isVideo =
+  message.message_type === "video" &&
+  message.media_url;
+
+const isAudio =
+  message.message_type === "audio" &&
+  message.media_url;
+
+const isMedia = isImage || isVideo || isAudio;
 
                   return (
                     <div
@@ -2285,14 +2813,21 @@ placeholder="https://example.com"
                           preload="metadata"
                         />
                       )}
-
+{isAudio && (
+  <audio
+    src={message.media_url}
+    controls
+    preload="metadata"
+    style={{ maxWidth: "100%" }}
+  />
+)}
                       {(!isMedia ||
-                        (message.content &&
-                          message.content !== "Photo" &&
-                          message.content !== "Video")) && (
-                        <div>{message.content}</div>
-                      )}
-
+  (message.content &&
+    message.content !== "Photo" &&
+    message.content !== "Video" &&
+    message.content !== "Voice message")) && (
+  <div>{message.content}</div>
+)}
                       <small>
                         {timeAgo(message.created_at, isArabic)}
                       </small>
@@ -2330,43 +2865,118 @@ placeholder="https://example.com"
               </div>
             )}
 
-            <form className="message-composer" onSubmit={sendMessage}>
-              <input
-                ref={messageMediaInput}
-                type="file"
-                accept="image/*,video/*"
-                hidden
-                onChange={handleMessageFileChange}
-              />
+           
+<form className="message-composer" onSubmit={sendMessage}>
+  <input
+    ref={messageMediaInput}
+    type="file"
+    accept="image/*,video/*"
+    hidden
+    onChange={handleMessageFileChange}
+  />
 
-              <button
-                type="button"
-                className="secondary-button attach-button"
-                onClick={() => messageMediaInput.current?.click()}
-                disabled={messageSending}
-                title="Attach a photo or video"
-              >
-                📎
-              </button>
+  <button
+    type="button"
+    className="secondary-button attach-button"
+    onClick={() => messageMediaInput.current?.click()}
+    disabled={messageSending || isRecording || !!voiceFile}
+    title="Attach a photo or video"
+  >
+    📎
+  </button>
 
-              <input
-                value={messageText}
-                onChange={(event) => setMessageText(event.target.value)}
-                placeholder={t("Write a message...")}
-                disabled={messageSending}
-              />
+  {!voiceFile && (
+  <button
+    type="button"
+    className="secondary-button"
+    onPointerDown={handleVoicePointerDown}
+    onPointerUp={handleVoicePointerUp}
+    onPointerCancel={handleVoicePointerCancel}
+    onContextMenu={(event) => event.preventDefault()}
+    disabled={messageSending || !!messageFile}
+    title="Hold to record a voice message"
+    style={{
+      touchAction: "none",
+      userSelect: "none",
+      WebkitUserSelect: "none",
+    }}
+  >
+    🎤
+  </button>
+)}
 
-              <button
-                className="primary-button"
-                type="submit"
-                disabled={
-                  messageSending ||
-                  (!messageText.trim() && !messageFile)
-                }
-              >
-                {messageSending ? t("Sending...") : t("Send")}
-              </button>
-            </form>
+  {isRecording && (
+    <>
+      <span style={{ color: "#e53935", fontWeight: "bold" }}>
+        🔴 {t("Recording...")} {Math.floor(recordingSeconds / 60)}:
+        {String(recordingSeconds % 60).padStart(2, "0")}
+      </span>
+
+      <button
+        type="button"
+        className="primary-button"
+        onClick={stopVoiceRecording}
+      >
+        ⏹
+      </button>
+
+      <button
+        type="button"
+        className="secondary-button"
+        onClick={cancelVoiceRecording}
+      >
+        ✖
+      </button>
+    </>
+  )}
+
+  
+{voiceFile && (
+  <div style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    minWidth: 0
+  }}>
+    <audio
+      src={voiceFilePreview}
+      controls
+      preload="metadata"
+      style={{ width: "180px", maxWidth: "100%" }}
+    />
+
+    <button
+      type="button"
+      className="secondary-button"
+      onClick={() => setVoiceFile(null)}
+      title="Remove voice message"
+    >
+      ✖
+    </button>
+  </div>
+)}
+
+
+  <input
+    value={messageText}
+    onChange={(event) => setMessageText(event.target.value)}
+    placeholder={t("Write a message...")}
+    disabled={messageSending || isRecording}
+  />
+
+  <button
+    className="primary-button"
+    type="submit"
+    disabled={
+      messageSending ||
+      isRecording ||
+      (!messageText.trim() && !messageFile && !voiceFile)
+    }
+  >
+    {messageSending ? t("Sending...") : t("Send")}
+  </button>
+</form>
+
 
             <small className="upload-hint">
               {t("Images and videos only · Maximum 100 MB")}
@@ -2486,9 +3096,19 @@ onClick={() => markNotificationRead(item.id)}
 )}
 </section>
 )}
- 
+ {/* PREMIUM */}
+
+{activePage === "premium" && (
+  <section className="other-page">
+    <Premium
+  isArabic={isArabic}
+  onStartCheckout={startPremiumCheckout}
+  isPremium={isPremium}
+/>
+  </section>
+)}
 {/* SETTINGS */}
- 
+
 {activePage === "settings" && (
 <section className="other-page">
 <span className="eyebrow">
@@ -2499,10 +3119,29 @@ onClick={() => markNotificationRead(item.id)}
 )}
 </div>
 </main>
+
+{currentCallContext && (
+  <div className="lolz-call-dock">
+    <Calls
+      supabase={supabase}
+      user={user}
+      conversation={currentCallContext.conversation || null}
+      callType={currentCallContext.callType || "private"}
+      groupId={currentCallContext.groupId || null}
+      channelId={currentCallContext.channelId || null}
+      canStart={currentCallContext.canStart === true}
+      canEnd={currentCallContext.canEnd === true}
+      onCallStateChange={handleCallStateChange}
+    />
+  </div>
+)}
+
 </div>
 );
 }
+
  
+
 // POST LIST
  
  
@@ -2736,4 +3375,3 @@ aria-label={t("Send")}
 </div>
 );
 }
- 
