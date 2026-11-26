@@ -33,6 +33,7 @@ import {
 
 import { supabase } from "./supabase";
 import Calls from "./Calls";
+import { dispatchLolzPush } from "./pushNotifications";
 import "./Groups.css";
 
 function getInitials(name = "G") {
@@ -1002,6 +1003,11 @@ export default function Groups({ user, onCallContextChange, onReport }) {
 
       if (joinError) throw joinError;
 
+      void dispatchLolzPush(supabase, {
+        action: "group_join",
+        group_id: group.id,
+      });
+
       await loadGroups();
 
       setSelectedGroup({
@@ -1041,6 +1047,11 @@ export default function Groups({ user, onCallContextChange, onReport }) {
         );
 
       if (joinError) throw joinError;
+
+      void dispatchLolzPush(supabase, {
+        action: "group_join",
+        group_id: String(data),
+      });
 
       setInviteInput("");
 
@@ -1122,6 +1133,11 @@ export default function Groups({ user, onCallContextChange, onReport }) {
         .single();
 
       if (sendError) throw sendError;
+
+      void dispatchLolzPush(supabase, {
+        action: "group_message",
+        message_id: data.id,
+      });
 
       const ownProfile =
         profiles[authData.user.id] || null;
@@ -1241,6 +1257,11 @@ export default function Groups({ user, onCallContextChange, onReport }) {
         .single();
 
       if (insertError) throw insertError;
+
+      void dispatchLolzPush(supabase, {
+        action: "group_message",
+        message_id: data.id,
+      });
 
       setMessages((current) => [
         ...current,
