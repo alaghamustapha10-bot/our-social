@@ -4278,3 +4278,43 @@ function PostList({
     </div>
   );
 }
+
+function ProfileReelsGrid({ reels = [], isArabic = false, onOpen }) {
+  if (!reels.length) {
+    return (
+      <div className="profile-reels-empty">
+        {isArabic ? "لم تنشر مقاطع LOLZ بعد." : "No LOLZ videos yet."}
+      </div>
+    );
+  }
+
+  return (
+    <div className="profile-reels-grid">
+      {reels.map((reel) => (
+        <button
+          type="button"
+          className="profile-reel-tile"
+          key={reel.id}
+          onClick={onOpen}
+          title={reel.caption || (isArabic ? "مقطع LOLZ" : "LOLZ video")}
+        >
+          <video
+            src={reel.video_url}
+            muted
+            playsInline
+            preload="metadata"
+            aria-label={reel.caption || (isArabic ? "مقطع LOLZ" : "LOLZ video")}
+          />
+          <span className="profile-reel-caption">
+            {reel.caption || (isArabic ? "مقطع LOLZ" : "LOLZ video")}
+          </span>
+          <span className="profile-reel-views">
+            <Eye size={14} />
+            {reel.view_count || 0}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
