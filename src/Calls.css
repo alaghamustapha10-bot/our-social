@@ -454,6 +454,8 @@
 }
 
 .lolz-call-dock:has(.lolz-call-mini) {
+  top: calc(82px + env(safe-area-inset-top, 0px)) !important;
+  bottom: auto !important;
   width: min(280px, calc(100vw - 20px)) !important;
   max-height: none !important;
   overflow: visible !important;
