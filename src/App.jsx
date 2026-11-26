@@ -3150,6 +3150,8 @@ function PostList({
   t,
   isArabic,
 }) {
+  const [openPostMenu, setOpenPostMenu] = useState(null);
+
   if (!posts.length) {
     return (
       <div className="empty-state">
@@ -3230,14 +3232,66 @@ function PostList({
                 </span>
               </div>
 
-              <button
-                type="button"
-                className="post-menu"
-                aria-label={t("More options")}
-                title={t("More options")}
+              <div
+                className="post-menu-wrap"
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget)) {
+                    setOpenPostMenu(null);
+                  }
+                }}
               >
-                <span>•••</span>
-              </button>
+                <button
+                  type="button"
+                  className="post-menu"
+                  aria-label={t("More options")}
+                  title={t("More options")}
+                  aria-expanded={openPostMenu === post.id}
+                  onClick={() =>
+                    setOpenPostMenu((current) =>
+                      current === post.id ? null : post.id
+                    )
+                  }
+                >
+                  <span>•••</span>
+                </button>
+
+                {openPostMenu === post.id && (
+                  <div className="post-dropdown-menu" role="menu">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        onSave(post.id);
+                        setOpenPostMenu(null);
+                      }}
+                    >
+                      {saved
+                        ? isArabic ? "إزالة من المحفوظات" : "Remove from saved"
+                        : isArabic ? "حفظ المنشور" : "Save post"}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        onComments(post.id);
+                        setOpenPostMenu(null);
+                      }}
+                    >
+                      {isArabic ? "عرض التعليقات" : "View comments"}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        onOpenProfile?.(post.user_id);
+                        setOpenPostMenu(null);
+                      }}
+                    >
+                      {isArabic ? "عرض الملف الشخصي" : "View profile"}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {post.content && (
