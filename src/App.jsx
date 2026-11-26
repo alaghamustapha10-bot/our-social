@@ -3535,6 +3535,37 @@ export default function App() {
             </section>
           )}
 
+          {activePage === "blocked" && (
+            <section className="other-page lolz-blocked-page">
+              <span className="eyebrow">{isArabic ? "الخصوصية والتحكم" : "PRIVACY & CONTROL"}</span>
+              <h1>{isArabic ? "الحسابات المحظورة" : "Blocked accounts"}</h1>
+              <p>{isArabic ? "لن تظهر منشورات هذه الحسابات في خلاصتك أو قصصك." : "Posts and stories from these accounts are hidden from your feed."}</p>
+
+              {blockedLoading ? (
+                <div className="empty-state">{isArabic ? "جارٍ التحميل..." : "Loading..."}</div>
+              ) : blockedProfiles.length === 0 ? (
+                <div className="empty-state">
+                  <h3>{isArabic ? "لا توجد حسابات محظورة" : "No blocked accounts"}</h3>
+                </div>
+              ) : (
+                <div className="lolz-blocked-list">
+                  {blockedProfiles.map((person) => (
+                    <article className="lolz-blocked-item" key={person.id}>
+                      <Avatar url={person.avatar_url} name={person.display_name || person.username} size="large" />
+                      <div>
+                        <strong>{person.display_name || person.username}</strong>
+                        <span>@{person.username || "member"}</span>
+                      </div>
+                      <button type="button" className="secondary-button" onClick={() => void unblockUser(person.id)}>
+                        {isArabic ? "إلغاء الحظر" : "Unblock"}
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
           {activePage === "moderation" && user?.app_metadata?.role === "admin" && (
             <section className="other-page lolz-moderation-page">
               <span className="eyebrow">{isArabic ? "مركز الثقة والأمان" : "TRUST & SAFETY"}</span>
