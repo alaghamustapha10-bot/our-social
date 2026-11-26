@@ -6,18 +6,44 @@ begin;
 
 create or replace function public.lolz_private_message_media_allowed(p_conversation_id text)
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public, pg_temp
-as $$
-  select exists (
-    select 1
-    from public.conversations c
-    where c.id::text = p_conversation_id
-      and auth.uid() in (c.user_one, c.user_two)
-  );
-$$;
+as $
+declare
+  v_user_one uuid;
+  v_user_two uuid;
+  v_not_blocked boolean := true;
+begin
+  select c.user_one, c.user_two
+    into v_user_one, v_user_two
+  from public.conversations c
+  where c.id::text = p_conversation_id;
+
+  if not found
+    or auth.uid() is null
+    or auth.uid() not in (v_user_one, v_user_two) then
+    return false;
+  end if;
+
+  -- Respect blocks when the optional blocks table has been installed.
+  -- Dynamic SQL keeps this isolated migration usable before that table exists.
+  if to_regclass('public.user_blocks') is not null then
+    execute
+      'select not exists (
+         select 1
+         from public.user_blocks b
+         where (b.blocker_id = $1 and b.blocked_id = $2)
+            or (b.blocker_id = $2 and b.blocked_id = $1)
+       )'
+      into v_not_blocked
+      using v_user_one, v_user_two;
+  end if;
+
+  return coalesce(v_not_blocked, false);
+end;
+$;
 
 revoke all on function public.lolz_private_message_media_allowed(text) from public;
 grant execute on function public.lolz_private_message_media_allowed(text) to authenticated;
