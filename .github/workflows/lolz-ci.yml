@@ -27,6 +27,8 @@ jobs:
         run: npm ci
       - name: Build web app
         run: npm run build
+      - name: Run ESLint
+        run: npm run lint
 
   edge-function-check:
     name: PayPal Edge Function type check
