@@ -20,6 +20,7 @@ import Calls from "./Calls";
 import Premium from "./Premium";
 import StoryViewer from "./StoryViewer";
 import ModerationDialog from "./ModerationDialog";
+import "./ModerationPage.css";
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 
