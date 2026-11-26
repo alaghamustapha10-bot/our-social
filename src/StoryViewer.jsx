@@ -34,11 +34,6 @@ export default function StoryViewer({
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
 
-  useEffect(() => {
-    setActiveIndex(initialIndex);
-    setProgress(0);
-  }, [initialIndex, startStoryId]);
-
   const story = orderedStories[activeIndex] || null;
 
   function close() {
@@ -66,7 +61,6 @@ export default function StoryViewer({
       onView?.(story);
     }
 
-    setProgress(0);
     const startedAt = Date.now();
     const duration = 6500;
     const timer = window.setInterval(() => {
@@ -74,6 +68,7 @@ export default function StoryViewer({
       setProgress(value);
       if (value >= 100) {
         window.clearInterval(timer);
+        setProgress(0);
         if (activeIndex >= orderedStories.length - 1) {
           onClose?.();
         } else {
@@ -83,7 +78,7 @@ export default function StoryViewer({
     }, 80);
 
     return () => window.clearInterval(timer);
-  }, [story?.id, activeIndex, currentUserId, onView, onClose, orderedStories.length]);
+  }, [story, activeIndex, currentUserId, onView, onClose, orderedStories.length]);
 
   useEffect(() => {
     function onKeyDown(event) {
