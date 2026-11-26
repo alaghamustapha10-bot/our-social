@@ -215,7 +215,10 @@ async function handleWebhook(
   const eventType = String(event.event_type || "");
   const resource = (event.resource || {}) as JsonObject;
   const subscriptionId = String(
-    resource.id || resource.billing_agreement_id || "",
+    resource.billing_agreement_id ||
+      resource.subscription_id ||
+      resource.id ||
+      "",
   );
 
   const statusByEvent: Record<string, string> = {
