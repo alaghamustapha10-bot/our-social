@@ -163,6 +163,8 @@ function copyFor(event: PushEvent, language: string) {
     const copies: Record<string, { title: string; body: string }> = {
       like: { title: "LOLZ", body: `${actor} liked your post.` },
       comment: { title: "LOLZ", body: `${actor} commented on your post.` },
+      lolz_like: { title: "LOLZ", body: `${actor} liked your video.` },
+      lolz_comment: { title: "LOLZ", body: `${actor} commented on your video.` },
       follow: { title: "New follower", body: `${actor} started following you.` },
       story_reply: { title: "Story reply", body: `${actor} replied to your story.` },
       message: { title: actor, body: "Sent you a message." },
@@ -179,6 +181,8 @@ function copyFor(event: PushEvent, language: string) {
   const copies: Record<string, { title: string; body: string }> = {
     like: { title: "LOLZ", body: `${actor} أُعجب بمنشورك.` },
     comment: { title: "LOLZ", body: `${actor} علّق على منشورك.` },
+    lolz_like: { title: "LOLZ", body: `${actor} أُعجب بفيديو LOLZ الخاص بك.` },
+    lolz_comment: { title: "LOLZ", body: `${actor} علّق على فيديو LOLZ الخاص بك.` },
     follow: { title: "متابع جديد", body: `${actor} بدأ بمتابعتك.` },
     story_reply: { title: "رد على قصتك", body: `${actor} ردّ على قصتك.` },
     message: { title: actor, body: "أرسل لك رسالة." },
@@ -310,7 +314,7 @@ async function createAndSendNotifications(
   for (const recipientId of recipients) {
     const sourceObjectId =
       data.message_id || data.post_id || data.call_id ||
-      data.group_id || data.channel_id || crypto.randomUUID();
+      data.video_id || data.group_id || data.channel_id || crypto.randomUUID();
     const row = {
       recipient_id: recipientId,
       actor_id: actorId,
@@ -397,6 +401,57 @@ async function handleAction(userId: string, body: JsonObject) {
 
     if (recipientId === userId) {
       throw new HttpError("You cannot notify yourself.", 400);
+    }
+
+    if (type === "lolz_like" || type === "lolz_comment") {
+      const videoId = requireString(body.video_id, "LOLZ video id");
+      const { data: video, error: videoError } = await admin
+        .from("lolz_videos")
+        .select("id, user_id")
+        .eq("id", videoId)
+        .maybeSingle();
+
+      if (videoError || !video) {
+        throw new HttpError("LOLZ video was not found.", 404);
+      }
+
+      if (String(video.user_id) === userId) {
+        return { success: true, notifications_created: 0, pushes_sent: 0 };
+      }
+
+      if (type === "lolz_like") {
+        const { data: like, error: likeError } = await admin
+          .from("lolz_likes")
+          .select("video_id")
+          .eq("video_id", videoId)
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (likeError || !like) {
+          throw new HttpError("The LOLZ video like could not be verified.", 403);
+        }
+      } else {
+        const { data: comment, error: commentError } = await admin
+          .from("lolz_comments")
+          .select("id")
+          .eq("video_id", videoId)
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (commentError || !comment) {
+          throw new HttpError("The LOLZ video comment could not be verified.", 403);
+        }
+      }
+
+      const result = await createAndSendNotifications(
+        [String(video.user_id)],
+        userId,
+        type,
+        { video_id: videoId },
+      );
+      return { success: true, ...result };
     }
 
     if (type === "like" || type === "comment") {
