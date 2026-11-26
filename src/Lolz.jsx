@@ -15,6 +15,7 @@ import {
   Eye,
 } from "lucide-react";
 import { supabase } from "./supabase";
+import { dispatchLolzPush } from "./pushNotifications";
 import "./Lolz.css";
 
 function formatDate(date) {
@@ -362,6 +363,15 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
     if (result.error) {
       setNotice("تعذر تحديث الإعجاب.");
       await loadVideos();
+      return;
+    }
+
+    if (!current.liked) {
+      void dispatchLolzPush(supabase, {
+        action: "social_event",
+        type: "lolz_like",
+        video_id: videoId,
+      });
     }
   }
 
@@ -385,6 +395,12 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
       setNotice("تعذر نشر التعليق: " + error.message);
       return;
     }
+
+    void dispatchLolzPush(supabase, {
+      action: "social_event",
+      type: "lolz_comment",
+      video_id: videoId,
+    });
 
     setCommentText((prev) => ({
       ...prev,
