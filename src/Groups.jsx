@@ -91,7 +91,13 @@ function MemberAvatar({ profile }) {
   );
 }
 
-export default function Groups({ user, onCallContextChange, onReport }) {
+export default function Groups({
+  user,
+  onCallContextChange,
+  onReport,
+  initialGroupId = null,
+  onInitialGroupOpened,
+}) {
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -866,6 +872,22 @@ export default function Groups({ user, onCallContextChange, onReport }) {
     setShowInfo(true);
     setError("");
   };
+
+  useEffect(() => {
+    if (!initialGroupId || !groups.length) return;
+
+    const targetGroup = groups.find(
+      (group) => String(group.id) === String(initialGroupId)
+    );
+
+    if (!targetGroup) return;
+
+    if (String(selectedGroup?.id || "") !== String(targetGroup.id)) {
+      openGroup(targetGroup);
+    }
+
+    onInitialGroupOpened?.();
+  }, [initialGroupId, groups, selectedGroup?.id, openGroup, onInitialGroupOpened]);
 
   // CREATE GROUP
   const createGroup = async (event) => {
