@@ -333,6 +333,61 @@ $$;
 revoke all on function public.get_lolz_story_viewers(text) from public;
 grant execute on function public.get_lolz_story_viewers(text) to authenticated;
 
+-- One view per authenticated viewer and LOLZ video.
+create table if not exists public.lolz_video_views (
+  video_id text not null,
+  viewer_id uuid not null references auth.users(id) on delete cascade,
+  viewed_at timestamptz not null default now(),
+  primary key (video_id, viewer_id)
+);
+
+create index if not exists lolz_video_views_viewer_idx
+  on public.lolz_video_views(viewer_id, viewed_at desc);
+
+alter table public.lolz_video_views enable row level security;
+
+drop policy if exists "LOLZ viewers record their own video views" on public.lolz_video_views;
+create policy "LOLZ viewers record their own video views"
+  on public.lolz_video_views for insert to authenticated
+  with check (
+    viewer_id = auth.uid()
+    and exists (
+      select 1
+      from public.lolz_videos v
+      where v.id::text = video_id
+        and v.user_id <> auth.uid()
+        and public.lolz_users_not_blocked(auth.uid(), v.user_id)
+    )
+  );
+
+drop policy if exists "LOLZ viewers read their own video views" on public.lolz_video_views;
+create policy "LOLZ viewers read their own video views"
+  on public.lolz_video_views for select to authenticated
+  using (viewer_id = auth.uid());
+
+grant select, insert on public.lolz_video_views to authenticated;
+
+create or replace function public.get_lolz_video_view_counts(p_video_ids text[])
+returns table(video_id text, view_count bigint)
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $
+  select
+    v.id::text,
+    count(vw.viewer_id)::bigint
+  from public.lolz_videos v
+  left join public.lolz_video_views vw
+    on vw.video_id = v.id::text
+  where v.id::text = any(coalesce(p_video_ids, array[]::text[]))
+    and public.lolz_users_not_blocked(auth.uid(), v.user_id)
+  group by v.id;
+$;
+
+revoke all on function public.get_lolz_video_view_counts(text[]) from public;
+grant execute on function public.get_lolz_video_view_counts(text[]) to authenticated;
+
 create table if not exists public.lolz_subscriptions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
