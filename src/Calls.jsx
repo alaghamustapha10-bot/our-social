@@ -43,6 +43,7 @@ export default function Calls({
   canEnd = false,
   onCallStateChange = null,
   onCallActionsReady = null,
+  showIdleControls = true,
 }) {
   const [incomingCall, setIncomingCall] = useState(null);
   const [incomingProfile, setIncomingProfile] = useState(null);
@@ -1398,7 +1399,7 @@ export default function Calls({
       className="lolz-calls"
       style={{ width: "100%", color: "#ffffff" }}
     >
-      {!active && !incomingCall && isPrivate && conversation?.id && (
+      {!active && !incomingCall && showIdleControls && isPrivate && conversation?.id && (
         <div
           className="lolz-private-call-actions"
           style={{ display: "flex", gap: "10px", padding: "8px 0" }}
@@ -1427,7 +1428,7 @@ export default function Calls({
         </div>
       )}
 
-      {!active && !isPrivate && (
+      {!active && showIdleControls && !isPrivate && (
         <div
           style={{
             padding: "12px",
