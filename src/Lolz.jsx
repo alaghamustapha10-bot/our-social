@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Play,
   Heart,
@@ -11,6 +11,7 @@ import {
   Video,
   Volume2,
   VolumeX,
+  Flag,
 } from "lucide-react";
 import { supabase } from "./supabase";
 import "./Lolz.css";
@@ -22,7 +23,7 @@ function formatDate(date) {
   );
 }
 
-export default function Lolz({ user }) {
+export default function Lolz({ user, blockedUserIds = [], onReport }) {
   const fileRef = useRef(null);
   const videoRefs = useRef({});
   const feedRef = useRef(null);
@@ -42,8 +43,8 @@ export default function Lolz({ user }) {
   const [uploadOpen, setUploadOpen] = useState(false);
 
   useEffect(() => {
-    loadVideos();
-  }, []);
+    void loadVideos();
+  }, [loadVideos]);
 
   // تشغيل الفيديو الظاهر وإيقاف بقية الفيديوهات
   useEffect(() => {
@@ -78,7 +79,7 @@ export default function Lolz({ user }) {
     };
   }, [videos, soundOn]);
 
-  async function loadVideos() {
+  const loadVideos = useCallback(async () => {
     setLoading(true);
     setNotice("");
 
@@ -93,7 +94,7 @@ export default function Lolz({ user }) {
       return;
     }
 
-    const videoRows = data || [];
+    const videoRows = (data || []).filter((video) => !blockedUserIds.includes(video.user_id));
     const userIds = [...new Set(videoRows.map((v) => v.user_id))];
     const videoIds = videoRows.map((v) => v.id);
 
@@ -125,7 +126,7 @@ export default function Lolz({ user }) {
       ]);
 
       likeRows = likesResult.data || [];
-      commentRows = commentsResult.data || [];
+      commentRows = (commentsResult.data || []).filter((comment) => !blockedUserIds.includes(comment.user_id));
     }
 
     const commentUserIds = [
@@ -189,7 +190,7 @@ export default function Lolz({ user }) {
 
     setComments(commentMap);
     setLoading(false);
-  }
+  }, [blockedUserIds, user?.id]);
 
   async function publishVideo(e) {
     e.preventDefault();
@@ -580,6 +581,23 @@ export default function Lolz({ user }) {
                   <div className="lolz-video-top">
                     <span className="lolz-label">✦ LOLZ</span>
 
+                    {video.user_id !== user?.id && (
+                      <button
+                        className="lolz-report-button"
+                        type="button"
+                        onClick={() =>
+                          onReport?.({
+                            type: "video",
+                            id: video.id,
+                            targetUserId: video.user_id,
+                          })
+                        }
+                        aria-label="Report video"
+                        title="Report video"
+                      >
+                        <Flag size={17} />
+                      </button>
+                    )}
                     <button
                       className="lolz-sound-button"
                       onClick={toggleSound}
@@ -718,6 +736,21 @@ export default function Lolz({ user }) {
                           <div className="lolz-comment-content">
                             <strong>{displayName(comment.profile)}</strong>
                             <p>{comment.content}</p>
+                            {comment.user_id !== user?.id && (
+                              <button
+                                type="button"
+                                className="lolz-comment-report"
+                                onClick={() =>
+                                  onReport?.({
+                                    type: "comment",
+                                    id: comment.id,
+                                    targetUserId: comment.user_id,
+                                  })
+                                }
+                              >
+                                الإبلاغ عن التعليق
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))
