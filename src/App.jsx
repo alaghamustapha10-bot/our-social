@@ -333,21 +333,22 @@ export default function App() {
 
     if (status === "ended") {
       setActiveCallContext(null);
-      const contextPage =
-        context?.callType === "private"
-          ? "messages"
-          : context?.callType === "group"
-            ? "groups"
-            : context?.callType === "channel"
-              ? "channels"
-              : null;
-      setSelectedCallContext(
-        contextPage === activePage ? context : null
-      );
+      if (context) setSelectedCallContext(context);
     }
-  }, [activePage]);
+  }, []);
 
   const currentCallContext = activeCallContext || selectedCallContext;
+  const callContextPage =
+    currentCallContext?.callType === "private"
+      ? "messages"
+      : currentCallContext?.callType === "group"
+        ? "groups"
+        : currentCallContext?.callType === "channel"
+          ? "channels"
+          : null;
+  const showIdleCallControls =
+    activePage === callContextPage &&
+    (currentCallContext?.callType !== "private" || Boolean(activeConversation?.id));
   const callActionsRef = useRef(null);
 
   const registerPrivateCallActions = useCallback((actions) => {
@@ -400,15 +401,8 @@ export default function App() {
         canStart: true,
         canEnd: false,
       });
-    } else if (
-      activePage === "messages" &&
-      !activeConversation &&
-      selectedCallContext?.callType === "private" &&
-      !activeCallContext
-    ) {
-      setSelectedCallContext(null);
     }
-  }, [activePage, activeConversation, selectedCallContext?.callType, activeCallContext]);
+  }, [activePage, activeConversation]);
 
   useEffect(() => {
     if (!isRecording) {
@@ -1813,9 +1807,6 @@ export default function App() {
   const unreadCount = notifications.filter((item) => !item.is_read).length;
 
   function goTo(page) {
-    if (page !== activePage && !activeCallContext) {
-      setSelectedCallContext(null);
-    }
     setActivePage(page);
     setNotice("");
     setOpenComments(null);
@@ -3127,6 +3118,7 @@ export default function App() {
             canEnd={currentCallContext.canEnd === true}
             onCallStateChange={handleCallStateChange}
             onCallActionsReady={registerPrivateCallActions}
+            showIdleControls={showIdleCallControls}
           />
         </div>
       )}
