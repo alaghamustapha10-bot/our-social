@@ -2103,11 +2103,12 @@ export default function App() {
     setNotice("");
     shouldAutoScrollRef.current = true;
 
+    let mediaUrl = null;
+    let messageSaved = false;
+
     try {
-      let mediaUrl = null;
       let messageType = "text";
       let uploadedFile = null;
-      let messageSaved = false;
 
       if (audioFile) {
         if (!audioFile.type.startsWith("audio/")) {
