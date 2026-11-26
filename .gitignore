@@ -38,3 +38,6 @@ supabase/.temp/
 project-inspection/
 our-social-source.zip
 src/App_backup_before_profile.jsx
+
+# Firebase project credentials (local Android build only)
+android/app/google-services.json
