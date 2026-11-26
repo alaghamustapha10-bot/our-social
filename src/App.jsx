@@ -23,6 +23,7 @@ import ModerationDialog from "./ModerationDialog";
 import "./ModerationPage.css";
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
+import { dispatchLolzPush } from "./pushNotifications";
 
 const translations = {
   "Please sign in to continue.": "يرجى تسجيل الدخول للمتابعة.",
@@ -141,6 +142,14 @@ const translations = {
   "commented on your post.": "علّق على منشورك.",
   "started following you.": "بدأ بمتابعتك.",
   "interacted with you.": "تفاعل معك.",
+  "replied to your story.": "ردّ على قصتك.",
+  "sent you a message.": "أرسل لك رسالة.",
+  "sent a message in your group.": "أرسل رسالة في مجموعتك.",
+  "posted an update in your channel.": "نشر تحديثاً في قناتك.",
+  "is calling you.": "يتصل بك الآن.",
+  "you missed a call from them.": "لديك مكالمة فائتة منه.",
+  "joined your group.": "انضم إلى مجموعتك.",
+  "subscribed to your channel.": "اشترك في قناتك.",
   "Read": "قراءة",
   "PERSONALIZE YOUR EXPERIENCE": "خصص تجربتك",
   "Nothing here yet": "لا يوجد شيء هنا بعد",
@@ -221,6 +230,12 @@ export default function App() {
   const [subscriptionInfo, setSubscriptionInfo] = useState(null);
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
+  const userRef = useRef(user);
+  userRef.current = user;
+  const pushTokenRef = useRef(null);
+  const pushActionHandlerRef = useRef(null);
+  const pendingPushActionRef = useRef(null);
+  const notificationReloadRef = useRef(null);
 
   useEffect(() => {
     document.documentElement.lang = isArabic ? "ar" : "en";
@@ -228,40 +243,71 @@ export default function App() {
   }, [isArabic]);
 
   useEffect(() => {
-    if (!user?.id || !Capacitor.isNativePlatform()) return;
+    if (!Capacitor.isNativePlatform()) return;
 
     let active = true;
     const listeners = [];
 
+    const saveDeviceToken = async (tokenValue) => {
+      const currentUser = userRef.current;
+      if (!active || !currentUser?.id || !tokenValue) return;
+
+      const { error } = await supabase
+        .from("push_tokens")
+        .upsert(
+          {
+            user_id: currentUser.id,
+            token: tokenValue,
+            platform: Capacitor.getPlatform(),
+            language: document.documentElement.lang === "en" ? "en" : "ar",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "token" }
+        );
+
+      if (error) console.error("Saving push token failed:", error);
+    };
+
     async function setupPushNotifications() {
       try {
-        let permission = await PushNotifications.checkPermissions();
+        if (Capacitor.getPlatform() === "android") {
+          const channels = [
+            {
+              id: "lolz_calls",
+              name: isArabic ? "المكالمات" : "Calls",
+              description: isArabic ? "مكالمات LOLZ الواردة والفائتة" : "Incoming and missed LOLZ calls",
+              importance: 5,
+              visibility: 1,
+              vibration: true,
+            },
+            {
+              id: "lolz_messages",
+              name: isArabic ? "الرسائل" : "Messages",
+              description: isArabic ? "الرسائل الخاصة ورسائل المجموعات" : "Direct and group messages",
+              importance: 4,
+              visibility: 1,
+              vibration: true,
+            },
+            {
+              id: "lolz_social",
+              name: isArabic ? "التفاعلات" : "Social activity",
+              description: isArabic ? "الإعجابات والتعليقات والمتابعات" : "Likes, comments and follows",
+              importance: 3,
+              visibility: 1,
+              vibration: true,
+            },
+          ];
 
-        if (permission.receive !== "granted") {
-          permission = await PushNotifications.requestPermissions();
-        }
-
-        if (permission.receive !== "granted") {
-          return;
+          for (const channel of channels) {
+            await PushNotifications.createChannel(channel);
+          }
         }
 
         listeners.push(
           await PushNotifications.addListener("registration", async (token) => {
             if (!active) return;
-
-            const { error } = await supabase
-              .from("push_tokens")
-              .upsert(
-                {
-                  user_id: user.id,
-                  token: token.value,
-                  platform: Capacitor.getPlatform(),
-                  updated_at: new Date().toISOString(),
-                },
-                { onConflict: "token" }
-              );
-
-            if (error) console.error("Saving push token failed:", error);
+            pushTokenRef.current = token.value;
+            await saveDeviceToken(token.value);
           })
         );
 
@@ -271,19 +317,53 @@ export default function App() {
           })
         );
 
+        listeners.push(
+          await PushNotifications.addListener("pushNotificationReceived", (notification) => {
+            if (!active) return;
+            console.info("LOLZ push received:", notification?.data?.type || "notification");
+            const currentUser = userRef.current;
+            if (currentUser?.id) {
+              void notificationReloadRef.current?.(currentUser.id);
+            }
+          })
+        );
+
+        listeners.push(
+          await PushNotifications.addListener("pushNotificationActionPerformed", (event) => {
+            if (!active) return;
+            const data = event?.notification?.data || {};
+            if (pushActionHandlerRef.current) {
+              void pushActionHandlerRef.current(data);
+            } else {
+              pendingPushActionRef.current = data;
+            }
+          })
+        );
+
+        const permission = await PushNotifications.checkPermissions();
+        const finalPermission =
+          permission.receive === "granted"
+            ? permission
+            : await PushNotifications.requestPermissions();
+
+        if (finalPermission.receive !== "granted") {
+          console.warn("LOLZ push notifications permission was not granted.");
+          return;
+        }
+
         await PushNotifications.register();
       } catch (error) {
         console.error("Push setup failed:", error);
       }
     }
 
-    setupPushNotifications();
+    void setupPushNotifications();
 
     return () => {
       active = false;
       listeners.forEach((listener) => listener.remove());
     };
-  }, [user?.id]);
+  }, []);
 
   const [posts, setPosts] = useState([]);
   const [stories, setStories] = useState([]);
@@ -875,6 +955,32 @@ export default function App() {
     }
   }, [t]);
 
+  notificationReloadRef.current = loadNotifications;
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`lolz-notifications-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `recipient_id=eq.${user.id}`,
+        },
+        () => {
+          void loadNotifications(user.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user?.id, loadNotifications]);
+
   const startApp = useCallback(async () => {
     setLoading(true);
 
@@ -1089,11 +1195,23 @@ export default function App() {
 
     if (postId) notification.post_id = postId;
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("notifications")
-      .insert(notification);
+      .insert(notification)
+      .select("id")
+      .single();
 
-    if (error) console.error("Notification error:", error.message);
+    if (error) {
+      console.error("Notification error:", error.message);
+      return;
+    }
+
+    if (data?.id) {
+      void dispatchLolzPush(supabase, {
+        action: "notification",
+        notification_id: data.id,
+      });
+    }
   }
 
   async function toggleLike(postId) {
@@ -1557,7 +1675,6 @@ export default function App() {
 
       if (messageError) throw messageError;
 
-      await createNotification(story.user_id, "story_reply");
       await loadConversations();
 
       setNotice(
@@ -1971,6 +2088,59 @@ export default function App() {
     }
   }
 
+  async function openConversationById(conversationId) {
+    if (!user?.id || !conversationId) return;
+
+    try {
+      const { data: conversation, error } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("id", conversationId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!conversation || ![conversation.user_one, conversation.user_two].includes(user.id)) {
+        throw new Error(isArabic ? "هذه المحادثة غير متاحة لحسابك." : "This conversation is not available to your account.");
+      }
+
+      const otherId = conversation.user_one === user.id
+        ? conversation.user_two
+        : conversation.user_one;
+
+      if (blockedUserIds.includes(otherId)) {
+        setNotice(isArabic ? "هذه المحادثة مع حساب محظور." : "This conversation is with a blocked account.");
+        return;
+      }
+
+      const { data: otherProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", otherId)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+
+      const selectedConversation = {
+        ...conversation,
+        otherProfile: otherProfile || {},
+      };
+
+      setActiveConversation(selectedConversation);
+      setConversationMessages([]);
+      goTo("messages");
+      await loadMessages(conversation.id);
+      await loadConversations();
+      setActiveConversation(selectedConversation);
+    } catch (error) {
+      console.error("Open conversation from push failed:", error);
+      setNotice(
+        (isArabic ? "تعذر فتح المحادثة: " : "Could not open conversation: ") +
+        error.message
+      );
+      goTo("messages");
+    }
+  }
+
   function handleMessageFileChange(event) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -2196,26 +2366,37 @@ export default function App() {
         }
       }
 
-      const { error } = await supabase.from("messages").insert({
-        conversation_id: activeConversation.id,
-        sender_id: user.id,
-        content:
-          content ||
-          (messageType === "image"
-            ? "Photo"
-            : messageType === "video"
-            ? "Video"
-            : messageType === "audio"
-            ? "Voice message"
-            : ""),
-        message_type: messageType,
-        media_url: mediaUrl,
-        file_name: uploadedFile?.name || null,
-        mime_type: uploadedFile?.type || null,
-      });
+      const { data: savedMessage, error } = await supabase
+        .from("messages")
+        .insert({
+          conversation_id: activeConversation.id,
+          sender_id: user.id,
+          content:
+            content ||
+            (messageType === "image"
+              ? "Photo"
+              : messageType === "video"
+              ? "Video"
+              : messageType === "audio"
+              ? "Voice message"
+              : ""),
+          message_type: messageType,
+          media_url: mediaUrl,
+          file_name: uploadedFile?.name || null,
+          mime_type: uploadedFile?.type || null,
+        })
+        .select("id")
+        .single();
 
       if (error) throw error;
       messageSaved = true;
+
+      if (savedMessage?.id) {
+        void dispatchLolzPush(supabase, {
+          action: "direct_message",
+          message_id: savedMessage.id,
+        });
+      }
 
       setMessageText("");
       setMessageFile(null);
@@ -2417,6 +2598,48 @@ export default function App() {
     setNotice("");
     setOpenComments(null);
   }
+
+  pushActionHandlerRef.current = async (data = {}) => {
+    const notificationId = data.notification_id;
+    if (notificationId && userRef.current?.id) {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("id", notificationId)
+        .eq("recipient_id", userRef.current.id);
+      if (error) console.warn("Could not mark push notification as read:", error.message);
+      void notificationReloadRef.current?.(userRef.current.id);
+    }
+
+    if (data.conversation_id) {
+      await openConversationById(data.conversation_id);
+      return;
+    }
+
+    if (data.group_id) {
+      goTo("groups");
+      return;
+    }
+
+    if (data.channel_id) {
+      goTo("channels");
+      return;
+    }
+
+    if (data.post_id || data.story_id) {
+      goTo("home");
+      return;
+    }
+
+    goTo("activity");
+  };
+
+  useEffect(() => {
+    if (!user?.id || !pendingPushActionRef.current) return;
+    const pending = pendingPushActionRef.current;
+    pendingPushActionRef.current = null;
+    void pushActionHandlerRef.current?.(pending);
+  }, [user?.id]);
 
   function createPost() {
     goTo("home");
@@ -3727,6 +3950,14 @@ export default function App() {
                       like: t("liked your post."),
                       comment: t("commented on your post."),
                       follow: t("started following you."),
+                      story_reply: t("replied to your story."),
+                      message: t("sent you a message."),
+                      group_message: t("sent a message in your group."),
+                      channel_post: t("posted an update in your channel."),
+                      incoming_call: t("is calling you."),
+                      missed_call: t("you missed a call from them."),
+                      group_join: t("joined your group."),
+                      channel_join: t("subscribed to your channel."),
                     };
 
                     const message =
