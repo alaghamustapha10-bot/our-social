@@ -2765,32 +2765,34 @@ export default function App() {
                           shouldAutoScrollRef.current = distanceFromBottom < 150;
                         }}
                       >
-                        <div className="ig-dm-profile-intro">
-                          <div className="ig-dm-profile-avatar">
-                            <Avatar
-                              url={activeConversation.otherProfile?.avatar_url}
-                              name={
-                                activeConversation.otherProfile?.display_name ||
+                        {conversationMessages.length === 0 && !messagesLoading && (
+                          <div className="ig-dm-profile-intro">
+                            <div className="ig-dm-profile-avatar">
+                              <Avatar
+                                url={activeConversation.otherProfile?.avatar_url}
+                                name={
+                                  activeConversation.otherProfile?.display_name ||
+                                  activeConversation.otherProfile?.username ||
+                                  t("Member")
+                                }
+                                size="profile"
+                              />
+                            </div>
+                            <strong>
+                              {activeConversation.otherProfile?.display_name ||
+                                activeConversation.otherProfile?.full_name ||
                                 activeConversation.otherProfile?.username ||
-                                t("Member")
-                              }
-                              size="profile"
-                            />
+                                t("Member")}
+                            </strong>
+                            <span>@{activeConversation.otherProfile?.username || "user"}</span>
+                            <button
+                              type="button"
+                              onClick={() => openUserProfile(activeConversation.otherProfile?.id)}
+                            >
+                              {isArabic ? "عرض الملف الشخصي" : "View profile"}
+                            </button>
                           </div>
-                          <strong>
-                            {activeConversation.otherProfile?.display_name ||
-                              activeConversation.otherProfile?.full_name ||
-                              activeConversation.otherProfile?.username ||
-                              t("Member")}
-                          </strong>
-                          <span>@{activeConversation.otherProfile?.username || "user"}</span>
-                          <button
-                            type="button"
-                            onClick={() => openUserProfile(activeConversation.otherProfile?.id)}
-                          >
-                            {isArabic ? "عرض الملف الشخصي" : "View profile"}
-                          </button>
-                        </div>
+                        )}
 
                         {messagesLoading ? (
                           <div className="ig-dm-feed-state">
