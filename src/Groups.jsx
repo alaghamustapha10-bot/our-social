@@ -1455,7 +1455,13 @@ export default function Groups({
     }
   };
 
-  sendVoiceMessageRef.current = sendVoiceMessage;
+  useEffect(() => {
+    sendVoiceMessageRef.current = sendVoiceMessage;
+  }, [sendVoiceMessage]);
+
+  useEffect(() => {
+    clearMessageMedia();
+  }, [selectedGroup?.id, clearMessageMedia]);
 
   // LEAVE GROUP
   const leaveGroup = async () => {
@@ -2226,7 +2232,8 @@ export default function Groups({
                         sending ||
                         uploadingMedia ||
                         uploadingVoice ||
-                        Boolean(voiceFile)
+                        Boolean(voiceFile) ||
+                        Boolean(messageMediaFile)
                       }
                       title={
                         isRecording
