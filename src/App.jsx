@@ -550,7 +550,24 @@ export default function App() {
 
     if (error || !data) return;
 
-    const userIds = [...new Set(data.map((story) => story.user_id))];
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id;
+
+    let blockedIds = [];
+    if (currentUserId) {
+      const { data: blocks, error: blocksError } = await supabase
+        .from("user_blocks")
+        .select("blocked_id")
+        .eq("blocker_id", currentUserId);
+
+      if (!blocksError) blockedIds = (blocks || []).map((item) => item.blocked_id);
+    }
+
+    const visibleStories = data.filter(
+      (story) => !blockedIds.includes(story.user_id)
+    );
+
+    const userIds = [...new Set(visibleStories.map((story) => story.user_id))];
     let profileMap = {};
 
     if (userIds.length) {
@@ -564,9 +581,7 @@ export default function App() {
       });
     }
 
-    const { data: authData } = await supabase.auth.getUser();
-    const currentUserId = authData?.user?.id;
-    const ownStories = data.filter((story) => story.user_id === currentUserId);
+    const ownStories = visibleStories.filter((story) => story.user_id === currentUserId);
     const viewCounts = new Map();
 
     await Promise.all(
@@ -580,7 +595,7 @@ export default function App() {
     );
 
     setStories(
-      data.map((story) => ({
+      visibleStories.map((story) => ({
         ...story,
         view_count: viewCounts.get(String(story.id)) || 0,
         author: profileMap[story.user_id] || {},
