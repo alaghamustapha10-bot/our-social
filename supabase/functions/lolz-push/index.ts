@@ -389,6 +389,98 @@ async function getCallParticipants(call: JsonObject): Promise<string[]> {
 async function handleAction(userId: string, body: JsonObject) {
   const action = requireString(body.action, "action");
 
+  if (action === "social_event") {
+    const recipientId = requireString(body.recipient_id, "notification recipient");
+    const type = requireString(body.type, "notification type");
+    let eventData: Record<string, unknown> = {};
+    let postId: string | null = null;
+
+    if (recipientId === userId) {
+      throw new HttpError("You cannot notify yourself.", 400);
+    }
+
+    if (type === "like" || type === "comment") {
+      postId = requireString(body.post_id, "post id");
+
+      const { data: post, error: postError } = await admin
+        .from("posts")
+        .select("id, user_id")
+        .eq("id", postId)
+        .maybeSingle();
+
+      if (postError || !post || String(post.user_id) !== recipientId) {
+        throw new HttpError("Notification recipient does not own this post.", 403);
+      }
+
+      if (type === "like") {
+        const { data: like, error: likeError } = await admin
+          .from("post_likes")
+          .select("post_id")
+          .eq("post_id", postId)
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (likeError || !like) {
+          throw new HttpError("The like could not be verified.", 403);
+        }
+      } else {
+        const { data: comment, error: commentError } = await admin
+          .from("comments")
+          .select("id")
+          .eq("post_id", postId)
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (commentError || !comment) {
+          throw new HttpError("The comment could not be verified.", 403);
+        }
+        eventData.comment_id = String(comment.id);
+      }
+
+      eventData.post_id = postId;
+    } else if (type === "follow") {
+      const { data: follow, error: followError } = await admin
+        .from("follows")
+        .select("follower_id")
+        .eq("follower_id", userId)
+        .eq("following_id", recipientId)
+        .maybeSingle();
+
+      if (followError || !follow) {
+        throw new HttpError("The follow relationship could not be verified.", 403);
+      }
+    } else {
+      throw new HttpError("Unsupported social notification type.", 400);
+    }
+
+    let query = admin
+      .from("notifications")
+      .select("id")
+      .eq("recipient_id", recipientId)
+      .eq("actor_id", userId)
+      .eq("type", type)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    query = postId ? query.eq("post_id", postId) : query.is("post_id", null);
+
+    const { data: notification, error: notificationError } = await query.maybeSingle();
+    if (notificationError || !notification) {
+      throw new HttpError("The in-app notification was not found.", 404);
+    }
+
+    const actorName = await getActorName(userId);
+    const result = await sendToUser(
+      recipientId,
+      { type, actor_name: actorName, data: eventData },
+      String(notification.id),
+    );
+
+    return { success: true, ...result };
+  }
+
   if (action === "notification") {
     const notificationId = requireString(body.notification_id, "notification id");
     const { data: notification, error } = await admin
