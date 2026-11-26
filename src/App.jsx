@@ -8,12 +8,13 @@ import {
   useState,
 } from "react";
 import { supabase } from "./supabase";
-import { MessageCircle, Heart, UsersRound, Radio, Bookmark } from "lucide-react";
+import { MessageCircle, Heart, UsersRound, Radio, Bookmark, Search, SquarePen, Phone, Video, Info, ImagePlus, Send, Mic, ArrowLeft, X } from "lucide-react";
 import Navigation from "./Navigation";
 import Lolz from "./Lolz";
 import "./App.css";
 import "./InstagramRedesign.css";
 import "./InstagramExperience.css";
+import "./InstagramDirect.css";
 import Calls from "./Calls";
 import Premium from "./Premium";
 import { Capacitor } from "@capacitor/core";
@@ -314,6 +315,7 @@ export default function App() {
   const [messageText, setMessageText] = useState("");
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messageSending, setMessageSending] = useState(false);
+  const [messageSearch, setMessageSearch] = useState("");
 
   // CENTRAL CALL CONTEXT
   const [selectedCallContext, setSelectedCallContext] = useState(null);
@@ -334,6 +336,11 @@ export default function App() {
   }, []);
 
   const currentCallContext = activeCallContext || selectedCallContext;
+  const callActionsRef = useRef(null);
+
+  const registerPrivateCallActions = useCallback((actions) => {
+    callActionsRef.current = actions;
+  }, []);
 
   const voicePressActiveRef = useRef(false);
   const [messageFile, setMessageFile] = useState(null);
@@ -1268,6 +1275,7 @@ export default function App() {
         })
       );
 
+      results.sort((a, b) => new Date(b.lastMessage?.created_at || b.created_at || 0) - new Date(a.lastMessage?.created_at || a.created_at || 0));
       setConversations(results);
 
       setActiveConversation((current) => {
@@ -1303,27 +1311,49 @@ export default function App() {
   }, [t]);
 
   useEffect(() => {
-    if (!user?.id || !activeConversation?.id) return;
+    if (!user?.id || activePage !== "messages") return;
 
     const channel = supabase
-      .channel(`messages-${activeConversation.id}`)
+      .channel(`user-message-inbox-${user.id}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "messages",
-          filter: `conversation_id=eq.${activeConversation.id}`,
         },
         (payload) => {
           const newMessage = payload.new;
+          if (!newMessage?.id || !newMessage?.conversation_id) return;
 
-          setConversationMessages((current) =>
-            current.some((message) => message.id === newMessage.id)
-              ? current
-              : [...current, newMessage]
-          );
+          if (activeConversation?.id === newMessage.conversation_id) {
+            setConversationMessages((current) =>
+              current.some((message) => message.id === newMessage.id)
+                ? current
+                : [...current, newMessage]
+            );
+          }
 
+          setConversations((current) => {
+            const exists = current.some(
+              (conversation) => conversation.id === newMessage.conversation_id
+            );
+            if (!exists) return current;
+
+            return current
+              .map((conversation) =>
+                conversation.id === newMessage.conversation_id
+                  ? { ...conversation, lastMessage: newMessage }
+                  : conversation
+              )
+              .sort(
+                (a, b) =>
+                  new Date(b.lastMessage?.created_at || b.created_at || 0) -
+                  new Date(a.lastMessage?.created_at || a.created_at || 0)
+              );
+          });
+
+          // Also refresh the inbox so newly-created or newly-visible chats appear.
           void loadConversations();
         }
       )
@@ -1332,7 +1362,7 @@ export default function App() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [activeConversation?.id, user?.id, loadConversations]);
+  }, [activePage, activeConversation?.id, user?.id, loadConversations]);
 
   async function openConversationWith(person) {
     if (!user || !person?.id || person.id === user.id) return;
@@ -2499,268 +2529,355 @@ export default function App() {
 
           {activePage === "messages" && (
             <section
-              className={`other-page messages-page ${
+              className={`other-page messages-page ig-dm-page ${
                 activeConversation ? "conversation-open" : ""
               }`}
             >
-              <span className="eyebrow">{t("PRIVATE CONVERSATIONS")}</span>
-              <h1>{t("Messages")}</h1>
-
-              <div className="messages-layout">
-                <div className="conversation-panel">
-                  <div className="panel-heading">
-                    <h3>{t("Your chats")}</h3>
+              <div className="ig-dm-layout">
+                <aside className="ig-dm-inbox">
+                  <div className="ig-dm-inbox-top">
+                    <div className="ig-dm-account">
+                      <strong>{profile?.username || user?.email?.split("@")[0] || "LOLZ"}</strong>
+                      <span>Messages</span>
+                    </div>
                     <button
                       type="button"
-                      className="secondary-button"
-                      onClick={loadConversations}
+                      className="ig-dm-icon-button ig-dm-new-message"
+                      onClick={() => goTo("people")}
+                      title={isArabic ? "رسالة جديدة" : "New message"}
+                      aria-label={isArabic ? "رسالة جديدة" : "New message"}
                     >
-                      {t("Refresh")}
+                      <SquarePen size={21} />
                     </button>
                   </div>
 
-                  {messagesLoading && conversations.length === 0 ? (
-                    <p>{t("Loading conversations...")}</p>
-                  ) : conversations.length === 0 ? (
-                    <p className="subtle-text">
-                      {t(
-                        "No conversations yet. Visit someone's profile and press Message to start a chat."
-                      )}
-                    </p>
-                  ) : (
-                    <div className="conversation-list">
-                      {conversations.map((conversation) => {
+                  <div className="ig-dm-search">
+                    <Search size={17} />
+                    <input
+                      type="search"
+                      value={messageSearch}
+                      onChange={(event) => setMessageSearch(event.target.value)}
+                      placeholder={isArabic ? "بحث" : "Search"}
+                      aria-label={isArabic ? "بحث في المحادثات" : "Search conversations"}
+                    />
+                    {messageSearch && (
+                      <button
+                        type="button"
+                        onClick={() => setMessageSearch("")}
+                        aria-label={isArabic ? "مسح البحث" : "Clear search"}
+                      >
+                        <X size={15} />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="ig-dm-list-heading">
+                    <strong>{isArabic ? "الرسائل" : "Messages"}</strong>
+                    <span>{conversations.length}</span>
+                  </div>
+
+                  <div className="ig-dm-threads">
+                    {messagesLoading && conversations.length === 0 ? (
+                      <div className="ig-dm-list-state">
+                        <span className="ig-dm-loader" />
+                        <p>{isArabic ? "جارٍ تحميل المحادثات..." : "Loading messages..."}</p>
+                      </div>
+                    ) : conversations.filter((conversation) => {
                         const person = conversation.otherProfile || {};
-                        const name =
-                          person.display_name ||
-                          person.full_name ||
-                          person.username ||
-                          t("Member");
-
-                        const isActive =
-                          activeConversation?.id === conversation.id;
-
-                        const lastMessage = conversation.lastMessage;
-
-                        const preview =
-                          lastMessage?.message_type === "image"
-                            ? `📷 ${t("Photo")}`
-                            : lastMessage?.message_type === "video"
-                            ? `🎥 ${t("Video message")}`
-                            : lastMessage?.message_type === "audio"
-                            ? `🎤 ${t("Voice message")}`
-                            : lastMessage?.content ||
-                              t("Start a conversation");
-
-                        return (
-                          <button
-                            key={conversation.id}
-                            type="button"
-                            className={`conversation-item ${
-                              isActive ? "active" : ""
-                            }`}
-                            onClick={async () => {
-                              setActiveConversation(conversation);
-                              setConversationMessages([]);
-                              setMessageText("");
-                              setMessageFile(null);
-
-                              if (messageMediaInput.current) {
-                                messageMediaInput.current.value = "";
-                              }
-
-                              await loadMessages(conversation.id);
-                            }}
-                          >
-                            <Avatar
-                              url={person.avatar_url}
-                              name={name}
-                              size="large"
-                            />
-
-                            <span className="conversation-person">
-                              <strong>{name}</strong>
-                              <small>{preview}</small>
-                            </span>
+                        const query = messageSearch.trim().toLowerCase();
+                        const name = [
+                          person.display_name,
+                          person.full_name,
+                          person.username,
+                          conversation.lastMessage?.content,
+                        ].filter(Boolean).join(" ").toLowerCase();
+                        return !query || name.includes(query);
+                      }).length === 0 ? (
+                      <div className="ig-dm-list-state">
+                        <div className="ig-dm-empty-icon"><MessageCircle size={23} /></div>
+                        <strong>{isArabic ? "لا توجد محادثات" : "No messages yet"}</strong>
+                        <p>
+                          {messageSearch
+                            ? (isArabic ? "لم نعثر على محادثة بهذا الاسم." : "No conversations match your search.")
+                            : (isArabic ? "ابدأ محادثة جديدة مع شخص من مجتمع LOLZ." : "Start a conversation with someone on LOLZ.")}
+                        </p>
+                        {!messageSearch && (
+                          <button type="button" onClick={() => goTo("people")}>
+                            {isArabic ? "العثور على أشخاص" : "Find people"}
                           </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                        )}
+                      </div>
+                    ) : (
+                      conversations
+                        .filter((conversation) => {
+                          const person = conversation.otherProfile || {};
+                          const query = messageSearch.trim().toLowerCase();
+                          const name = [
+                            person.display_name,
+                            person.full_name,
+                            person.username,
+                            conversation.lastMessage?.content,
+                          ].filter(Boolean).join(" ").toLowerCase();
+                          return !query || name.includes(query);
+                        })
+                        .map((conversation) => {
+                          const person = conversation.otherProfile || {};
+                          const name =
+                            person.display_name ||
+                            person.full_name ||
+                            person.username ||
+                            t("Member");
+                          const lastMessage = conversation.lastMessage;
+                          const preview =
+                            lastMessage?.message_type === "image"
+                              ? (isArabic ? "أرسل صورة" : "Sent a photo")
+                              : lastMessage?.message_type === "video"
+                              ? (isArabic ? "أرسل فيديو" : "Sent a video")
+                              : lastMessage?.message_type === "audio"
+                              ? (isArabic ? "رسالة صوتية" : "Voice message")
+                              : lastMessage?.content || (isArabic ? "ابدأ المحادثة" : "Start a conversation");
 
-                <div className="chat-panel">
+                          return (
+                            <button
+                              key={conversation.id}
+                              type="button"
+                              className={`ig-dm-thread ${
+                                activeConversation?.id === conversation.id ? "active" : ""
+                              }`}
+                              onClick={async () => {
+                                setActiveConversation(conversation);
+                                setConversationMessages([]);
+                                setMessageText("");
+                                setMessageFile(null);
+                                setVoiceFile(null);
+                                shouldAutoScrollRef.current = true;
+                                if (messageMediaInput.current) {
+                                  messageMediaInput.current.value = "";
+                                }
+                                await loadMessages(conversation.id);
+                              }}
+                            >
+                              <span className="ig-dm-thread-avatar">
+                                <Avatar url={person.avatar_url} name={name} size="large" />
+                              </span>
+                              <span className="ig-dm-thread-copy">
+                                <strong>{name}</strong>
+                                <small>{preview}</small>
+                              </span>
+                              <span className="ig-dm-thread-meta">
+                                {lastMessage?.created_at ? timeAgo(lastMessage.created_at, isArabic) : ""}
+                              </span>
+                            </button>
+                          );
+                        })
+                    )}
+                  </div>
+                </aside>
+
+                <section className="ig-dm-chat">
                   {activeConversation ? (
                     <>
-                      <div className="chat-header">
+                      <header className="ig-dm-chat-header">
                         <button
                           type="button"
-                          className="chat-back-button"
+                          className="ig-dm-back ig-dm-icon-button"
                           onClick={() => {
                             setActiveConversation(null);
                             setConversationMessages([]);
                             setMessageText("");
                             setMessageFile(null);
                             setVoiceFile(null);
-
                             if (messageMediaInput.current) {
                               messageMediaInput.current.value = "";
                             }
                           }}
-                          aria-label={t("Back")}
-                          title={t("Back")}
+                          aria-label={isArabic ? "العودة إلى المحادثات" : "Back to messages"}
                         >
-                          {isArabic ? "→" : "←"}
+                          <ArrowLeft size={21} />
                         </button>
 
-                        <Avatar
-                          url={activeConversation.otherProfile?.avatar_url}
-                          name={
-                            activeConversation.otherProfile?.display_name ||
-                            activeConversation.otherProfile?.username
-                          }
-                          size="large"
-                        />
+                        <button
+                          type="button"
+                          className="ig-dm-chat-person"
+                          onClick={() => openUserProfile(activeConversation.otherProfile?.id)}
+                        >
+                          <Avatar
+                            url={activeConversation.otherProfile?.avatar_url}
+                            name={
+                              activeConversation.otherProfile?.display_name ||
+                              activeConversation.otherProfile?.username ||
+                              t("Member")
+                            }
+                            size="large"
+                          />
+                          <span>
+                            <strong>
+                              {activeConversation.otherProfile?.display_name ||
+                                activeConversation.otherProfile?.full_name ||
+                                activeConversation.otherProfile?.username ||
+                                t("Member")}
+                            </strong>
+                            <small>
+                              @{activeConversation.otherProfile?.username || "user"}
+                            </small>
+                          </span>
+                        </button>
 
-                        <div className="chat-user-info">
+                        <div className="ig-dm-chat-actions">
+                          <button
+                            type="button"
+                            className="ig-dm-icon-button"
+                            onClick={() => callActionsRef.current?.startAudio?.()}
+                            title={isArabic ? "اتصال صوتي" : "Voice call"}
+                            aria-label={isArabic ? "اتصال صوتي" : "Voice call"}
+                          >
+                            <Phone size={21} />
+                          </button>
+                          <button
+                            type="button"
+                            className="ig-dm-icon-button"
+                            onClick={() => callActionsRef.current?.startVideo?.()}
+                            title={isArabic ? "مكالمة فيديو" : "Video call"}
+                            aria-label={isArabic ? "مكالمة فيديو" : "Video call"}
+                          >
+                            <Video size={22} />
+                          </button>
+                          <button
+                            type="button"
+                            className="ig-dm-icon-button ig-dm-info-button"
+                            onClick={() => openUserProfile(activeConversation.otherProfile?.id)}
+                            title={isArabic ? "معلومات الحساب" : "Profile information"}
+                            aria-label={isArabic ? "معلومات الحساب" : "Profile information"}
+                          >
+                            <Info size={21} />
+                          </button>
+                        </div>
+                      </header>
+
+                      <div
+                        className="ig-dm-message-feed"
+                        onScroll={(event) => {
+                          const container = event.currentTarget;
+                          const distanceFromBottom =
+                            container.scrollHeight -
+                            container.scrollTop -
+                            container.clientHeight;
+                          shouldAutoScrollRef.current = distanceFromBottom < 150;
+                        }}
+                      >
+                        <div className="ig-dm-profile-intro">
+                          <div className="ig-dm-profile-avatar">
+                            <Avatar
+                              url={activeConversation.otherProfile?.avatar_url}
+                              name={
+                                activeConversation.otherProfile?.display_name ||
+                                activeConversation.otherProfile?.username ||
+                                t("Member")
+                              }
+                              size="profile"
+                            />
+                          </div>
                           <strong>
                             {activeConversation.otherProfile?.display_name ||
                               activeConversation.otherProfile?.full_name ||
                               activeConversation.otherProfile?.username ||
                               t("Member")}
                           </strong>
-                          <small>{t("Private conversation")}</small>
+                          <span>@{activeConversation.otherProfile?.username || "user"}</span>
+                          <button
+                            type="button"
+                            onClick={() => openUserProfile(activeConversation.otherProfile?.id)}
+                          >
+                            {isArabic ? "عرض الملف الشخصي" : "View profile"}
+                          </button>
                         </div>
-                      </div>
 
-                      {!currentCallContext && (
-                        <Calls
-                          supabase={supabase}
-                          user={user}
-                          conversation={activeConversation}
-                          onCallStateChange={handleCallStateChange}
-                        />
-                      )}
-
-                      <div
-                        className="chat-history"
-                        onScroll={(event) => {
-                          const container = event.currentTarget;
-
-                          const distanceFromBottom =
-                            container.scrollHeight -
-                            container.scrollTop -
-                            container.clientHeight;
-
-                          shouldAutoScrollRef.current =
-                            distanceFromBottom < 150;
-                        }}
-                      >
                         {messagesLoading ? (
-                          <p>{t("Loading messages...")}</p>
+                          <div className="ig-dm-feed-state">
+                            <span className="ig-dm-loader" />
+                            <p>{isArabic ? "جارٍ تحميل الرسائل..." : "Loading messages..."}</p>
+                          </div>
                         ) : conversationMessages.length === 0 ? (
-                          <p className="chat-empty">
-                            {t("No messages yet. Say hello!")}
-                          </p>
+                          <div className="ig-dm-first-message">
+                            <MessageCircle size={24} />
+                            <strong>{isArabic ? "ابدأ المحادثة" : "Start a conversation"}</strong>
+                            <span>{isArabic ? "أرسل أول رسالة إلى هذا الحساب." : "Send a message to get the conversation started."}</span>
+                          </div>
                         ) : (
-                          conversationMessages.map((message) => {
-                            const mine = message.sender_id === user.id;
-                            const isImage =
-                              message.message_type === "image" &&
-                              message.media_url;
+                          <div className="ig-dm-message-list">
+                            {conversationMessages.map((message) => {
+                              const mine = message.sender_id === user.id;
+                              const isImage =
+                                message.message_type === "image" && message.media_url;
+                              const isVideo =
+                                message.message_type === "video" && message.media_url;
+                              const isAudio =
+                                message.message_type === "audio" && message.media_url;
+                              const isMedia = isImage || isVideo || isAudio;
 
-                            const isVideo =
-                              message.message_type === "video" &&
-                              message.media_url;
-
-                            const isAudio =
-                              message.message_type === "audio" &&
-                              message.media_url;
-
-                            const isMedia = isImage || isVideo || isAudio;
-
-                            return (
-                              <div
-                                key={message.id}
-                                className={`message-bubble ${
-                                  mine ? "mine" : "theirs"
-                                }`}
-                              >
-                                {isImage && (
-                                  <img
-                                    src={message.media_url}
-                                    alt={message.file_name || "Shared image"}
-                                    loading="lazy"
-                                  />
-                                )}
-
-                                {isVideo && (
-                                  <video
-                                    src={message.media_url}
-                                    controls
-                                    playsInline
-                                    preload="metadata"
-                                  />
-                                )}
-
-                                {isAudio && (
-                                  <audio
-                                    src={message.media_url}
-                                    controls
-                                    preload="metadata"
-                                  />
-                                )}
-
-                                {(!isMedia ||
-                                  (message.content &&
-                                    message.content !== "Photo" &&
-                                    message.content !== "Video" &&
-                                    message.content !== "Voice message")) && (
-                                  <div>{message.content}</div>
-                                )}
-
-                                <small>
-                                  {timeAgo(message.created_at, isArabic)}
-                                </small>
-                              </div>
-                            );
-                          })
+                              return (
+                                <div
+                                  key={message.id}
+                                  className={`ig-dm-message-row ${mine ? "mine" : "theirs"}`}
+                                >
+                                  <div className={`ig-dm-bubble ${mine ? "mine" : "theirs"} ${isMedia ? "media" : ""}`}>
+                                    {isImage && (
+                                      <a href={message.media_url} target="_blank" rel="noreferrer">
+                                        <img
+                                          src={message.media_url}
+                                          alt={message.file_name || "Shared image"}
+                                          loading="lazy"
+                                        />
+                                      </a>
+                                    )}
+                                    {isVideo && (
+                                      <video
+                                        src={message.media_url}
+                                        controls
+                                        playsInline
+                                        preload="metadata"
+                                      />
+                                    )}
+                                    {isAudio && (
+                                      <audio
+                                        src={message.media_url}
+                                        controls
+                                        preload="metadata"
+                                      />
+                                    )}
+                                    {(!isMedia ||
+                                      (message.content &&
+                                        !["Photo", "Video", "Voice message"].includes(message.content))) && (
+                                      <p>{message.content}</p>
+                                    )}
+                                    <time>{timeAgo(message.created_at, isArabic)}</time>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
-
                         <div ref={messagesEndRef} />
                       </div>
 
-                      {messageFile && messageFilePreview && (
-                        <div className="message-file-preview">
+                      {(messageFile && messageFilePreview) && (
+                        <div className="ig-dm-attachment-preview">
                           {messageFile.type.startsWith("image/") ? (
                             <img src={messageFilePreview} alt="Preview" />
                           ) : (
-                            <video src={messageFilePreview} />
+                            <video src={messageFilePreview} controls />
                           )}
-
-                          <div className="preview-file-info">
+                          <div>
                             <strong>{messageFile.name}</strong>
-                            <small>
-                              {(messageFile.size / (1024 * 1024)).toFixed(2)}{" "}
-                              MB
-                            </small>
+                            <small>{(messageFile.size / (1024 * 1024)).toFixed(2)} MB</small>
                           </div>
-
-                          <button
-                            type="button"
-                            onClick={clearMessageFile}
-                            disabled={messageSending}
-                            className="secondary-button"
-                          >
-                            {t("Remove")}
+                          <button type="button" onClick={clearMessageFile} disabled={messageSending}>
+                            <X size={17} />
                           </button>
                         </div>
                       )}
 
-                      <form
-                        className="message-composer"
-                        onSubmit={sendMessage}
-                      >
+                      <form className="ig-dm-composer" onSubmit={sendMessage}>
                         <input
                           ref={messageMediaInput}
                           type="file"
@@ -2768,120 +2885,87 @@ export default function App() {
                           hidden
                           onChange={handleMessageFileChange}
                         />
-
                         <button
                           type="button"
-                          className="secondary-button attach-button"
+                          className="ig-dm-composer-icon"
                           onClick={() => messageMediaInput.current?.click()}
-                          disabled={
-                            messageSending || isRecording || !!voiceFile
-                          }
-                          title="إرفاق صورة أو فيديو"
+                          disabled={messageSending || isRecording || !!voiceFile}
+                          title={isArabic ? "إرفاق صورة أو فيديو" : "Attach a photo or video"}
+                          aria-label={isArabic ? "إرفاق صورة أو فيديو" : "Attach a photo or video"}
                         >
-                          📎
+                          <ImagePlus size={22} />
                         </button>
 
                         {!voiceFile && (
                           <button
                             type="button"
-                            className="secondary-button"
+                            className={`ig-dm-composer-icon ig-dm-mic ${isRecording ? "recording" : ""}`}
                             onPointerDown={handleVoicePointerDown}
                             onPointerUp={handleVoicePointerUp}
                             onPointerCancel={handleVoicePointerCancel}
                             onContextMenu={(event) => event.preventDefault()}
                             disabled={messageSending || !!messageFile}
-                            title="اضغط مطولاً لتسجيل رسالة صوتية"
+                            title={isArabic ? "اضغط مطولاً لتسجيل رسالة صوتية" : "Hold to record a voice message"}
+                            aria-label={isArabic ? "تسجيل رسالة صوتية" : "Record a voice message"}
                           >
-                            🎤
+                            <Mic size={21} />
                           </button>
                         )}
 
                         {isRecording && (
-                          <>
-                            <span className="recording-indicator">
-                              🔴 {t("Recording...")}{" "}
-                              {Math.floor(recordingSeconds / 60)}:
-                              {String(recordingSeconds % 60).padStart(2, "0")}
-                            </span>
-
-                            <button
-                              type="button"
-                              className="primary-button"
-                              onClick={stopVoiceRecording}
-                            >
-                              ⏹
-                            </button>
-
-                            <button
-                              type="button"
-                              className="secondary-button"
-                              onClick={cancelVoiceRecording}
-                            >
-                              ✖
-                            </button>
-                          </>
+                          <div className="ig-dm-recording-state">
+                            <span />
+                            {isArabic ? "جارٍ التسجيل" : "Recording"} {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, "0")}
+                            <button type="button" onClick={stopVoiceRecording}>■</button>
+                            <button type="button" onClick={cancelVoiceRecording}><X size={14} /></button>
+                          </div>
                         )}
 
                         {voiceFile && (
-                          <div className="voice-preview-row">
-                            <audio
-                              src={voiceFilePreview}
-                              controls
-                              preload="metadata"
-                            />
-
-                            <button
-                              type="button"
-                              className="secondary-button"
-                              onClick={() => setVoiceFile(null)}
-                              title="حذف الرسالة الصوتية"
-                            >
-                              ✖
+                          <div className="ig-dm-voice-preview">
+                            <audio src={voiceFilePreview} controls preload="metadata" />
+                            <button type="button" onClick={() => setVoiceFile(null)} aria-label={isArabic ? "حذف التسجيل" : "Remove recording"}>
+                              <X size={16} />
                             </button>
                           </div>
                         )}
 
                         <input
+                          className="ig-dm-composer-input"
                           value={messageText}
-                          onChange={(event) =>
-                            setMessageText(event.target.value)
-                          }
-                          placeholder={t("Write a message...")}
+                          onChange={(event) => setMessageText(event.target.value)}
+                          placeholder={isArabic ? "اكتب رسالة..." : "Message..."}
                           disabled={messageSending || isRecording}
                         />
 
                         <button
-                          className="primary-button"
+                          className="ig-dm-send-button"
                           type="submit"
                           disabled={
                             messageSending ||
                             isRecording ||
-                            (!messageText.trim() &&
-                              !messageFile &&
-                              !voiceFile)
+                            (!messageText.trim() && !messageFile && !voiceFile)
                           }
+                          aria-label={isArabic ? "إرسال الرسالة" : "Send message"}
                         >
-                          {messageSending ? t("Sending...") : t("Send")}
+                          {messageSending ? <span className="ig-dm-send-spinner" /> : <Send size={19} />}
                         </button>
                       </form>
-
-                      <small className="upload-hint">
-                        {t("Images and videos only · Maximum 100 MB")}
+                      <small className="ig-dm-upload-hint">
+                        {isArabic ? "الصور والفيديوهات حتى 100 ميغابايت" : "Photos and videos up to 100 MB"}
                       </small>
                     </>
                   ) : (
-                    <div className="chat-placeholder">
-                      <div>
-                        <h3>{t("Your private messages")}</h3>
-                        <p>
-                          {t(
-                            "Choose a conversation or visit a person's profile and press Message."
-                          )}
-                        </p>
-                      </div>
+                    <div className="ig-dm-welcome">
+                      <div className="ig-dm-welcome-icon"><Send size={26} /></div>
+                      <h2>{isArabic ? "رسائلك" : "Your messages"}</h2>
+                      <p>{isArabic ? "أرسل صوراً ورسائل إلى أصدقائك على LOLZ." : "Send private messages, photos and voice notes to your friends on LOLZ."}</p>
+                      <button type="button" onClick={() => goTo("people")}>
+                        {isArabic ? "رسالة جديدة" : "New message"}
+                      </button>
                     </div>
                   )}
-                </div>
+                </section>
               </div>
             </section>
           )}
@@ -3025,6 +3109,7 @@ export default function App() {
             canStart={currentCallContext.canStart === true}
             canEnd={currentCallContext.canEnd === true}
             onCallStateChange={handleCallStateChange}
+            onCallActionsReady={registerPrivateCallActions}
           />
         </div>
       )}
