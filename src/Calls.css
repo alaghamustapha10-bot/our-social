@@ -453,10 +453,14 @@
   }
 }
 
+/* Keep the minimized call dock centered in the viewport on every page */
 .lolz-call-dock:has(.lolz-call-mini) {
-  top: calc(82px + env(safe-area-inset-top, 0px)) !important;
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
   bottom: auto !important;
-  width: min(280px, calc(100vw - 20px)) !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(320px, calc(100vw - 28px)) !important;
   max-height: none !important;
   overflow: visible !important;
 }
