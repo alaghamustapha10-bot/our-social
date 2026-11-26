@@ -20,6 +20,7 @@ export default function Premium({
   isArabic = false,
   isPremium = false,
   subscriptionEnd = null,
+  canCancelSubscription = false,
   onStartCheckout,
   onCancelSubscription,
   onSupport,
@@ -248,12 +249,14 @@ export default function Premium({
             </p>
           </div>
 
-          <button
-            className="premium-cancel-btn"
-            onClick={() => setModal("cancel")}
-          >
-            {t("Cancel subscription", "إلغاء الاشتراك")}
-          </button>
+          {canCancelSubscription && (
+            <button
+              className="premium-cancel-btn"
+              onClick={() => setModal("cancel")}
+            >
+              {t("Cancel subscription", "إلغاء الاشتراك")}
+            </button>
+          )}
         </section>
       )}
 
