@@ -37,7 +37,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = public, pg_temp
-as $
+as $$
 declare
   recent_report_count integer;
 begin
@@ -60,7 +60,7 @@ begin
 
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists limit_lolz_report_rate_trigger on public.content_reports;
 create trigger limit_lolz_report_rate_trigger
@@ -136,7 +136,7 @@ language sql
 stable
 security definer
 set search_path = public, pg_temp
-as $
+as $$
   select
     p_user_a is not null
     and p_user_b is not null
@@ -146,7 +146,7 @@ as $
       where (b.blocker_id = p_user_a and b.blocked_id = p_user_b)
          or (b.blocker_id = p_user_b and b.blocked_id = p_user_a)
     );
-$;
+$$;
 
 revoke all on function public.lolz_users_not_blocked(uuid, uuid) from public;
 grant execute on function public.lolz_users_not_blocked(uuid, uuid) to authenticated;
@@ -154,7 +154,7 @@ grant execute on function public.lolz_users_not_blocked(uuid, uuid) to authentic
 -- Restrict reads of core feed, profile, story, and LOLZ media rows even if an
 -- older permissive SELECT policy also exists. The caller still needs an
 -- applicable permissive policy; this policy only adds a block condition.
-do $
+do $$
 declare
   item record;
 begin
@@ -191,7 +191,7 @@ begin
     end if;
   end loop;
 end;
-$;
+$$;
 
 -- Blocked users cannot see or create a private conversation with each other.
 alter table public.conversations enable row level security;
@@ -213,7 +213,7 @@ language sql
 stable
 security definer
 set search_path = public, pg_temp
-as $
+as $$
   select exists (
     select 1
     from public.conversations c
@@ -221,7 +221,7 @@ as $
       and auth.uid() in (c.user_one, c.user_two)
       and public.lolz_users_not_blocked(c.user_one, c.user_two)
   );
-$;
+$$;
 
 revoke all on function public.lolz_conversation_is_allowed(text) from public;
 grant execute on function public.lolz_conversation_is_allowed(text) to authenticated;
