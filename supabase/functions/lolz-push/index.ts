@@ -593,10 +593,11 @@ async function handleAction(userId: string, body: JsonObject) {
     const recipientId = conversation.user_one === userId
       ? conversation.user_two
       : conversation.user_one;
+    const notificationType = body.story_reply === true ? "story_reply" : "message";
     const result = await createAndSendNotifications(
       [String(recipientId)],
       userId,
-      "message",
+      notificationType,
       { conversation_id: String(message.conversation_id), message_id: String(message.id) },
     );
     return { success: true, ...result };
