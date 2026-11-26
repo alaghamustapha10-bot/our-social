@@ -16,6 +16,7 @@ import {
   Crown,
   Bookmark,
   Flag,
+  Ban,
 } from "lucide-react";
 import { useState } from "react";
 import "./Navigation.css";
@@ -37,6 +38,7 @@ const COPY = {
     premium: "LOLZ Premium",
     settings: "الإعدادات",
     moderation: "مراجعة البلاغات",
+    blocked: "الحسابات المحظورة",
     logout: "تسجيل الخروج",
     close: "إغلاق",
   },
@@ -56,6 +58,7 @@ const COPY = {
     premium: "LOLZ Premium",
     settings: "Settings",
     moderation: "Reports review",
+    blocked: "Blocked accounts",
     logout: "Log out",
     close: "Close",
   },
@@ -88,6 +91,7 @@ export default function Navigation({ page, setPage, onCreate, onLogout, username
     { id: "channels", label: t.channels, icon: Radio },
     { id: "premium", label: t.premium, icon: Crown },
     { id: "settings", label: t.settings, icon: Settings },
+    { id: "blocked", label: t.blocked, icon: Ban },
     ...(isAdmin ? [{ id: "moderation", label: t.moderation, icon: Flag }] : []),
   ];
 
