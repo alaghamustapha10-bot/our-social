@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import { Room, RoomEvent } from "livekit-client";
+import { createPortal } from "react-dom";
 
 import {
   Phone,
@@ -1753,9 +1754,9 @@ export default function Calls({
         </div>
       )}
 
-      {active && (
-        <>
-          {isMinimized && (
+      {active && isMinimized && typeof document !== "undefined" &&
+        createPortal(
+          <div className="lolz-call-mini-portal">
             <button
               type="button"
               className="lolz-call-mini"
@@ -1763,27 +1764,25 @@ export default function Calls({
               title="العودة إلى المكالمة"
               aria-label="العودة إلى المكالمة"
             >
-              <span className="lolz-call-mini-name">
-                <span className="lolz-call-mini-dot" />
-                <Phone size={18} />
-
-                <span>
-                  {activeMediaType === "video"
-                    ? "مكالمة فيديو"
-                    : isPrivate
-                      ? "مكالمة LOLZ"
-                      : callType === "channel"
-                        ? "مكالمة القناة"
-                        : "مكالمة جماعية"}
-                </span>
+              <span className="lolz-call-mini-dot" />
+              <Phone size={16} />
+              <span className="lolz-call-mini-label">
+                {isPrivate
+                  ? getDisplayName(conversation?.otherProfile, "مكالمة LOLZ")
+                  : callType === "channel"
+                    ? "مكالمة القناة"
+                    : "مكالمة جماعية"}
               </span>
-
               <span className="lolz-call-mini-duration">
-                <Clock size={16} />
                 {formatDuration(callDuration)}
               </span>
             </button>
-          )}
+          </div>,
+          document.body
+        )}
+
+      {active && (
+        <>
 
           <div
             className={`lolz-call-active-panel${isMinimized ? " is-minimized" : ""}`}
