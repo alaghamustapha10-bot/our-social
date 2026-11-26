@@ -1205,23 +1205,23 @@ export default function App() {
 
     if (postId) notification.post_id = postId;
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("notifications")
-      .insert(notification)
-      .select("id")
-      .single();
+      .insert(notification);
 
     if (error) {
       console.error("Notification error:", error.message);
       return;
     }
 
-    if (data?.id) {
-      void dispatchLolzPush(supabase, {
-        action: "notification",
-        notification_id: data.id,
-      });
-    }
+    // The Edge Function verifies the underlying like, comment, or follow
+    // and locates the notification row with service-role access.
+    void dispatchLolzPush(supabase, {
+      action: "social_event",
+      recipient_id: recipientId,
+      type,
+      post_id: postId,
+    });
   }
 
   async function toggleLike(postId) {
