@@ -6,7 +6,7 @@ begin;
 create table if not exists public.content_reports (
   id uuid primary key default gen_random_uuid(),
   reporter_id uuid not null references auth.users(id) on delete cascade,
-  target_type text not null check (target_type in ('user', 'post', 'comment', 'message', 'story', 'group', 'channel')),
+  target_type text not null check (target_type in ('user', 'post', 'video', 'comment', 'message', 'story', 'group', 'channel')),
   target_id text not null check (length(trim(target_id)) > 0),
   target_user_id uuid references auth.users(id) on delete set null,
   reason text not null check (length(trim(reason)) between 2 and 100),
@@ -16,6 +16,14 @@ create table if not exists public.content_reports (
   reviewed_at timestamptz,
   reviewed_by uuid references auth.users(id) on delete set null
 );
+
+-- Keep the target-type check correct when this migration is applied to an
+-- already-existing content_reports table.
+alter table public.content_reports
+  drop constraint if exists content_reports_target_type_check;
+alter table public.content_reports
+  add constraint content_reports_target_type_check
+  check (target_type in ('user', 'post', 'video', 'comment', 'message', 'story', 'group', 'channel'));
 
 create index if not exists content_reports_status_created_idx
   on public.content_reports(status, created_at desc);
