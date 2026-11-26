@@ -12,6 +12,7 @@ import {
   Volume2,
   VolumeX,
   Flag,
+  Eye,
 } from "lucide-react";
 import { supabase } from "./supabase";
 import "./Lolz.css";
@@ -26,6 +27,7 @@ function formatDate(date) {
 export default function Lolz({ user, blockedUserIds = [], onReport }) {
   const fileRef = useRef(null);
   const videoRefs = useRef({});
+  const viewedVideosRef = useRef(new Set());
   const feedRef = useRef(null);
 
   const [videos, setVideos] = useState([]);
@@ -42,6 +44,53 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
   const [pausedVideoId, setPausedVideoId] = useState(null);
   const [uploadOpen, setUploadOpen] = useState(false);
 
+  const markVideoViewed = useCallback(async (videoId, ownerId) => {
+    if (
+      !user?.id ||
+      !videoId ||
+      !ownerId ||
+      ownerId === user.id ||
+      viewedVideosRef.current.has(String(videoId))
+    ) {
+      return;
+    }
+
+    const normalizedId = String(videoId);
+    viewedVideosRef.current.add(normalizedId);
+
+    const { data, error } = await supabase
+      .from("lolz_video_views")
+      .upsert(
+        {
+          video_id: normalizedId,
+          viewer_id: user.id,
+          viewed_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "video_id,viewer_id",
+          ignoreDuplicates: true,
+        }
+      )
+      .select("video_id")
+      .maybeSingle();
+
+    if (error) {
+      viewedVideosRef.current.delete(normalizedId);
+      console.warn("Could not record LOLZ video view:", error.message);
+      return;
+    }
+
+    if (data) {
+      setVideos((current) =>
+        current.map((item) =>
+          String(item.id) === normalizedId
+            ? { ...item, view_count: (item.view_count || 0) + 1 }
+            : item
+        )
+      );
+    }
+  }, [user?.id]);
+
   // تشغيل الفيديو الظاهر وإيقاف بقية الفيديوهات
   useEffect(() => {
     const elements = Object.values(videoRefs.current).filter(Boolean);
@@ -55,6 +104,7 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
 
           if (entry.isIntersecting && entry.intersectionRatio >= 0.65) {
             video.muted = !soundOn;
+            void markVideoViewed(video.dataset.videoId, video.dataset.ownerId);
             video.play().catch(() => {});
           } else {
             video.pause();
@@ -73,7 +123,7 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
       observer.disconnect();
       elements.forEach((video) => video.pause());
     };
-  }, [videos, soundOn]);
+  }, [videos, soundOn, markVideoViewed]);
 
   const loadVideos = useCallback(async () => {
     setLoading(true);
@@ -108,7 +158,7 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
     }
 
     if (videoIds.length) {
-      const [likesResult, commentsResult] = await Promise.all([
+      const [likesResult, commentsResult, viewCountsResult] = await Promise.all([
         supabase
           .from("lolz_likes")
           .select("*")
@@ -119,10 +169,25 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
           .select("*")
           .in("video_id", videoIds)
           .order("created_at", { ascending: true }),
+
+        supabase.rpc("get_lolz_video_view_counts", {
+          p_video_ids: videoIds.map(String),
+        }),
       ]);
 
       likeRows = likesResult.data || [];
       commentRows = (commentsResult.data || []).filter((comment) => !blockedUserIds.includes(comment.user_id));
+      const viewCountMap = Object.fromEntries(
+        (viewCountsResult.data || []).map((item) => [String(item.video_id), Number(item.view_count || 0)])
+      );
+
+      setVideos(
+        videoRows.map((video) => ({
+          ...video,
+          profile: profileMap[video.user_id] || null,
+          view_count: viewCountMap[String(video.id)] || 0,
+        }))
+      );
     }
 
     const commentUserIds = [
@@ -146,13 +211,6 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
 
     const commentProfileMap = Object.fromEntries(
       commentProfiles.map((p) => [p.id, p])
-    );
-
-    setVideos(
-      videoRows.map((video) => ({
-        ...video,
-        profile: profileMap[video.user_id] || null,
-      }))
     );
 
     const likeMap = {};
@@ -559,6 +617,8 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
                       }
                     }}
                     className="lolz-video-element"
+                    data-video-id={video.id}
+                    data-owner-id={video.user_id}
                     src={video.video_url}
                     playsInline
                     loop
@@ -639,6 +699,12 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
                       </span>
                       <span>{videoComments.length}</span>
                     </button>
+                    <div className="lolz-view-count" aria-label="Views">
+                      <span className="lolz-action-icon">
+                        <Eye size={23} />
+                      </span>
+                      <span>{video.view_count || 0}</span>
+                    </div>
                   </div>
 
                   <div className="lolz-video-bottom">
