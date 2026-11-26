@@ -446,7 +446,7 @@
 }
 
 /* One LiveKit instance; expose its audio/video start actions in the DM header. */
-.app-shell:has(.ig-dm-page.conversation-open) .lolz-call-dock:has(.lolz-private-call-actions):not(:has(.lolz-incoming-call)):not(:has(.lolz-call-active-panel)) {
+.app-shell:has(.ig-dm-page.conversation-open) .lolz-call-dock:has(.lolz-private-call-actions):not(:has(.lolz-incoming-call)):not(:has(.lolz-call-active-panel)):not(:has(.lolz-call-connecting)):not(:has(.lolz-call-error)) {
   display:none;
 }
 .app-shell:has(.ig-dm-page.conversation-open) .lolz-call-dock:has(.lolz-private-call-actions):not(:has(.lolz-incoming-call)):not(:has(.lolz-call-active-panel)) .lolz-private-call-actions {
@@ -716,3 +716,29 @@
 @media (prefers-reduced-motion: reduce) {
   .ig-dm-page *, .lolz-call-dock * { scroll-behavior:auto !important; animation:none !important; transition:none !important; }
 }
+
+
+.app-shell:has(.ig-dm-page.conversation-open) .lolz-call-dock:has(.lolz-call-connecting),
+.app-shell:has(.ig-dm-page.conversation-open) .lolz-call-dock:has(.lolz-call-error) {
+  position:fixed;
+  top:82px;
+  right:24px;
+  left:auto;
+  bottom:auto;
+  z-index:80;
+  width:min(350px,calc(100vw - 32px));
+  max-height:160px;
+  padding:10px;
+  transform:none;
+  overflow:visible;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:var(--panel);
+  box-shadow:0 12px 35px rgba(0,0,0,.18);
+}
+.app-shell:has(.ig-dm-page.conversation-open) .lolz-call-connecting,
+.app-shell:has(.ig-dm-page.conversation-open) .lolz-call-error {
+  border-radius:11px !important;
+  font-size:12px;
+}
+.ig-call-remote-media:not(:has(video)) { display:none !important; }
