@@ -19,6 +19,7 @@ import "./InstagramMobile.css";
 import Calls from "./Calls";
 import Premium from "./Premium";
 import StoryViewer from "./StoryViewer";
+import ModerationDialog from "./ModerationDialog";
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 
@@ -308,6 +309,8 @@ export default function App() {
 
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [selectedProfilePosts, setSelectedProfilePosts] = useState([]);
+  const [blockedUserIds, setBlockedUserIds] = useState([]);
+  const [moderationTarget, setModerationTarget] = useState(null);
   const [selectedProfileStats, setSelectedProfileStats] = useState({
     followers: 0,
     following: 0,
@@ -620,6 +623,22 @@ export default function App() {
     setFollowingIds((data || []).map((item) => item.following_id));
   }, []);
 
+  const loadBlockedUsers = useCallback(async (userId) => {
+    if (!userId) return;
+
+    const { data, error } = await supabase
+      .from("user_blocks")
+      .select("blocked_id")
+      .eq("blocker_id", userId);
+
+    if (error) {
+      console.warn("Could not load blocked accounts:", error.message);
+      return;
+    }
+
+    setBlockedUserIds((data || []).map((item) => item.blocked_id));
+  }, []);
+
   const loadFollowStats = useCallback(async (userId) => {
     if (!userId) return;
 
@@ -734,6 +753,7 @@ export default function App() {
         loadPosts(currentUser.id),
         loadStories(),
         loadFollowing(currentUser.id),
+        loadBlockedUsers(currentUser.id),
         loadNotifications(currentUser.id),
         loadFollowStats(currentUser.id),
       ]);
@@ -742,7 +762,7 @@ export default function App() {
     }
 
     setLoading(false);
-  }, [loadFollowStats, loadFollowing, loadNotifications, loadPosts, loadPremiumStatus, loadStories, t]);
+  }, [loadFollowStats, loadFollowing, loadBlockedUsers, loadNotifications, loadPosts, loadPremiumStatus, loadStories, t]);
 
   useEffect(() => {
     startApp();
@@ -1132,13 +1152,13 @@ export default function App() {
       const { data, error } = await query;
       if (error) throw error;
 
-      setPeople(data || []);
+      setPeople((data || []).filter((person) => !blockedUserIds.includes(person.id)));
     } catch (error) {
       setNotice(t("People search error: ") + error.message);
     }
 
     setPeopleLoading(false);
-  }, [t, user?.id]);
+  }, [t, user?.id, blockedUserIds]);
 
   useEffect(() => {
     if (!user?.id || activePage !== "people") return;
@@ -1207,6 +1227,15 @@ export default function App() {
 
     if (personId === user.id) {
       goTo("profile");
+      return;
+    }
+
+    if (blockedUserIds.includes(personId)) {
+      setNotice(
+        isArabic
+          ? "لقد حظرت هذا الحساب. أزل الحظر أولاً لفتح ملفه."
+          : "You blocked this account. Unblock it before opening the profile."
+      );
       return;
     }
 
@@ -1293,6 +1322,69 @@ export default function App() {
     }
 
     setProfileLoading(false);
+  }
+
+  async function reportContent(report) {
+    if (!user?.id || !report?.type || !report?.id || !report?.reason) return;
+
+    const { error } = await supabase.from("content_reports").insert({
+      reporter_id: user.id,
+      target_type: report.type,
+      target_id: String(report.id),
+      target_user_id: report.targetUserId || null,
+      reason: report.reason,
+      details: report.details || null,
+    });
+
+    if (error) {
+      setNotice(
+        isArabic
+          ? "تعذر إرسال البلاغ: " + error.message
+          : "Could not submit report: " + error.message
+      );
+      return;
+    }
+
+    setNotice(
+      isArabic
+        ? "وصل بلاغك بسرية. شكراً لمساعدتنا في حماية LOLZ."
+        : "Your private report has been submitted. Thank you for helping keep LOLZ safe."
+    );
+  }
+
+  async function blockUser(targetUserId) {
+    if (!user?.id || !targetUserId || targetUserId === user.id) return;
+
+    const { error } = await supabase.from("user_blocks").insert({
+      blocker_id: user.id,
+      blocked_id: targetUserId,
+    });
+
+    if (error && error.code !== "23505") {
+      setNotice(
+        isArabic
+          ? "تعذر حظر الحساب: " + error.message
+          : "Could not block account: " + error.message
+      );
+      return;
+    }
+
+    setBlockedUserIds((current) =>
+      current.includes(targetUserId) ? current : [...current, targetUserId]
+    );
+    setPeople((current) => current.filter((person) => person.id !== targetUserId));
+
+    if (selectedProfile?.id === targetUserId) {
+      setSelectedProfile(null);
+      setSelectedProfilePosts([]);
+      setActivePage("people");
+    }
+
+    setNotice(
+      isArabic
+        ? "تم حظر الحساب. لن تظهر منشوراته في صفحتك الرئيسية."
+        : "Account blocked. Their posts will no longer appear in your feed."
+    );
   }
 
   async function markNotificationRead(notificationId) {
@@ -1948,12 +2040,16 @@ export default function App() {
     );
   });
 
+  const unblockedPosts = filteredPosts.filter(
+    (post) => !blockedUserIds.includes(post.user_id)
+  );
+
   const visiblePosts =
     activePage === "saved"
-      ? filteredPosts.filter((post) => savedPosts.includes(post.id))
+      ? unblockedPosts.filter((post) => savedPosts.includes(post.id))
       : activePage === "profile"
       ? filteredPosts.filter((post) => post.user_id === user?.id)
-      : filteredPosts;
+      : unblockedPosts;
 
   const unreadCount = notifications.filter((item) => !item.is_read).length;
 
@@ -1985,6 +2081,10 @@ export default function App() {
     setCommentText,
     onAddComment: addComment,
     onOpenProfile: openUserProfile,
+    onReport: (target) => setModerationTarget(target),
+    onBlock: (targetUserId) =>
+      setModerationTarget({ mode: "block", targetUserId }),
+    currentUserId: user?.id,
     t,
     isArabic,
   };
@@ -2122,11 +2222,7 @@ export default function App() {
                     <button
                       type="button"
                       className="story-item add-story"
-                      onClick={() => {
-                        const ownStory = stories.find((item) => item.user_id === user.id);
-                        if (ownStory) setActiveStoryId(ownStory.id);
-                        else storyInput.current?.click();
-                      }}
+                      onClick={() => storyInput.current?.click()}
                     >
                       <div className="story-ring add-ring">
                         <Avatar url={profile?.avatar_url} name={displayName} size="large" />
@@ -2134,6 +2230,22 @@ export default function App() {
                       </div>
                       <span>{t("Your story")}</span>
                     </button>
+
+                    {stories.filter((story) => story.user_id === user.id).length > 0 && (
+                      <button
+                        type="button"
+                        className="story-item own-story"
+                        onClick={() => {
+                          const ownStory = stories.find((story) => story.user_id === user.id);
+                          if (ownStory) setActiveStoryId(ownStory.id);
+                        }}
+                      >
+                        <div className="story-ring">
+                          <Avatar url={profile?.avatar_url} name={displayName} size="large" />
+                        </div>
+                        <span>{isArabic ? "مشاهدة قصتك" : "Your active story"}</span>
+                      </button>
+                    )}
 
                     {stories.filter((story) => story.user_id !== user.id).map((story) => (
                       <button
@@ -2423,6 +2535,33 @@ export default function App() {
                         onClick={() => openConversationWith(selectedProfile)}
                       >
                         {t("Message")}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() =>
+                          setModerationTarget({
+                            type: "user",
+                            id: selectedProfile.id,
+                            targetUserId: selectedProfile.id,
+                          })
+                        }
+                      >
+                        {isArabic ? "إبلاغ" : "Report"}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() =>
+                          setModerationTarget({
+                            mode: "block",
+                            targetUserId: selectedProfile.id,
+                          })
+                        }
+                      >
+                        {isArabic ? "حظر" : "Block"}
                       </button>
 
                       <button
@@ -3287,7 +3426,18 @@ export default function App() {
           currentUserId={user.id}
           isArabic={isArabic}
           onView={recordStoryView}
+          onReport={setModerationTarget}
           onClose={closeStoryViewer}
+        />
+      )}
+
+      {moderationTarget && (
+        <ModerationDialog
+          target={moderationTarget}
+          isArabic={isArabic}
+          onClose={() => setModerationTarget(null)}
+          onSubmitReport={reportContent}
+          onConfirmBlock={blockUser}
         />
       )}
     </div>
@@ -3307,6 +3457,9 @@ function PostList({
   setCommentText,
   onAddComment,
   onOpenProfile,
+  onReport,
+  onBlock,
+  currentUserId,
   t,
   isArabic,
 }) {
@@ -3449,6 +3602,34 @@ function PostList({
                     >
                       {isArabic ? "عرض الملف الشخصي" : "View profile"}
                     </button>
+                    {post.user_id !== currentUserId && (
+                      <>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            onReport?.({
+                              type: "post",
+                              id: post.id,
+                              targetUserId: post.user_id,
+                            });
+                            setOpenPostMenu(null);
+                          }}
+                        >
+                          {isArabic ? "الإبلاغ عن المنشور" : "Report post"}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            onBlock?.(post.user_id);
+                            setOpenPostMenu(null);
+                          }}
+                        >
+                          {isArabic ? "حظر الحساب" : "Block account"}
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
