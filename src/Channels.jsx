@@ -661,7 +661,7 @@ export default function Channels({
   const publishPost = async (event) => {
     event.preventDefault();
 
-    if ((!content.trim() && !mediaFile) || !selected || !isAdmin || loading || uploadingMedia) return;
+    if ((!content.trim() && !mediaFile) || !selected || !isAdmin || loading || uploadingMedia || uploadingVoice) return;
 
     if (mediaFile) {
       await publishMediaPost();
@@ -781,7 +781,13 @@ export default function Channels({
     }
   };
 
-  publishVoiceMessageRef.current = publishVoiceMessage;
+  useEffect(() => {
+    publishVoiceMessageRef.current = publishVoiceMessage;
+  }, [publishVoiceMessage]);
+
+  useEffect(() => {
+    clearMediaFile();
+  }, [selected?.id, clearMediaFile]);
 
   const leaveChannel = async () => {
     if (!selected || loading) return;
@@ -1207,7 +1213,7 @@ export default function Channels({
 
                     <button
                       type="submit"
-                      disabled={loading || (!content.trim() && !mediaFile) || isRecording || uploadingMedia}
+                      disabled={loading || (!content.trim() && !mediaFile) || isRecording || uploadingMedia || uploadingVoice}
                       title="نشر المنشور"
                       aria-label="نشر المنشور"
                     >
