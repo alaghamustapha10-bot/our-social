@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 import { supabase } from "./supabase";
-import { MessageCircle, Heart, UsersRound, Radio, Bookmark, Search, SquarePen, Phone, Video, Info, ImagePlus, Send, Mic, ArrowLeft, X } from "lucide-react";
+import { MessageCircle, Heart, UsersRound, Radio, Bookmark, Search, SquarePen, Phone, Video, Info, ImagePlus, Send, Mic, ArrowLeft, X, Eye } from "lucide-react";
 import Navigation from "./Navigation";
 import Lolz from "./Lolz";
 import "./App.css";
