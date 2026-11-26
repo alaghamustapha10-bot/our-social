@@ -8,9 +8,11 @@ import {
   useState,
 } from "react";
 import { supabase } from "./supabase";
+import { MessageCircle, Heart } from "lucide-react";
 import Navigation from "./Navigation";
 import Lolz from "./Lolz";
 import "./App.css";
+import "./InstagramRedesign.css";
 import Calls from "./Calls";
 import Premium from "./Premium";
 import { Capacitor } from "@capacitor/core";
@@ -1833,14 +1835,14 @@ export default function App() {
       />
 
       <main className="main-area">
-        <header className="topbar">
+        <header className="topbar ig-topbar">
           <div className="mobile-brand">
             <span className="brand-mark">L</span>
-            LOLZ<span className="brand-dot">.</span>
+            LOLZ
           </div>
 
           <div className="topbar-search">
-            <span>⌕</span>
+            <span aria-hidden="true">⌕</span>
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -1849,6 +1851,7 @@ export default function App() {
                   ? "Search people by name or username..."
                   : "Search posts and people..."
               )}
+              aria-label={t("Search posts and people...")}
             />
             {search && (
               <button
@@ -1860,6 +1863,16 @@ export default function App() {
                 ×
               </button>
             )}
+          </div>
+
+          <div className="ig-topbar-actions">
+            <button type="button" onClick={() => goTo("messages")} aria-label={t("Messages")} title={t("Messages")}>
+              <MessageCircle />
+            </button>
+            <button type="button" onClick={() => goTo("activity")} aria-label={t("Notifications")} title={t("Notifications")}>
+              <Heart />
+              {unreadCount > 0 && <span className="ig-notification-dot" />}
+            </button>
           </div>
 
           <button
@@ -1909,169 +1922,163 @@ export default function App() {
           )}
 
           {activePage === "home" && (
-            <>
-              <section className="welcome-section">
-                <div className="welcome-content">
-                  <span className="eyebrow">
-                    {t("YOUR WORLD. YOUR PEOPLE.")}
-                  </span>
-                  <h1>
-                    {t("Welcome back")}، {displayName.split(" ")[0]}.
-                  </h1>
-                  <p>{t("Your space. Your stories. Your community.")}</p>
-                </div>
-
-                <div className="welcome-decoration" aria-hidden="true">
-                  LOLZ<span>.</span>
-                </div>
-              </section>
-
-              <section className="stories-section">
-                <div className="section-heading">
-                  <div>
-                    <span className="eyebrow">{t("MOMENTS")}</span>
-                    <h2>{t("Stories")}</h2>
+            <section className="ig-home">
+              <div className="ig-home-column">
+                <section className="stories-section">
+                  <div className="ig-stories-heading">
+                    <strong>{t("Stories")}</strong>
+                    <span>{t("Disappear after 24 hours")}</span>
                   </div>
-                  <span className="subtle-text">
-                    {t("Disappear after 24 hours")}
-                  </span>
-                </div>
 
-                <div className="stories-list">
-                  <button
-                    type="button"
-                    className="story-item add-story"
-                    onClick={() => storyInput.current?.click()}
-                  >
-                    <div className="story-ring add-ring">
-                      <Avatar
-                        url={profile?.avatar_url}
-                        name={displayName}
-                        size="large"
-                      />
-                      <span className="add-story-plus">+</span>
-                    </div>
-                    <span>{t("Your story")}</span>
-                  </button>
-
-                  {stories.map((story) => (
+                  <div className="stories-list">
                     <button
                       type="button"
-                      className="story-item"
-                      key={story.id}
-                      onClick={() => window.open(story.media_url, "_blank")}
+                      className="story-item add-story"
+                      onClick={() => storyInput.current?.click()}
                     >
-                      <div className="story-ring">
-                        <Avatar
-                          url={story.author?.avatar_url}
-                          name={story.author?.username}
-                          size="large"
-                        />
+                      <div className="story-ring add-ring">
+                        <Avatar url={profile?.avatar_url} name={displayName} size="large" />
+                        <span className="add-story-plus">+</span>
                       </div>
-                      <span>
-                        {story.author?.display_name ||
-                          story.author?.username ||
-                          t("Member")}
-                      </span>
+                      <span>{t("Your story")}</span>
                     </button>
-                  ))}
-                </div>
 
-                <form className="story-upload" onSubmit={publishStory}>
-                  <input
-                    ref={storyInput}
-                    type="file"
-                    accept="image/*,video/*"
-                    hidden
-                    onChange={(event) =>
-                      setStoryFile(event.target.files?.[0] || null)
-                    }
-                  />
-
-                  {storyFile && (
-                    <>
-                      <span className="file-name">{storyFile.name}</span>
+                    {stories.map((story) => (
                       <button
-                        type="submit"
-                        className="primary-button"
-                        disabled={busy}
+                        type="button"
+                        className="story-item"
+                        key={story.id}
+                        onClick={() => window.open(story.media_url, "_blank")}
                       >
-                        {busy ? t("Uploading...") : t("Share story")}
+                        <div className="story-ring">
+                          <Avatar
+                            url={story.author?.avatar_url}
+                            name={story.author?.username}
+                            size="large"
+                          />
+                        </div>
+                        <span>
+                          {story.author?.display_name ||
+                            story.author?.username ||
+                            t("Member")}
+                        </span>
                       </button>
+                    ))}
+                  </div>
+
+                  <form className="story-upload" onSubmit={publishStory}>
+                    <input
+                      ref={storyInput}
+                      type="file"
+                      accept="image/*,video/*"
+                      hidden
+                      onChange={(event) => setStoryFile(event.target.files?.[0] || null)}
+                    />
+                    {storyFile && (
+                      <>
+                        <span className="file-name">{storyFile.name}</span>
+                        <button type="submit" className="primary-button" disabled={busy}>
+                          {busy ? t("Uploading...") : t("Share story")}
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => {
+                            setStoryFile(null);
+                            if (storyInput.current) storyInput.current.value = "";
+                          }}
+                        >
+                          {t("Cancel")}
+                        </button>
+                      </>
+                    )}
+                  </form>
+                </section>
+
+                <form className="composer-card" onSubmit={publishPost}>
+                  <div className="composer-top">
+                    <Avatar url={profile?.avatar_url} name={displayName} />
+                    <textarea
+                      ref={postInput}
+                      value={newPost}
+                      onChange={(event) => setNewPost(event.target.value)}
+                      placeholder={t("What's happening in your world?")}
+                      rows="2"
+                    />
+                  </div>
+
+                  <div className="composer-bottom">
+                    <div className="composer-tools">
+                      <input
+                        ref={imageInput}
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        onChange={(event) => setPostFile(event.target.files?.[0] || null)}
+                      />
                       <button
                         type="button"
                         className="secondary-button"
-                        onClick={() => {
-                          setStoryFile(null);
-                          if (storyInput.current) storyInput.current.value = "";
-                        }}
+                        onClick={() => imageInput.current?.click()}
                       >
-                        {t("Cancel")}
+                        ▧ {t("Photo")}
                       </button>
-                    </>
-                  )}
-                </form>
-              </section>
-
-              <form className="composer-card" onSubmit={publishPost}>
-                <div className="composer-top">
-                  <Avatar url={profile?.avatar_url} name={displayName} />
-                  <textarea
-                    ref={postInput}
-                    value={newPost}
-                    onChange={(event) => setNewPost(event.target.value)}
-                    placeholder={t("What's happening in your world?")}
-                    rows="2"
-                  />
-                </div>
-
-                <div className="composer-bottom">
-                  <div className="composer-tools">
-                    <input
-                      ref={imageInput}
-                      type="file"
-                      accept="image/*"
-                      hidden
-                      onChange={(event) =>
-                        setPostFile(event.target.files?.[0] || null)
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      onClick={() => imageInput.current?.click()}
-                    >
-                      ▧ {t("Photo")}
+                      {postFile && <span className="file-name">{postFile.name}</span>}
+                    </div>
+                    <button className="primary-button" type="submit" disabled={busy}>
+                      {busy ? t("Publishing...") : t("Publish")}
                     </button>
-                    {postFile && (
-                      <span className="file-name">{postFile.name}</span>
-                    )}
                   </div>
+                </form>
 
-                  <button
-                    className="primary-button"
-                    type="submit"
-                    disabled={busy}
-                  >
-                    {busy ? t("Publishing...") : `${t("Publish")} ↗`}
+                <section className="feed-section">
+                  <div className="section-heading">
+                    <div>
+                      <span className="eyebrow">{t("THE COMMUNITY")}</span>
+                      <h2>{t("Your feed")}</h2>
+                    </div>
+                    <span className="subtle-text">{posts.length} {t("posts")}</span>
+                  </div>
+                  <PostList posts={visiblePosts} {...postListProps} />
+                </section>
+              </div>
+
+              <aside className="ig-home-sidebar">
+                <div className="ig-mini-profile">
+                  <Avatar url={profile?.avatar_url} name={displayName} />
+                  <div className="ig-mini-profile-copy">
+                    <strong>{displayName}</strong>
+                    <span>@{profile?.username || "user"}</span>
+                  </div>
+                  <button type="button" className="ig-text-button" onClick={() => goTo("profile")}>
+                    {t("Profile")}
                   </button>
                 </div>
-              </form>
 
-              <section className="feed-section">
-                <div className="section-heading">
-                  <div>
-                    <span className="eyebrow">{t("THE COMMUNITY")}</span>
-                    <h2>{t("Your feed")}</h2>
-                  </div>
-                  <span className="subtle-text">
-                    {posts.length} {t("posts")}
-                  </span>
+                <div className="ig-side-card">
+                  <strong>{t("Discover")}</strong>
+                  <p>{t("Find people and connect with the community.")}</p>
+                  <button type="button" className="ig-text-button" onClick={() => goTo("discover")}>
+                    {t("Search")}
+                  </button>
                 </div>
 
-                <PostList posts={visiblePosts} {...postListProps} />
-              </section>
-            </>
+                <div className="ig-side-card">
+                  <strong>{t("Your community")}</strong>
+                  <div className="ig-side-shortcuts">
+                    <button type="button" onClick={() => goTo("groups")}>
+                      <UsersRound /> {t("Groups")}
+                    </button>
+                    <button type="button" onClick={() => goTo("channels")}>
+                      <Radio /> {t("Channels")}
+                    </button>
+                    <button type="button" onClick={() => goTo("saved")}>
+                      <Bookmark /> {t("Saved posts")}
+                    </button>
+                  </div>
+                </div>
+              </aside>
+            </section>
           )}
 
           {activePage === "discover" && (
