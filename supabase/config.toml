@@ -1,4 +1,4 @@
-project_id = "our-social"
+project_id = "edxwpivsuximriwdvzeq"
 
 [functions.paypal-subscription]
 # PayPal webhooks do not send a Supabase JWT. The function verifies the
