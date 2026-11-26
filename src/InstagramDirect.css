@@ -1,0 +1,718 @@
+/* LOLZ Direct Messages + Instagram-like call experience */
+.ig-dm-page { width:100%; max-width:1320px; padding:0; }
+.ig-dm-layout {
+  display:grid;
+  grid-template-columns:370px minmax(0,1fr);
+  width:100%;
+  height:min(820px,calc(100dvh - 142px));
+  min-height:560px;
+  overflow:hidden;
+  border:1px solid var(--border);
+  border-radius:17px;
+  background:var(--panel);
+  box-shadow:0 7px 30px rgba(20,18,50,.045);
+}
+.ig-dm-inbox {
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  min-height:0;
+  overflow:hidden;
+  border-inline-end:1px solid var(--border);
+  background:var(--panel);
+}
+.ig-dm-inbox-top {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  min-height:75px;
+  padding:13px 19px;
+  border-bottom:1px solid var(--border);
+}
+.ig-dm-account { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.ig-dm-account strong { color:var(--text); font-size:18px; font-weight:850; letter-spacing:-.3px; }
+.ig-dm-account span { color:var(--muted); font-size:12px; }
+.ig-dm-icon-button {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:var(--text);
+  cursor:pointer;
+  transition:background .16s ease,color .16s ease,transform .16s ease;
+}
+.ig-dm-icon-button:hover { background:var(--accent-soft); color:var(--accent); }
+.ig-dm-search {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-height:42px;
+  margin:13px 15px 8px;
+  padding:0 13px;
+  border:1px solid transparent;
+  border-radius:10px;
+  background:var(--panel-2);
+  color:var(--muted);
+}
+.ig-dm-search:focus-within { border-color:var(--border-strong); background:var(--panel); }
+.ig-dm-search input {
+  flex:1;
+  width:100%;
+  min-width:0;
+  height:40px;
+  padding:0;
+  border:0 !important;
+  outline:0;
+  background:transparent !important;
+  color:var(--text);
+  box-shadow:none !important;
+  font-size:13px;
+}
+.ig-dm-search input::placeholder { color:var(--muted); }
+.ig-dm-search button {
+  display:grid;
+  place-items:center;
+  width:26px;
+  height:26px;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:var(--muted);
+  cursor:pointer;
+}
+.ig-dm-list-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 18px 8px;
+}
+.ig-dm-list-heading strong { color:var(--text); font-size:13px; font-weight:800; }
+.ig-dm-list-heading span { color:var(--muted); font-size:11px; }
+.ig-dm-threads { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:3px 7px 10px; }
+.ig-dm-thread {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  width:100%;
+  min-height:76px;
+  padding:10px 11px;
+  border:0;
+  border-radius:11px;
+  background:transparent;
+  color:var(--text);
+  text-align:start;
+  cursor:pointer;
+  transition:background .15s ease;
+}
+.ig-dm-thread:hover { background:var(--panel-2); }
+.ig-dm-thread.active { background:var(--accent-soft); }
+.ig-dm-thread-avatar { position:relative; display:block; width:54px; height:54px; flex:0 0 54px; }
+.ig-dm-thread-avatar .avatar { width:54px !important; height:54px !important; }
+.ig-dm-thread-copy { display:flex; flex:1; flex-direction:column; gap:5px; min-width:0; }
+.ig-dm-thread-copy strong { overflow:hidden; color:var(--text); font-size:13px; font-weight:750; text-overflow:ellipsis; white-space:nowrap; }
+.ig-dm-thread-copy small { overflow:hidden; color:var(--muted); font-size:12px; line-height:1.4; text-overflow:ellipsis; white-space:nowrap; }
+.ig-dm-thread-meta { align-self:center; flex:0 0 auto; color:var(--muted-2); font-size:10px; white-space:nowrap; }
+.ig-dm-list-state {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:260px;
+  padding:25px 18px;
+  color:var(--muted);
+  text-align:center;
+}
+.ig-dm-list-state strong { margin-top:12px; color:var(--text); font-size:14px; }
+.ig-dm-list-state p { max-width:230px; margin:7px 0 12px; font-size:12px; line-height:1.6; }
+.ig-dm-list-state button {
+  min-height:36px;
+  padding:0 16px;
+  border:0;
+  border-radius:999px;
+  background:var(--accent);
+  color:#fff;
+  font-size:12px;
+  font-weight:750;
+  cursor:pointer;
+}
+.ig-dm-empty-icon {
+  display:grid;
+  place-items:center;
+  width:48px;
+  height:48px;
+  border:1px solid var(--border);
+  border-radius:50%;
+  color:var(--accent);
+}
+.ig-dm-loader {
+  width:22px;
+  height:22px;
+  border:2px solid var(--border);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:ig-dm-spin .8s linear infinite;
+}
+@keyframes ig-dm-spin { to { transform:rotate(360deg); } }
+
+/* Conversation area */
+.ig-dm-chat {
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  min-height:0;
+  overflow:hidden;
+  background:var(--bg);
+}
+.ig-dm-chat-header {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:75px;
+  padding:10px 20px;
+  border-bottom:1px solid var(--border);
+  background:var(--panel);
+}
+.ig-dm-back { display:none; }
+.ig-dm-chat-person {
+  display:flex;
+  flex:1;
+  align-items:center;
+  gap:11px;
+  min-width:0;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--text);
+  text-align:start;
+  cursor:pointer;
+}
+.ig-dm-chat-person .avatar { width:44px !important; height:44px !important; flex:0 0 44px; }
+.ig-dm-chat-person > span:last-child { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.ig-dm-chat-person strong { overflow:hidden; color:var(--text); font-size:14px; font-weight:800; text-overflow:ellipsis; white-space:nowrap; }
+.ig-dm-chat-person small { color:var(--muted); font-size:11px; }
+.ig-dm-chat-actions { display:flex; align-items:center; gap:4px; flex:0 0 auto; }
+.ig-dm-chat-actions .ig-dm-icon-button { color:var(--accent); }
+.ig-dm-message-feed {
+  display:flex;
+  flex:1;
+  flex-direction:column;
+  min-height:0;
+  gap:18px;
+  padding:22px clamp(14px,3vw,36px) 18px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scroll-behavior:smooth;
+}
+.ig-dm-profile-intro {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  padding:10px 0 15px;
+  text-align:center;
+}
+.ig-dm-profile-avatar { margin-bottom:4px; }
+.ig-dm-profile-avatar .avatar { width:86px !important; height:86px !important; }
+.ig-dm-profile-intro strong { color:var(--text); font-size:14px; font-weight:800; }
+.ig-dm-profile-intro > span { color:var(--muted); font-size:12px; }
+.ig-dm-profile-intro button {
+  min-height:31px;
+  margin-top:3px;
+  padding:0 13px;
+  border:0;
+  border-radius:8px;
+  background:var(--panel-2);
+  color:var(--text);
+  font-size:11px;
+  font-weight:700;
+  cursor:pointer;
+}
+.ig-dm-feed-state {
+  display:flex;
+  flex:1;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  gap:12px;
+  min-height:120px;
+  color:var(--muted);
+  font-size:12px;
+}
+.ig-dm-first-message {
+  display:flex;
+  flex:1;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:120px;
+  color:var(--muted);
+  text-align:center;
+}
+.ig-dm-first-message svg {
+  width:48px;
+  height:48px;
+  padding:11px;
+  border:1px solid var(--border);
+  border-radius:50%;
+  color:var(--accent);
+}
+.ig-dm-first-message strong { color:var(--text); font-size:13px; }
+.ig-dm-first-message span { font-size:11px; }
+.ig-dm-message-list { display:flex; flex-direction:column; gap:7px; width:100%; margin-top:auto; }
+.ig-dm-message-row { display:flex; width:100%; }
+.ig-dm-message-row.mine { justify-content:flex-end; }
+.ig-dm-message-row.theirs { justify-content:flex-start; }
+.ig-dm-bubble {
+  width:fit-content;
+  max-width:min(76%,520px);
+  padding:10px 14px 7px;
+  border:1px solid var(--border);
+  border-radius:20px;
+  background:var(--panel);
+  color:var(--text);
+  overflow-wrap:anywhere;
+  box-shadow:none;
+}
+.ig-dm-bubble.mine {
+  border-color:transparent;
+  border-end-end-radius:6px;
+  background:linear-gradient(135deg,var(--accent),#6259e8);
+  color:#fff;
+}
+.ig-dm-bubble.theirs { border-end-start-radius:6px; }
+.ig-dm-bubble p { margin:0; color:inherit; font-size:13px; line-height:1.6; white-space:pre-wrap; }
+.ig-dm-bubble time { display:block; margin-top:5px; color:var(--muted); font-size:9px; text-align:end; }
+.ig-dm-bubble.mine time { color:rgba(255,255,255,.72); }
+.ig-dm-bubble.media { padding:5px; overflow:hidden; }
+.ig-dm-bubble img,
+.ig-dm-bubble video {
+  display:block;
+  width:min(100%,360px);
+  max-height:410px;
+  border-radius:15px;
+  object-fit:cover;
+}
+.ig-dm-bubble audio { display:block; width:min(300px,65vw); max-width:100%; height:38px; }
+.ig-dm-bubble.media p { padding:5px 8px 0; }
+.ig-dm-bubble.media time { padding:0 8px 4px; }
+
+/* Compose messages */
+.ig-dm-attachment-preview {
+  display:flex;
+  align-items:center;
+  gap:11px;
+  margin:0 16px 7px;
+  padding:9px 12px;
+  border:1px solid var(--border);
+  border-radius:13px;
+  background:var(--panel);
+}
+.ig-dm-attachment-preview img,
+.ig-dm-attachment-preview video { width:48px; height:48px; border-radius:8px; object-fit:cover; }
+.ig-dm-attachment-preview > div { display:flex; flex:1; flex-direction:column; gap:3px; min-width:0; }
+.ig-dm-attachment-preview strong { overflow:hidden; color:var(--text); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.ig-dm-attachment-preview small { color:var(--muted); font-size:10px; }
+.ig-dm-attachment-preview button,
+.ig-dm-voice-preview button {
+  display:grid;
+  place-items:center;
+  width:31px;
+  height:31px;
+  border:0;
+  border-radius:50%;
+  background:var(--panel-2);
+  color:var(--text);
+  cursor:pointer;
+}
+.ig-dm-composer {
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-height:54px;
+  margin:9px 15px 3px;
+  padding:5px 8px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  background:var(--panel);
+  box-shadow:0 2px 10px rgba(0,0,0,.025);
+}
+.ig-dm-composer:focus-within { border-color:var(--border-strong); }
+.ig-dm-composer-icon {
+  display:grid;
+  place-items:center;
+  width:37px;
+  height:37px;
+  flex:0 0 37px;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:var(--accent);
+  cursor:pointer;
+}
+.ig-dm-composer-icon:hover { background:var(--accent-soft); }
+.ig-dm-composer-icon:disabled { opacity:.4; cursor:not-allowed; }
+.ig-dm-mic { color:var(--muted); }
+.ig-dm-mic.recording { color:#e54861; }
+.ig-dm-composer-input {
+  flex:1;
+  width:100%;
+  min-width:0;
+  height:40px;
+  padding:0 8px;
+  border:0 !important;
+  outline:0;
+  background:transparent !important;
+  color:var(--text);
+  box-shadow:none !important;
+  font-size:13px;
+}
+.ig-dm-composer-input::placeholder { color:var(--muted); }
+.ig-dm-send-button {
+  display:grid;
+  place-items:center;
+  width:39px;
+  height:39px;
+  flex:0 0 39px;
+  border:0;
+  border-radius:50%;
+  background:var(--accent);
+  color:#fff;
+  cursor:pointer;
+  transition:transform .15s ease,background .15s ease;
+}
+.ig-dm-send-button:hover:not(:disabled) { transform:scale(1.04); background:var(--accent-hover); }
+.ig-dm-send-button:disabled { opacity:.38; cursor:not-allowed; }
+.ig-dm-send-spinner {
+  width:17px;
+  height:17px;
+  border:2px solid rgba(255,255,255,.38);
+  border-top-color:white;
+  border-radius:50%;
+  animation:ig-dm-spin .7s linear infinite;
+}
+.ig-dm-recording-state {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:#e54861;
+  font-size:11px;
+  white-space:nowrap;
+}
+.ig-dm-recording-state > span { width:7px; height:7px; border-radius:50%; background:#e54861; animation:ig-dm-pulse 1s infinite; }
+.ig-dm-recording-state button { display:grid; place-items:center; width:25px; height:25px; border:0; border-radius:50%; background:var(--panel-2); color:var(--text); cursor:pointer; }
+@keyframes ig-dm-pulse { 50% { opacity:.35; } }
+.ig-dm-voice-preview { display:flex; align-items:center; gap:5px; min-width:0; }
+.ig-dm-voice-preview audio { width:min(190px,30vw); height:34px; }
+.ig-dm-upload-hint { display:block; margin:0 20px 9px; color:var(--muted-2); font-size:9px; }
+.ig-dm-welcome {
+  display:flex;
+  flex:1;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  padding:25px;
+  text-align:center;
+}
+.ig-dm-welcome-icon {
+  display:grid;
+  place-items:center;
+  width:82px;
+  height:82px;
+  border:1.5px solid var(--text);
+  border-radius:50%;
+  color:var(--text);
+}
+.ig-dm-welcome h2 { margin:5px 0 0; color:var(--text); font-size:20px; font-weight:600; }
+.ig-dm-welcome p { max-width:340px; margin:0; color:var(--muted); font-size:12px; line-height:1.7; }
+.ig-dm-welcome button {
+  min-height:36px;
+  margin-top:8px;
+  padding:0 17px;
+  border:0;
+  border-radius:9px;
+  background:var(--accent);
+  color:white;
+  font-size:12px;
+  font-weight:750;
+  cursor:pointer;
+}
+
+/* One LiveKit instance; expose its audio/video start actions in the DM header. */
+.app-shell:has(.ig-dm-page.conversation-open) .lolz-call-dock:has(.lolz-private-call-actions):not(:has(.lolz-incoming-call)):not(:has(.lolz-call-active-panel)) {
+  display:none;
+}
+.app-shell:has(.ig-dm-page.conversation-open) .lolz-call-dock:has(.lolz-private-call-actions):not(:has(.lolz-incoming-call)):not(:has(.lolz-call-active-panel)) .lolz-private-call-actions {
+  display:none;
+}
+
+/* Instagram-style full-screen incoming and active call screens */
+.app-shell:has(.lolz-call-dock .lolz-incoming-call) .lolz-call-dock,
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-dock {
+  position:fixed;
+  inset:0;
+  z-index:5000;
+  display:flex;
+  align-items:stretch;
+  justify-content:center;
+  width:100vw;
+  height:100dvh;
+  max-height:100dvh;
+  padding:0;
+  margin:0;
+  transform:none;
+  overflow:auto;
+  border:0;
+  border-radius:0;
+  background:
+    radial-gradient(ellipse at 50% 36%,rgba(97,82,180,.24),transparent 48%),
+    radial-gradient(ellipse at 50% 100%,rgba(22,31,54,.6),transparent 50%),
+    #080810;
+  box-shadow:none;
+}
+.app-shell:has(.lolz-call-dock .lolz-incoming-call) .lolz-calls,
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-calls {
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  width:100%;
+  min-height:100%;
+  padding:clamp(18px,4vh,48px) clamp(16px,5vw,70px);
+  color:#fff !important;
+}
+.app-shell:has(.lolz-call-dock .lolz-incoming-call) .lolz-incoming-call {
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:17px !important;
+  width:min(440px,100%);
+  min-height:420px;
+  margin:auto !important;
+  padding:35px !important;
+  border:1px solid rgba(255,255,255,.12) !important;
+  border-radius:28px !important;
+  background:rgba(24,24,38,.92) !important;
+  color:#fff !important;
+  box-shadow:0 25px 90px rgba(0,0,0,.36);
+  text-align:center;
+}
+.app-shell:has(.lolz-call-dock .lolz-incoming-call) .lolz-incoming-call > div:first-child {
+  width:112px !important;
+  height:112px !important;
+  border-radius:50% !important;
+  background:linear-gradient(135deg,#7770ff,#b6a6ff) !important;
+}
+.app-shell:has(.lolz-call-dock .lolz-incoming-call) .lolz-incoming-call > div:nth-child(2) strong {
+  max-width:100%;
+  color:#fff;
+  font-size:23px;
+}
+.app-shell:has(.lolz-call-dock .lolz-incoming-call) .lolz-incoming-call small { color:#bcbccc !important; font-size:13px; }
+.app-shell:has(.lolz-call-dock .lolz-incoming-call) .lolz-incoming-call button {
+  width:58px !important;
+  height:58px !important;
+  margin:15px 7px 0;
+  border-radius:50% !important;
+}
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-active-panel {
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  width:100%;
+  min-height:100dvh;
+  height:100dvh;
+  margin:0 !important;
+  padding:clamp(20px,4vh,44px) clamp(16px,6vw,80px) 30px !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  color:#fff !important;
+  box-shadow:none !important;
+}
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-header {
+  justify-content:center;
+  padding:8px 0 20px;
+  border:0;
+  text-align:center;
+}
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-header > div:first-child {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-header strong { color:#fff !important; font-size:21px !important; }
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-header span { color:#c7c4da !important; }
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-header-actions {
+  position:absolute;
+  top:22px;
+  right:clamp(16px,4vw,54px);
+}
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-timer {
+  border-color:rgba(255,255,255,.13);
+  background:rgba(255,255,255,.08);
+  color:#fff;
+}
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-minimize-button {
+  border-color:rgba(255,255,255,.13) !important;
+  background:rgba(255,255,255,.08) !important;
+  color:#fff !important;
+}
+.ig-call-voice-stage {
+  display:flex;
+  flex:1;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  min-height:200px;
+  text-align:center;
+}
+.ig-call-portrait {
+  display:grid;
+  place-items:center;
+  width:clamp(140px,22vw,220px);
+  height:clamp(140px,22vw,220px);
+  overflow:hidden;
+  border:5px solid rgba(255,255,255,.13);
+  border-radius:50%;
+  background:linear-gradient(135deg,#7770ff,#b8a6ff);
+  box-shadow:0 0 0 15px rgba(119,112,255,.08),0 20px 70px rgba(0,0,0,.28);
+  color:#fff;
+  font-size:58px;
+  font-weight:800;
+}
+.ig-call-portrait img { width:100%; height:100%; object-fit:cover; }
+.ig-call-voice-stage strong { color:#fff; font-size:19px; font-weight:800; }
+.ig-call-voice-stage > span { color:#aaa9bb; font-size:12px; }
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .ig-call-remote-media {
+  display:flex !important;
+  flex:1;
+  align-items:center !important;
+  justify-content:center !important;
+  min-height:180px !important;
+}
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .ig-call-remote-media video {
+  width:auto !important;
+  max-width:min(100%,1100px) !important;
+  max-height:calc(100dvh - 260px) !important;
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:22px !important;
+  object-fit:contain !important;
+  box-shadow:0 20px 70px rgba(0,0,0,.35);
+}
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .ig-call-local-media {
+  position:absolute;
+  right:clamp(16px,4vw,55px);
+  bottom:115px;
+  z-index:3;
+  width:clamp(100px,17vw,190px);
+  max-height:230px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:16px;
+  background:#15151e;
+  box-shadow:0 12px 35px rgba(0,0,0,.4);
+}
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .ig-call-local-media video {
+  display:block;
+  width:100% !important;
+  max-width:100% !important;
+  border-radius:15px;
+  object-fit:cover;
+}
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-controls {
+  display:flex;
+  justify-content:center;
+  gap:18px !important;
+  padding:22px 10px 12px;
+  margin-top:auto !important;
+}
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-controls > button:not(.lolz-call-end-button) {
+  width:58px !important;
+  height:58px !important;
+  flex-basis:58px;
+  border:1px solid rgba(255,255,255,.13) !important;
+  background:rgba(255,255,255,.10) !important;
+  color:#fff !important;
+  backdrop-filter:blur(16px);
+}
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-end-button {
+  width:64px !important;
+  height:64px !important;
+  flex-basis:64px !important;
+  background:#e54861 !important;
+}
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-active-panel > div:last-child {
+  color:#aaa9bb !important;
+}
+.app-shell:has(.lolz-call-mini) .lolz-call-dock {
+  bottom:calc(env(safe-area-inset-bottom,0px) + 76px);
+  top:auto;
+  right:15px;
+  left:auto;
+  width:min(320px,calc(100vw - 30px));
+  max-height:70px;
+  overflow:visible;
+  transform:none;
+  border-radius:999px;
+  background:transparent;
+}
+
+/* Responsive Direct layout */
+@media (max-width: 900px) {
+  .ig-dm-layout { grid-template-columns:320px minmax(0,1fr); }
+}
+@media (max-width: 760px) {
+  .ig-dm-page { padding:0; }
+  .ig-dm-layout {
+    display:block;
+    height:calc(100dvh - 125px);
+    min-height:430px;
+    border:0;
+    border-radius:0;
+  }
+  .ig-dm-inbox,.ig-dm-chat { width:100%; height:100%; }
+  .ig-dm-chat { display:none; }
+  .ig-dm-page.conversation-open .ig-dm-inbox { display:none; }
+  .ig-dm-page.conversation-open .ig-dm-chat { display:flex; }
+  .ig-dm-chat-header { min-height:65px; gap:7px; padding:8px 10px; }
+  .ig-dm-back { display:inline-flex; width:34px; height:38px; flex-basis:34px; }
+  .ig-dm-chat-person .avatar { width:39px !important; height:39px !important; flex-basis:39px; }
+  .ig-dm-chat-actions { gap:0; }
+  .ig-dm-chat-actions .ig-dm-icon-button { width:36px; height:38px; flex-basis:36px; }
+  .ig-dm-info-button { display:none; }
+  .ig-dm-message-feed { padding:14px 11px 10px; gap:12px; }
+  .ig-dm-profile-intro { padding:8px 0 10px; }
+  .ig-dm-profile-avatar .avatar { width:76px !important; height:76px !important; }
+  .ig-dm-bubble { max-width:86%; }
+  .ig-dm-composer { margin:7px 8px 3px; gap:3px; padding:4px 5px; }
+  .ig-dm-composer-icon { width:33px; height:35px; flex-basis:33px; }
+  .ig-dm-composer-input { font-size:12px; }
+  .ig-dm-upload-hint { margin-bottom:7px; text-align:center; }
+  .app-shell:has(.ig-dm-page.conversation-open) .lolz-call-dock {
+    display:none;
+  }
+  .app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-dock,
+  .app-shell:has(.lolz-call-dock .lolz-incoming-call) .lolz-call-dock {
+    display:flex;
+  }
+}
+@media (max-width: 400px) {
+  .ig-dm-thread { gap:8px; padding-inline:7px; }
+  .ig-dm-thread-avatar,.ig-dm-thread-avatar .avatar { width:47px !important; height:47px !important; flex-basis:47px; }
+  .ig-dm-thread-meta { display:none; }
+  .ig-dm-chat-person small { font-size:10px; }
+  .ig-dm-chat-actions .ig-dm-icon-button { width:33px; flex-basis:33px; }
+  .ig-dm-voice-preview audio { width:100px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ig-dm-page *, .lolz-call-dock * { scroll-behavior:auto !important; animation:none !important; transition:none !important; }
+}
