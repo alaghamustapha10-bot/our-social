@@ -50,4 +50,8 @@ jobs:
             exit 1
           fi
 
-          npx @capgo/cli@latest bundle upload -a "$CAPGO_TOKEN" --channel=production
+          npx @capgo/cli@latest bundle upload \
+            --apikey "$CAPGO_TOKEN" \
+            --channel=production \
+            --auto-bump patch \
+            --delta
