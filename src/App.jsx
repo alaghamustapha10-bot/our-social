@@ -311,6 +311,8 @@ export default function App() {
   const [selectedProfilePosts, setSelectedProfilePosts] = useState([]);
   const [blockedUserIds, setBlockedUserIds] = useState([]);
   const [moderationTarget, setModerationTarget] = useState(null);
+  const [moderationReports, setModerationReports] = useState([]);
+  const [moderationLoading, setModerationLoading] = useState(false);
   const [selectedProfileStats, setSelectedProfileStats] = useState({
     followers: 0,
     following: 0,
@@ -674,6 +676,80 @@ export default function App() {
       following: followingResult.count || 0,
     });
   }, []);
+
+  const loadReports = useCallback(async () => {
+    if (user?.app_metadata?.role !== "admin") return;
+
+    setModerationLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("content_reports")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+
+      const rows = data || [];
+      const reporterIds = [...new Set(rows.map((item) => item.reporter_id))];
+      let profileMap = {};
+
+      if (reporterIds.length) {
+        const { data: profiles, error: profileError } = await supabase
+          .from("profiles")
+          .select("id,username,display_name")
+          .in("id", reporterIds);
+
+        if (profileError) throw profileError;
+        (profiles || []).forEach((item) => { profileMap[item.id] = item; });
+      }
+
+      setModerationReports(
+        rows.map((item) => ({
+          ...item,
+          reporter: profileMap[item.reporter_id] || {},
+        }))
+      );
+    } catch (error) {
+      setNotice(
+        isArabic
+          ? "تعذر تحميل البلاغات: " + error.message
+          : "Could not load reports: " + error.message
+      );
+    } finally {
+      setModerationLoading(false);
+    }
+  }, [user?.app_metadata?.role, isArabic]);
+
+  async function updateReportStatus(reportId, status) {
+    if (user?.app_metadata?.role !== "admin") return;
+
+    const { error } = await supabase
+      .from("content_reports")
+      .update({
+        status,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: user.id,
+      })
+      .eq("id", reportId);
+
+    if (error) {
+      setNotice(
+        isArabic
+          ? "تعذر تحديث البلاغ: " + error.message
+          : "Could not update report: " + error.message
+      );
+      return;
+    }
+
+    setModerationReports((current) =>
+      current.map((item) =>
+        item.id === reportId
+          ? { ...item, status, reviewed_at: new Date().toISOString(), reviewed_by: user.id }
+          : item
+      )
+    );
+  }
 
   const loadNotifications = useCallback(async (userId) => {
     if (!userId) return;
@@ -1444,6 +1520,12 @@ export default function App() {
     }
   }, [activePage, user?.id, loadNotifications]);
 
+  useEffect(() => {
+    if (activePage === "moderation" && user?.app_metadata?.role === "admin") {
+      void loadReports();
+    }
+  }, [activePage, user?.app_metadata?.role, loadReports]);
+
   // MESSAGING
 
   const loadConversations = useCallback(async () => {
@@ -2135,6 +2217,7 @@ export default function App() {
         onCreate={createPost}
         onLogout={logout}
         username={displayName}
+        isAdmin={user?.app_metadata?.role === "admin"}
       />
 
       <main className="main-area">
@@ -3388,6 +3471,70 @@ export default function App() {
                       </article>
                     );
                   })}
+                </div>
+              )}
+            </section>
+          )}
+
+          {activePage === "moderation" && user?.app_metadata?.role === "admin" && (
+            <section className="other-page lolz-moderation-page">
+              <span className="eyebrow">{isArabic ? "مركز الثقة والأمان" : "TRUST & SAFETY"}</span>
+              <h1>{isArabic ? "مراجعة البلاغات" : "Report review"}</h1>
+              <p>{isArabic ? "البلاغات المرسلة من مستخدمي LOLZ." : "Reports submitted by LOLZ members."}</p>
+
+              <div className="lolz-report-toolbar">
+                <strong>
+                  {moderationReports.length} {isArabic ? "بلاغ" : "reports"}
+                </strong>
+                <button type="button" className="secondary-button" onClick={() => void loadReports()} disabled={moderationLoading}>
+                  {moderationLoading ? (isArabic ? "جارٍ التحميل..." : "Loading...") : (isArabic ? "تحديث" : "Refresh")}
+                </button>
+              </div>
+
+              {moderationLoading ? (
+                <div className="empty-state">{isArabic ? "جارٍ تحميل البلاغات..." : "Loading reports..."}</div>
+              ) : moderationReports.length === 0 ? (
+                <div className="empty-state">
+                  <h3>{isArabic ? "لا توجد بلاغات" : "No reports"}</h3>
+                  <p>{isArabic ? "ستظهر البلاغات الجديدة هنا." : "New reports will appear here."}</p>
+                </div>
+              ) : (
+                <div className="lolz-report-list">
+                  {moderationReports.map((report) => (
+                    <article className="lolz-report-card" key={report.id}>
+                      <div className="lolz-report-card-top">
+                        <strong>{report.target_type} · {report.reason}</strong>
+                        <span className={"lolz-report-status status-" + report.status}>{report.status}</span>
+                      </div>
+                      <p>
+                        {isArabic ? "المبلّغ: " : "Reporter: "}
+                        @{report.reporter?.username || report.reporter_id}
+                      </p>
+                      <p>
+                        {isArabic ? "معرّف المحتوى: " : "Target ID: "}
+                        <code>{report.target_id}</code>
+                      </p>
+                      {report.details && <blockquote>{report.details}</blockquote>}
+                      <small>{new Date(report.created_at).toLocaleString(isArabic ? "ar" : "en")}</small>
+                      <div className="lolz-report-actions">
+                        {report.status !== "reviewing" && (
+                          <button type="button" className="secondary-button" onClick={() => void updateReportStatus(report.id, "reviewing")}>
+                            {isArabic ? "قيد المراجعة" : "Reviewing"}
+                          </button>
+                        )}
+                        {report.status !== "resolved" && (
+                          <button type="button" className="primary-button" onClick={() => void updateReportStatus(report.id, "resolved")}>
+                            {isArabic ? "تمت المعالجة" : "Resolve"}
+                          </button>
+                        )}
+                        {report.status !== "rejected" && (
+                          <button type="button" className="secondary-button" onClick={() => void updateReportStatus(report.id, "rejected")}>
+                            {isArabic ? "رفض البلاغ" : "Reject"}
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  ))}
                 </div>
               )}
             </section>
