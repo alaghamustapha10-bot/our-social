@@ -10,7 +10,7 @@ language plpgsql
 stable
 security definer
 set search_path = public, pg_temp
-as $
+as $fn$
 declare
   v_user_one uuid;
   v_user_two uuid;
@@ -43,7 +43,7 @@ begin
 
   return coalesce(v_not_blocked, false);
 end;
-$;
+$fn$;
 
 revoke all on function public.lolz_private_message_media_allowed(text) from public;
 grant execute on function public.lolz_private_message_media_allowed(text) to authenticated;
