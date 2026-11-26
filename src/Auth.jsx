@@ -1,12 +1,10 @@
-
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
 import "./Auth.css";
 
-const GOOGLE_REDIRECT_URL =
-  "com.oursocial.app://login-callback";
+const GOOGLE_REDIRECT_URL = "com.lolz.app://login-callback";
 
 const translations = {
   en: {
@@ -27,14 +25,15 @@ const translations = {
     loading: "Please wait...",
     or: "OR CONTINUE WITH",
     google: "Continue with Google",
-    noAccount: "New to OUR SOCIAL?",
+    noAccount: "New to LOLZ?",
     hasAccount: "Already have an account?",
     createAccount: "Create an account",
     backToLogin: "Back to log in",
     terms: "By continuing, you agree to our community guidelines and terms.",
     footer: "A social space made for real connections.",
     usernameError: "Username must contain at least 3 characters.",
-    signupSuccess: "Account created! Please check your email to confirm your account.",
+    signupSuccess:
+      "Account created! Please check your email to confirm your account.",
     genericError: "Something went wrong. Please try again.",
     googleError: "Google sign-in could not be started. Please try again.",
   },
@@ -56,14 +55,15 @@ const translations = {
     loading: "يرجى الانتظار...",
     or: "أو تابع باستخدام",
     google: "المتابعة باستخدام Google",
-    noAccount: "جديد في OUR SOCIAL؟",
+    noAccount: "جديد في لولز؟",
     hasAccount: "لديك حساب بالفعل؟",
     createAccount: "إنشاء حساب جديد",
     backToLogin: "العودة لتسجيل الدخول",
     terms: "بمتابعتك، فإنك توافق على إرشادات المجتمع والشروط الخاصة بنا.",
     footer: "مساحة اجتماعية لعلاقات حقيقية.",
     usernameError: "يجب أن يتكون اسم المستخدم من 3 أحرف على الأقل.",
-    signupSuccess: "تم إنشاء الحساب! تحقق من بريدك الإلكتروني لتأكيد حسابك.",
+    signupSuccess:
+      "تم إنشاء الحساب! تحقق من بريدك الإلكتروني لتأكيد حسابك.",
     genericError: "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
     googleError: "تعذّر بدء تسجيل الدخول عبر Google. حاول مرة أخرى.",
   },
@@ -71,7 +71,7 @@ const translations = {
 
 function getInitialLanguage() {
   try {
-    const saved = localStorage.getItem("our-social-language");
+    const saved = localStorage.getItem("lolz-language");
 
     if (saved === "ar" || saved === "en") return saved;
   } catch {
@@ -100,7 +100,7 @@ export default function Auth() {
     document.documentElement.dir = isArabic ? "rtl" : "ltr";
 
     try {
-      localStorage.setItem("our-social-language", language);
+      localStorage.setItem("lolz-language", language);
     } catch {
       // Continue even if local storage is unavailable.
     }
@@ -191,17 +191,15 @@ export default function Auth() {
     try {
       const isNative = Capacitor.isNativePlatform();
 
-      const { data, error } =
-        await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: {
-            redirectTo: isNative
-              ? GOOGLE_REDIRECT_URL
-              : window.location.origin,
-
-            skipBrowserRedirect: isNative,
-          },
-        });
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: isNative
+            ? GOOGLE_REDIRECT_URL
+            : window.location.origin,
+          skipBrowserRedirect: isNative,
+        },
+      });
 
       if (error) throw error;
 
@@ -217,10 +215,7 @@ export default function Auth() {
     } catch (error) {
       console.error("Google login error:", error);
 
-      setMessage(
-        error.message || t.googleError
-      );
-
+      setMessage(error.message || t.googleError);
       setMessageType("error");
       setLoading(false);
     }
@@ -236,9 +231,9 @@ export default function Auth() {
   return (
     <main className="auth-page" dir={isArabic ? "rtl" : "ltr"}>
       <div className="auth-topbar">
-        <a className="auth-logo" href="/" aria-label="OUR SOCIAL">
-          <span className="auth-logo-mark">O</span>
-          <span>OUR SOCIAL</span>
+        <a className="auth-logo" href="/" aria-label="LOLZ">
+          <span className="auth-logo-mark">L</span>
+          <span>LOLZ</span>
         </a>
 
         <button
@@ -257,7 +252,7 @@ export default function Auth() {
           <div className="auth-intro-content">
             <span className="auth-overline">
               <span className="auth-status-dot" />
-              YOUR SOCIAL SPACE
+              LOLZ SOCIAL SPACE
             </span>
 
             <h1>
@@ -281,12 +276,12 @@ export default function Auth() {
               <div className="auth-orbit auth-orbit-one" />
               <div className="auth-orbit auth-orbit-two" />
               <div className="auth-orbit auth-orbit-three" />
-              <div className="auth-orbit-center">O</div>
+              <div className="auth-orbit-center">L</div>
             </div>
           </div>
 
           <div className="auth-intro-footer">
-            <span>OUR SOCIAL</span>
+            <span>LOLZ</span>
             <span>01 — CONNECT</span>
           </div>
         </section>
@@ -354,7 +349,9 @@ export default function Auth() {
                     type="button"
                     className="auth-password-toggle"
                     onClick={() => setShowPassword((current) => !current)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                   >
                     {showPassword ? "Hide" : "Show"}
                   </button>
@@ -367,11 +364,7 @@ export default function Auth() {
                 disabled={loading}
               >
                 <span>
-                  {loading
-                    ? t.loading
-                    : isLogin
-                      ? t.login
-                      : t.signup}
+                  {loading ? t.loading : isLogin ? t.login : t.signup}
                 </span>
 
                 {!loading && (
@@ -427,7 +420,7 @@ export default function Auth() {
 
       <footer className="auth-page-footer">
         <span>{t.footer}</span>
-        <span>© {new Date().getFullYear()} OUR SOCIAL</span>
+        <span>© {new Date().getFullYear()} LOLZ</span>
       </footer>
     </main>
   );

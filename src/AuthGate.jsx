@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
@@ -7,7 +6,7 @@ import { supabase } from "./supabase";
 import Auth from "./Auth";
 import { PreferencesProvider } from "./PreferencesProvider";
 
-const CALLBACK_URL = "com.oursocial.app://login-callback";
+const CALLBACK_URL = "com.lolz.app://login-callback";
 
 function isTemporaryUsername(username) {
   return /^user_[0-9a-f]{8}$/i.test(username || "");
@@ -15,7 +14,7 @@ function isTemporaryUsername(username) {
 
 function getLanguage() {
   try {
-    return localStorage.getItem("our-social-language") === "ar"
+    return localStorage.getItem("lolz-language") === "ar"
       ? "ar"
       : "en";
   } catch {
@@ -42,10 +41,10 @@ export default function AuthGate({ children }) {
 
   const translations = {
     en: {
-      loading: "Loading OUR SOCIAL...",
+      loading: "Loading LOLZ...",
       title: "Choose your username",
       description:
-        "Welcome to OUR SOCIAL! Choose a unique username to complete your account.",
+        "Welcome to LOLZ! Choose a unique username to complete your account.",
       username: "Username",
       placeholder: "Choose a username",
       hint:
@@ -65,10 +64,10 @@ export default function AuthGate({ children }) {
     },
 
     ar: {
-      loading: "جارٍ تحميل OUR SOCIAL...",
+      loading: "جارٍ تحميل لولز...",
       title: "اختر اسم المستخدم",
       description:
-        "مرحبًا بك في OUR SOCIAL! اختر اسم مستخدم فريدًا لإكمال حسابك.",
+        "مرحبًا بك في لولز! اختر اسم مستخدم فريدًا لإكمال حسابك.",
       username: "اسم المستخدم",
       placeholder: "اختر اسم مستخدم",
       hint:
@@ -522,7 +521,7 @@ export default function AuthGate({ children }) {
               marginBottom: 14,
             }}
           >
-            OUR SOCIAL
+            LOLZ
           </div>
 
           <h1 style={{ marginTop: 0 }}>

@@ -101,10 +101,6 @@ export default function Calls({
   activeRef.current = active;
   connectingRef.current = connecting;
 
-  // --------------------------------------------------
-  // GLOBAL CALL STATE REPORTING
-  // --------------------------------------------------
-
   const reportCallState = useCallback(
     (status) => {
       onCallStateChange?.({
@@ -131,34 +127,35 @@ export default function Calls({
   );
 
   const buttonStyle = {
-    width: "46px",
-    height: "46px",
-    border: "1px solid rgba(255,255,255,0.12)",
+    width: "48px",
+    height: "48px",
+    border: "1px solid rgba(255,255,255,0.14)",
     borderRadius: "50%",
-    background: "#303541",
-    color: "white",
+    background: "#2a2f3a",
+    color: "#ffffff",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
     touchAction: "manipulation",
     flexShrink: 0,
+    transition: "transform 0.14s ease, background 0.16s ease",
   };
 
   const panelStyle = {
     padding: "12px",
     marginTop: "12px",
-    background: "#252b36",
+    background: "#222732",
     border: "1px solid rgba(255,255,255,0.08)",
     borderRadius: "12px",
   };
 
   const smallButtonStyle = {
     border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: "9px",
-    padding: "8px 11px",
-    color: "white",
-    background: "#303541",
+    borderRadius: "10px",
+    padding: "8px 12px",
+    color: "#ffffff",
+    background: "#2d3340",
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
@@ -180,47 +177,44 @@ export default function Calls({
     return `${two(minutes)}:${two(remaining)}`;
   };
 
-  const invokeCallAction = useCallback(async (body) => {
-    console.log("[LOLZ CALL ACTION]", {
-      action: body?.action,
-      call_id: body?.call_id || null,
-    });
+  const invokeCallAction = useCallback(
+    async (body) => {
+      const { data, error: functionError } =
+        await supabase.functions.invoke("livekit-token", { body });
 
-    const { data, error: functionError } =
-      await supabase.functions.invoke("livekit-token", { body });
+      if (functionError) {
+        let payload = data || null;
 
-    if (functionError) {
-      let payload = data || null;
-
-      try {
-        if (functionError.context?.json) {
-          payload = await functionError.context.json();
+        try {
+          if (functionError.context?.json) {
+            payload = await functionError.context.json();
+          }
+        } catch {
+          // Response body may already have been consumed.
         }
-      } catch {
-        // Response body may already have been consumed.
+
+        const message =
+          payload?.error ||
+          functionError.message ||
+          "حدث خطأ أثناء تنفيذ العملية";
+
+        const err = new Error(message);
+        err.payload = payload;
+        err.status = functionError.context?.status || null;
+        throw err;
       }
 
-      const message =
-        payload?.error ||
-        functionError.message ||
-        "حدث خطأ أثناء تنفيذ العملية";
+      if (data?.success === false) {
+        const err = new Error(data.error || "تعذر تنفيذ العملية");
+        err.payload = data;
+        throw err;
+      }
 
-      const err = new Error(message);
-      err.payload = payload;
-      err.status = functionError.context?.status || null;
-      throw err;
-    }
+      return data;
+    },
+    [supabase]
+  );
 
-    if (data?.success === false) {
-      const err = new Error(data.error || "تعذر تنفيذ العملية");
-      err.payload = data;
-      throw err;
-    }
-
-    return data;
-  }, [supabase]);
-
-  // Always keep the latest action function available to cleanup handlers.
   const invokeCallActionRef = useRef(invokeCallAction);
   invokeCallActionRef.current = invokeCallAction;
 
@@ -232,10 +226,6 @@ export default function Calls({
       fallback
     );
   };
-
-  // --------------------------------------------------
-  // REMOTE TRACKS
-  // --------------------------------------------------
 
   const attachRemoteTrack = useCallback((track) => {
     const container = remoteMediaRef.current;
@@ -260,7 +250,7 @@ export default function Calls({
         element.volume = 1;
       } else {
         element.style.width = "100%";
-        element.style.maxWidth = "420px";
+        element.style.maxWidth = "440px";
         element.style.borderRadius = "14px";
         element.style.objectFit = "cover";
       }
@@ -326,10 +316,6 @@ export default function Calls({
     }
   };
 
-  // --------------------------------------------------
-  // CLEAN UP
-  // --------------------------------------------------
-
   const clearCall = useCallback(() => {
     const room = roomRef.current;
 
@@ -387,10 +373,6 @@ export default function Calls({
     if (room) room.disconnect();
   }, [reportCallState]);
 
-  // --------------------------------------------------
-  // CONNECT TO LIVEKIT
-  // --------------------------------------------------
-
   const connectToRoom = useCallback(
     async (
       serverUrl,
@@ -411,19 +393,10 @@ export default function Calls({
       publishPermissionRef.current = publishPermission;
       remoteTracksRef.current.clear();
 
-      room.on(
-        RoomEvent.TrackSubscribed,
-        (track, publication, participant) => {
-          console.log(
-            "Remote track subscribed:",
-            track.kind,
-            participant.identity
-          );
-
-          remoteTracksRef.current.set(track.sid, track);
-          attachRemoteTrack(track);
-        }
-      );
+      room.on(RoomEvent.TrackSubscribed, (track) => {
+        remoteTracksRef.current.set(track.sid, track);
+        attachRemoteTrack(track);
+      });
 
       room.on(RoomEvent.TrackUnsubscribed, (track) => {
         remoteTracksRef.current.delete(track.sid);
@@ -436,10 +409,6 @@ export default function Calls({
         }
       });
 
-      room.on(RoomEvent.ParticipantDisconnected, () => {
-        // Group calls remain active while other participants are connected.
-      });
-
       room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
         if (!mountedRef.current) return;
 
@@ -448,7 +417,6 @@ export default function Calls({
         );
       });
 
-      // Handle unexpected LiveKit disconnections.
       room.on(RoomEvent.Disconnected, () => {
         if (roomRef.current !== room) return;
 
@@ -457,8 +425,6 @@ export default function Calls({
         roomRef.current = null;
         publishPermissionRef.current = null;
 
-        // If endCall is already waiting for the server,
-        // preserve callIdRef so a failed request can be retried.
         if (endingRef.current) {
           return;
         }
@@ -526,10 +492,7 @@ export default function Calls({
           console.warn("Audio playback needs user interaction:", audioError);
           setAudioPlaybackBlocked(true);
         }
-
-        console.log("LiveKit connected successfully:", room.name);
       } catch (err) {
-        // Clean up the server call if the LiveKit connection fails.
         const failedCallId = id || callIdRef.current;
 
         if (roomRef.current === room) {
@@ -558,16 +521,8 @@ export default function Calls({
         throw err;
       }
     },
-    [
-      attachRemoteTrack,
-      clearCall,
-      reportCallState,
-    ]
+    [attachRemoteTrack, clearCall, reportCallState]
   );
-
-  // --------------------------------------------------
-  // LOCAL CAMERA
-  // --------------------------------------------------
 
   useEffect(() => {
     if (!active || !videoEnabled || !localVideoRef.current) return;
@@ -589,7 +544,7 @@ export default function Calls({
     element.muted = true;
     element.playsInline = true;
     element.style.width = "100%";
-    element.style.maxWidth = "420px";
+    element.style.maxWidth = "440px";
     element.style.borderRadius = "14px";
     element.style.objectFit = "cover";
 
@@ -599,10 +554,6 @@ export default function Calls({
       publication.track.detach().forEach((item) => item.remove());
     };
   }, [active, videoEnabled]);
-
-  // --------------------------------------------------
-  // CALL TIMER
-  // --------------------------------------------------
 
   useEffect(() => {
     if (!connectedAt) {
@@ -620,137 +571,132 @@ export default function Calls({
     return () => clearInterval(interval);
   }, [connectedAt]);
 
-  // --------------------------------------------------
-  // REFRESH RECORDING, PARTICIPANTS AND SPEAK REQUESTS
-  // --------------------------------------------------
+  const refreshCallData = useCallback(
+    async (providedCallId = null) => {
+      const id = providedCallId || callIdRef.current;
 
-  const refreshCallData = useCallback(async (providedCallId = null) => {
-    const id = providedCallId || callIdRef.current;
+      if (
+        !id ||
+        !isGroupOrChannel ||
+        refreshingRef.current ||
+        callIdRef.current !== id
+      ) {
+        return;
+      }
 
-    if (
-      !id ||
-      !isGroupOrChannel ||
-      refreshingRef.current ||
-      callIdRef.current !== id
-    ) {
-      return;
-    }
+      refreshingRef.current = true;
 
-    refreshingRef.current = true;
+      try {
+        const [recordingData, participantData] = await Promise.all([
+          invokeCallAction({
+            action: "recording_state",
+            call_id: id,
+          }),
+          invokeCallAction({
+            action: "list_participants",
+            call_id: id,
+          }),
+        ]);
 
-    try {
-      const [recordingData, participantData] = await Promise.all([
-        invokeCallAction({
-          action: "recording_state",
-          call_id: id,
-        }),
-        invokeCallAction({
-          action: "list_participants",
-          call_id: id,
-        }),
-      ]);
+        if (!mountedRef.current || callIdRef.current !== id) return;
 
-      if (!mountedRef.current || callIdRef.current !== id) return;
+        const canManage =
+          recordingData.can_manage_recording === true;
 
-      const canManage =
-        recordingData.can_manage_recording === true;
+        setRecording(recordingData.recording || null);
+        setRecordingConsents(recordingData.consents || []);
+        setCanManageRecording(canManage);
+        setIsCallAdmin(canManage);
 
-      setRecording(recordingData.recording || null);
-      setRecordingConsents(recordingData.consents || []);
-      setCanManageRecording(canManage);
-      setIsCallAdmin(canManage);
+        const loadedParticipants =
+          participantData.participants || [];
 
-      const loadedParticipants =
-        participantData.participants || [];
+        setParticipants(loadedParticipants);
 
-      setParticipants(loadedParticipants);
+        const ownParticipant = loadedParticipants.find(
+          (participant) => participant.user_id === user?.id
+        );
 
-      const ownParticipant = loadedParticipants.find(
-        (participant) => participant.user_id === user?.id
-      );
+        if (ownParticipant) {
+          const nextPermission =
+            ownParticipant.can_publish === true;
 
-      if (ownParticipant) {
-        const nextPermission =
-          ownParticipant.can_publish === true;
+          const previousPermission =
+            publishPermissionRef.current;
 
-        const previousPermission =
-          publishPermissionRef.current;
+          publishPermissionRef.current = nextPermission;
+          setCanPublish(nextPermission);
 
-        publishPermissionRef.current = nextPermission;
-        setCanPublish(nextPermission);
+          if (
+            previousPermission === false &&
+            nextPermission === true &&
+            roomRef.current &&
+            callIdRef.current === id
+          ) {
+            try {
+              await roomRef.current.localParticipant.setMicrophoneEnabled(true);
 
-        if (
-          previousPermission === false &&
-          nextPermission === true &&
-          roomRef.current &&
-          callIdRef.current === id
-        ) {
-          try {
-            await roomRef.current.localParticipant.setMicrophoneEnabled(true);
+              if (mountedRef.current && callIdRef.current === id) {
+                setAudioEnabled(true);
+              }
+            } catch (permissionError) {
+              console.warn(
+                "Could not enable approved microphone:",
+                permissionError
+              );
+            }
+          }
+
+          if (
+            previousPermission === true &&
+            nextPermission === false &&
+            roomRef.current &&
+            callIdRef.current === id
+          ) {
+            try {
+              await roomRef.current.localParticipant.setMicrophoneEnabled(false);
+              await roomRef.current.localParticipant.setCameraEnabled(false);
+            } catch (permissionError) {
+              console.warn(
+                "Could not disable media after permission removal:",
+                permissionError
+              );
+            }
 
             if (mountedRef.current && callIdRef.current === id) {
-              setAudioEnabled(true);
+              setAudioEnabled(false);
+              setVideoEnabled(false);
             }
-          } catch (permissionError) {
-            console.warn(
-              "Could not enable approved microphone:",
-              permissionError
-            );
           }
         }
 
-        if (
-          previousPermission === true &&
-          nextPermission === false &&
-          roomRef.current &&
-          callIdRef.current === id
-        ) {
+        if (canManage) {
           try {
-            await roomRef.current.localParticipant.setMicrophoneEnabled(false);
-            await roomRef.current.localParticipant.setCameraEnabled(false);
-          } catch (permissionError) {
+            const requestsData = await invokeCallAction({
+              action: "list_speak_requests",
+              call_id: id,
+            });
+
+            if (mountedRef.current && callIdRef.current === id) {
+              setSpeakRequests(requestsData.requests || []);
+            }
+          } catch (requestError) {
             console.warn(
-              "Could not disable media after permission removal:",
-              permissionError
+              "Could not load speaking requests:",
+              requestError
             );
           }
-
-          if (mountedRef.current && callIdRef.current === id) {
-            setAudioEnabled(false);
-            setVideoEnabled(false);
-          }
+        } else {
+          setSpeakRequests([]);
         }
+      } catch (err) {
+        console.error("Refresh call data error:", err);
+      } finally {
+        refreshingRef.current = false;
       }
-
-      if (canManage) {
-        try {
-          const requestsData = await invokeCallAction({
-            action: "list_speak_requests",
-            call_id: id,
-          });
-
-          if (mountedRef.current && callIdRef.current === id) {
-            setSpeakRequests(requestsData.requests || []);
-          }
-        } catch (requestError) {
-          console.warn(
-            "Could not load speaking requests:",
-            requestError
-          );
-        }
-      } else {
-        setSpeakRequests([]);
-      }
-    } catch (err) {
-      console.error("Refresh call data error:", err);
-    } finally {
-      refreshingRef.current = false;
-    }
-  }, [isGroupOrChannel, invokeCallAction, user?.id]);
-
-  // --------------------------------------------------
-  // START CALL
-  // --------------------------------------------------
+    },
+    [isGroupOrChannel, invokeCallAction, user?.id]
+  );
 
   const startCall = async (withVideo = false) => {
     if (
@@ -786,14 +732,6 @@ export default function Calls({
       } else if (callType === "channel") {
         body.channel_id = channelId;
       }
-
-      console.log("[LOLZ CALL DEBUG]", {
-        callType,
-        conversationId: conversation?.id ?? null,
-        groupId,
-        channelId,
-        requestBody: body,
-      });
 
       const data = await invokeCallAction(body);
 
@@ -846,10 +784,6 @@ export default function Calls({
       }
     }
   };
-
-  // --------------------------------------------------
-  // CHECK INCOMING AND ACTIVE CALLS
-  // --------------------------------------------------
 
   const checkCalls = useCallback(async () => {
     if (
@@ -923,10 +857,6 @@ export default function Calls({
     invokeCallAction,
   ]);
 
-  // --------------------------------------------------
-  // LOAD CALLER PROFILE
-  // --------------------------------------------------
-
   useEffect(() => {
     const callerId = incomingCall?.created_by;
 
@@ -959,10 +889,6 @@ export default function Calls({
     };
   }, [incomingCall?.created_by, supabase]);
 
-  // --------------------------------------------------
-  // COMPONENT LIFECYCLE
-  // --------------------------------------------------
-
   useEffect(() => {
     mountedRef.current = true;
     endingRef.current = false;
@@ -974,8 +900,6 @@ export default function Calls({
       const callIdToLeave = callIdRef.current;
       const room = roomRef.current;
 
-      // Clear local references before disconnecting.
-      // This prevents the Disconnected event from sending another leave.
       roomRef.current = null;
       callIdRef.current = null;
       publishPermissionRef.current = null;
@@ -1000,39 +924,22 @@ export default function Calls({
     };
   }, []);
 
-  // --------------------------------------------------
-  // POLL CALLS
-  // --------------------------------------------------
-
   useEffect(() => {
     checkCalls();
-
     const interval = setInterval(checkCalls, 4000);
-
-    // This effect only controls polling.
-    // It must not end a call when checkCalls changes.
     return () => clearInterval(interval);
   }, [checkCalls]);
-
-  // --------------------------------------------------
-  // POLL ACTIVE CALL DATA
-  // --------------------------------------------------
 
   useEffect(() => {
     if (!active || !isGroupOrChannel) return;
 
     refreshCallData();
-
     const interval = setInterval(() => {
       refreshCallData();
     }, 3500);
 
     return () => clearInterval(interval);
   }, [active, isGroupOrChannel, refreshCallData]);
-
-  // --------------------------------------------------
-  // JOIN CALL
-  // --------------------------------------------------
 
   const joinCall = async (call) => {
     if (!call?.id || connecting || active || roomRef.current) return;
@@ -1102,10 +1009,6 @@ export default function Calls({
     await joinCall(incomingCall);
   };
 
-  // --------------------------------------------------
-  // RECORDING CONSENT
-  // --------------------------------------------------
-
   const respondToRecordingConsent = async (decision, joining = false) => {
     const targetCall = joining
       ? joinConsent?.call
@@ -1170,10 +1073,6 @@ export default function Calls({
       setRecordingPrompt(null);
     }
   }, [active, recording, recordingConsents, user?.id, isPrivate]);
-
-  // --------------------------------------------------
-  // RECORDING MANAGEMENT
-  // --------------------------------------------------
 
   const requestRecording = async () => {
     const id = callIdRef.current;
@@ -1250,10 +1149,6 @@ export default function Calls({
     }
   };
 
-  // --------------------------------------------------
-  // REQUEST TO SPEAK
-  // --------------------------------------------------
-
   const requestToSpeak = async () => {
     const id = callIdRef.current;
 
@@ -1305,10 +1200,6 @@ export default function Calls({
     }
   };
 
-  // --------------------------------------------------
-  // REJECT PRIVATE CALL
-  // --------------------------------------------------
-
   const rejectCall = async () => {
     if (!incomingCall) return;
 
@@ -1328,10 +1219,6 @@ export default function Calls({
     }
   };
 
-  // --------------------------------------------------
-  // END OR LEAVE CALL
-  // --------------------------------------------------
-
   const endCall = async () => {
     const room = roomRef.current;
     const id = callIdRef.current;
@@ -1342,8 +1229,7 @@ export default function Calls({
 
     try {
       if (id) {
-        const shouldEnd =
-          !isPrivate && (canEnd || isCallAdmin);
+        const shouldEnd = !isPrivate && (canEnd || isCallAdmin);
 
         await invokeCallAction({
           action: shouldEnd ? "end" : "leave",
@@ -1351,7 +1237,6 @@ export default function Calls({
         });
       }
 
-      // Only clear the ID after the server confirms the action.
       if (roomRef.current === room) {
         roomRef.current = null;
       }
@@ -1369,17 +1254,12 @@ export default function Calls({
       clearCall();
       checkCalls();
     } catch (err) {
-      // Keep the call ID so the user can retry the server request.
       console.error("End call error:", err);
       setError(err.message || "تعذر إنهاء المكالمة");
     } finally {
       endingRef.current = false;
     }
   };
-
-  // --------------------------------------------------
-  // MICROPHONE
-  // --------------------------------------------------
 
   const toggleMicrophone = async () => {
     const room = roomRef.current;
@@ -1400,10 +1280,6 @@ export default function Calls({
       setError(err.message || "تعذر تغيير الميكروفون");
     }
   };
-
-  // --------------------------------------------------
-  // CAMERA
-  // --------------------------------------------------
 
   const toggleCamera = async () => {
     const room = roomRef.current;
@@ -1472,11 +1348,7 @@ export default function Calls({
     }
   };
 
-  // --------------------------------------------------
-  // DISPLAY DATA
-  // --------------------------------------------------
-
-  const callerName = getDisplayName(incomingProfile, "Someone");
+  const callerName = getDisplayName(incomingProfile, "متصل");
   const callerInitials = callerName.trim().slice(0, 2).toUpperCase();
 
   const approvedCount = recordingConsents.filter(
@@ -1502,22 +1374,22 @@ export default function Calls({
   const ownSpeakRequestPending =
     mySpeakRequest?.status === "pending";
 
-  // --------------------------------------------------
-  // UI
-  // --------------------------------------------------
-
   return (
     <div
       className="lolz-calls"
-      style={{ width: "100%", color: "white" }}
+      style={{ width: "100%", color: "#ffffff" }}
     >
       {!active && !incomingCall && isPrivate && conversation?.id && (
-        <div style={{ display: "flex", gap: "10px", padding: "8px 0" }}>
+        <div
+          className="lolz-private-call-actions"
+          style={{ display: "flex", gap: "10px", padding: "8px 0" }}
+        >
           <button
             type="button"
             onClick={() => startCall(false)}
             disabled={connecting || !canStart}
             title="مكالمة صوتية"
+            aria-label="مكالمة صوتية"
             style={{ ...buttonStyle, background: "#18794e" }}
           >
             <Phone size={20} />
@@ -1528,6 +1400,7 @@ export default function Calls({
             onClick={() => startCall(true)}
             disabled={connecting || !canStart}
             title="مكالمة فيديو"
+            aria-label="مكالمة فيديو"
             style={{ ...buttonStyle, background: "#3157a4" }}
           >
             <Video size={20} />
@@ -1562,6 +1435,7 @@ export default function Calls({
               type="button"
               onClick={checkCalls}
               title="تحديث"
+              aria-label="تحديث"
               style={buttonStyle}
             >
               <RefreshCw size={17} />
@@ -1746,10 +1620,10 @@ export default function Calls({
       {error && (
         <div
           style={{
-            padding: "10px",
+            padding: "10px 12px",
             margin: "8px 0",
             background: "#542b32",
-            borderRadius: "10px",
+            borderRadius: "12px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
@@ -1761,6 +1635,7 @@ export default function Calls({
           <button
             type="button"
             onClick={() => setError("")}
+            aria-label="إغلاق"
             style={buttonStyle}
           >
             <X size={16} />
@@ -1770,15 +1645,16 @@ export default function Calls({
 
       {incomingCall && !active && isPrivate && (
         <div
+          className="lolz-incoming-call"
           style={{
             display: "flex",
             alignItems: "center",
             gap: "12px",
             padding: "14px",
             margin: "8px 0",
-            background: "#20242d",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: "14px",
+            background: "#1c2029",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: "16px",
           }}
         >
           <div
@@ -1832,6 +1708,7 @@ export default function Calls({
             onClick={acceptCall}
             disabled={connecting}
             title="قبول المكالمة"
+            aria-label="قبول المكالمة"
             style={{ ...buttonStyle, background: "#18794e" }}
           >
             {incomingCall.media_type === "video" ? (
@@ -1846,6 +1723,7 @@ export default function Calls({
             onClick={rejectCall}
             disabled={connecting}
             title="رفض المكالمة"
+            aria-label="رفض المكالمة"
             style={{ ...buttonStyle, background: "#b83240" }}
           >
             <PhoneOff size={19} />
@@ -1890,9 +1768,9 @@ export default function Calls({
             style={{
               padding: "18px",
               margin: "8px 0",
-              background: "linear-gradient(145deg, #20242d, #171a21)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: "18px",
+              background: "linear-gradient(145deg, #1b1f28, #12151c)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: "20px",
             }}
           >
             <div
@@ -1981,7 +1859,7 @@ export default function Calls({
                   }}
                 />
                 <strong>جارٍ تسجيل صوت المكالمة</strong>
-                <span style={{ marginRight: "auto", opacity: 0.8 }}>
+                <span style={{ marginInlineStart: "auto", opacity: 0.85 }}>
                   تسجيل صوتي
                 </span>
               </div>
@@ -2048,7 +1926,7 @@ export default function Calls({
                   border: "none",
                   borderRadius: "10px",
                   background: "#3157a4",
-                  color: "white",
+                  color: "#ffffff",
                   cursor: "pointer",
                 }}
               >
@@ -2613,9 +2491,10 @@ export default function Calls({
                       ? "إيقاف الميكروفون"
                       : "تشغيل الميكروفون"
                 }
+                aria-label={audioEnabled ? "إيقاف الميكروفون" : "تشغيل الميكروفون"}
                 style={{
                   ...buttonStyle,
-                  background: audioEnabled ? "#303541" : "#b83240",
+                  background: audioEnabled ? "#2c313d" : "#b83240",
                   opacity: canPublish ? 1 : 0.45,
                   cursor: canPublish ? "pointer" : "not-allowed",
                 }}
@@ -2634,9 +2513,10 @@ export default function Calls({
                       ? "إيقاف الكاميرا"
                       : "تشغيل الكاميرا"
                 }
+                aria-label={videoEnabled ? "إيقاف الكاميرا" : "تشغيل الكاميرا"}
                 style={{
                   ...buttonStyle,
-                  background: videoEnabled ? "#303541" : "#b83240",
+                  background: videoEnabled ? "#2c313d" : "#b83240",
                   opacity: canPublish ? 1 : 0.45,
                   cursor: canPublish ? "pointer" : "not-allowed",
                 }}
@@ -2650,6 +2530,7 @@ export default function Calls({
                   onClick={switchCamera}
                   disabled={switchingCamera}
                   title="تبديل الكاميرا الأمامية والخلفية"
+                  aria-label="تبديل الكاميرا الأمامية والخلفية"
                   style={{
                     ...buttonStyle,
                     background: "#3157a4",
@@ -2664,6 +2545,7 @@ export default function Calls({
                 type="button"
                 onClick={enableRemoteAudio}
                 title="تفعيل صوت المشاركين"
+                aria-label="تفعيل صوت المشاركين"
                 style={{
                   ...buttonStyle,
                   background: "#3157a4",
@@ -2676,6 +2558,11 @@ export default function Calls({
                 type="button"
                 className="lolz-call-end-button"
                 title={
+                  !isPrivate && (canEnd || isCallAdmin)
+                    ? "إنهاء المكالمة للجميع"
+                    : "مغادرة المكالمة"
+                }
+                aria-label={
                   !isPrivate && (canEnd || isCallAdmin)
                     ? "إنهاء المكالمة للجميع"
                     : "مغادرة المكالمة"
@@ -2701,7 +2588,7 @@ export default function Calls({
                 alignItems: "center",
                 gap: "6px",
                 marginTop: "14px",
-                color: "#000000",
+                color: "#9aa3b5",
                 fontSize: "12px",
               }}
             >
