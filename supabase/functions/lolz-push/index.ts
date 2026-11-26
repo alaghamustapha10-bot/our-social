@@ -314,7 +314,8 @@ async function createAndSendNotifications(
   for (const recipientId of recipients) {
     const sourceObjectId =
       data.message_id || data.post_id || data.call_id ||
-      data.video_id || data.group_id || data.channel_id || crypto.randomUUID();
+      data.comment_id || data.video_id ||
+      data.group_id || data.channel_id || crypto.randomUUID();
     const row = {
       recipient_id: recipientId,
       actor_id: actorId,
@@ -419,6 +420,8 @@ async function handleAction(userId: string, body: JsonObject) {
         return { success: true, notifications_created: 0, pushes_sent: 0 };
       }
 
+      const eventData: Record<string, unknown> = { video_id: videoId };
+
       if (type === "lolz_like") {
         const { data: like, error: likeError } = await admin
           .from("lolz_likes")
@@ -443,13 +446,14 @@ async function handleAction(userId: string, body: JsonObject) {
         if (commentError || !comment) {
           throw new HttpError("The LOLZ video comment could not be verified.", 403);
         }
+        eventData.comment_id = String(comment.id);
       }
 
       const result = await createAndSendNotifications(
         [String(video.user_id)],
         userId,
         type,
-        { video_id: videoId },
+        eventData,
       );
       return { success: true, ...result };
     }
