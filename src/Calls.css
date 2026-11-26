@@ -453,16 +453,73 @@
   }
 }
 
-/* Keep the minimized call dock centered in the viewport on every page */
-.lolz-call-dock:has(.lolz-call-mini) {
-  top: 50% !important;
+/* Compact minimized call chip rendered in a body-level portal */
+.lolz-call-mini-portal {
+  position: fixed !important;
+  z-index: 2147483000 !important;
   left: 50% !important;
   right: auto !important;
-  bottom: auto !important;
-  transform: translate(-50%, -50%) !important;
-  width: min(320px, calc(100vw - 28px)) !important;
-  max-height: none !important;
-  overflow: visible !important;
+  bottom: calc(var(--lolz-mobile-nav-height, 64px) + 12px + env(safe-area-inset-bottom, 0px)) !important;
+  top: auto !important;
+  width: auto !important;
+  max-width: calc(100vw - 24px) !important;
+  transform: translateX(-50%) !important;
+  pointer-events: none !important;
+}
+.lolz-call-mini-portal .lolz-call-mini {
+  pointer-events: auto !important;
+  width: min(230px, calc(100vw - 24px)) !important;
+  min-height: 44px !important;
+  height: 44px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 9px !important;
+  margin: 0 !important;
+  padding: 0 13px !important;
+  border: 1px solid rgba(119,112,255,.55) !important;
+  border-radius: 14px !important;
+  background: rgba(24,27,39,.96) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 26px rgba(0,0,0,.32) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  cursor: pointer;
+}
+.lolz-call-mini-portal .lolz-call-mini-label {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 750;
+  text-align: start;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lolz-call-mini-portal .lolz-call-mini-dot {
+  width: 8px !important;
+  height: 8px !important;
+  flex: 0 0 8px !important;
+  border-radius: 50%;
+  background: #48d597;
+  box-shadow: 0 0 0 4px rgba(72,213,151,.12);
+}
+.lolz-call-mini-portal .lolz-call-mini-duration {
+  flex: 0 0 auto;
+  color: #72e0ad !important;
+  font-size: 11px !important;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+@media (min-width: 769px) {
+  .lolz-call-mini-portal {
+    left: auto !important;
+    right: 24px !important;
+    bottom: 24px !important;
+    transform: none !important;
+  }
 }
 
 /* ==============================
