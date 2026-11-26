@@ -1619,3 +1619,22 @@
     overflow: hidden !important;
   }
 }
+
+.groups-report-message,
+.channel-report-post {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: #a0a0ad;
+  font-size: 11px;
+  cursor: pointer;
+}
+.groups-report-message:hover,
+.channel-report-post:hover {
+  color: #dc5364;
+  text-decoration: underline;
+}
