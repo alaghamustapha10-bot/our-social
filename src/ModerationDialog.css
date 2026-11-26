@@ -1,0 +1,83 @@
+.lolz-moderation-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 11000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(5, 6, 12, .68);
+  backdrop-filter: blur(7px);
+}
+.lolz-moderation-dialog {
+  position: relative;
+  width: min(100%, 440px);
+  padding: 28px;
+  border: 1px solid var(--border, #dedee8);
+  border-radius: 22px;
+  background: var(--panel, #fff);
+  color: var(--text, #20232b);
+  box-shadow: 0 24px 80px rgba(0,0,0,.26);
+}
+.lolz-moderation-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--panel-2, #f1f1f5);
+  color: inherit;
+  cursor: pointer;
+}
+[dir="rtl"] .lolz-moderation-close { right: auto; left: 12px; }
+.lolz-moderation-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 15px;
+  border-radius: 16px;
+  background: rgba(119,112,255,.13);
+  color: #7770ff;
+}
+.lolz-moderation-dialog h2 { margin: 0 0 10px; font-size: 21px; }
+.lolz-moderation-dialog p {
+  margin: 0 0 18px;
+  color: var(--muted, #777);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.lolz-moderation-label {
+  display: grid;
+  gap: 8px;
+  margin: 15px 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+.lolz-moderation-label select,
+.lolz-moderation-label textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 11px;
+  background: var(--bg, #fff);
+  color: var(--text, #20232b);
+  font: inherit;
+  font-size: 13px;
+}
+.lolz-moderation-label textarea { resize: vertical; }
+.lolz-moderation-actions { display: flex; flex-direction: column; gap: 9px; margin-top: 20px; }
+.lolz-moderation-actions button {
+  min-height: 44px;
+  border-radius: 11px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.lolz-moderation-danger { border: 0; background: #d84a5a; color: #fff; }
+.lolz-moderation-secondary { border: 1px solid var(--border, #ddd); background: transparent; color: inherit; }
+.lolz-moderation-actions button:disabled { opacity: .6; cursor: wait; }
