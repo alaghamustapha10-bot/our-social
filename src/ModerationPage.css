@@ -1,0 +1,67 @@
+.lolz-moderation-page > h1 { margin: 8px 0; }
+.lolz-report-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 22px 0 16px;
+}
+.lolz-report-list {
+  display: grid;
+  gap: 13px;
+}
+.lolz-report-card {
+  padding: 18px;
+  border: 1px solid var(--border, #e5e5ec);
+  border-radius: 16px;
+  background: var(--panel, #fff);
+}
+.lolz-report-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.lolz-report-card-top strong { font-size: 14px; }
+.lolz-report-card p {
+  margin: 10px 0;
+  color: var(--muted, #777);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.lolz-report-card code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.lolz-report-card blockquote {
+  margin: 12px 0;
+  padding: 10px 13px;
+  border-inline-start: 3px solid #7770ff;
+  color: var(--text, #222);
+  background: var(--panel-2, #f5f5f9);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.lolz-report-card small {
+  color: var(--muted, #888);
+  font-size: 11px;
+}
+.lolz-report-status {
+  padding: 5px 9px;
+  border-radius: 20px;
+  background: var(--panel-2, #f1f1f5);
+  color: var(--muted, #666);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.lolz-report-status.status-resolved { color: #16794a; background: rgba(32,165,107,.1); }
+.lolz-report-status.status-rejected { color: #b34d55; background: rgba(211,65,80,.1); }
+.lolz-report-status.status-reviewing { color: #8762cf; background: rgba(119,112,255,.12); }
+.lolz-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 15px;
+}
+.lolz-report-actions button { min-height: 36px; }
