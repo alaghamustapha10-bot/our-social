@@ -1447,7 +1447,7 @@ export default function App() {
   }
 
   async function reportContent(report) {
-    if (!user?.id || !report?.type || !report?.id || !report?.reason) return;
+    if (!user?.id || !report?.type || !report?.id || !report?.reason) return false;
 
     const { error } = await supabase.from("content_reports").insert({
       reporter_id: user.id,
@@ -1464,7 +1464,7 @@ export default function App() {
           ? "تعذر إرسال البلاغ: " + error.message
           : "Could not submit report: " + error.message
       );
-      return;
+      return false;
     }
 
     setNotice(
@@ -1472,10 +1472,11 @@ export default function App() {
         ? "وصل بلاغك بسرية. شكراً لمساعدتنا في حماية LOLZ."
         : "Your private report has been submitted. Thank you for helping keep LOLZ safe."
     );
+    return true;
   }
 
   async function blockUser(targetUserId) {
-    if (!user?.id || !targetUserId || targetUserId === user.id) return;
+    if (!user?.id || !targetUserId || targetUserId === user.id) return false;
 
     const { error } = await supabase.from("user_blocks").insert({
       blocker_id: user.id,
@@ -1488,7 +1489,7 @@ export default function App() {
           ? "تعذر حظر الحساب: " + error.message
           : "Could not block account: " + error.message
       );
-      return;
+      return false;
     }
 
     setBlockedUserIds((current) =>
@@ -1520,6 +1521,7 @@ export default function App() {
         ? "تم حظر الحساب. لن تظهر منشوراته في صفحتك الرئيسية."
         : "Account blocked. Their posts will no longer appear in your feed."
     );
+    return true;
   }
 
   async function unblockUser(targetUserId) {
