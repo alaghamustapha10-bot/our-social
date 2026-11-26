@@ -23,7 +23,7 @@ const COPY = {
   ar: {
     home: "الرئيسية",
     explore: "استكشاف",
-    reels: "Reels",
+    reels: "LOLZ",
     messages: "الرسائل",
     notifications: "الإشعارات",
     profile: "الملف الشخصي",
@@ -41,7 +41,7 @@ const COPY = {
   en: {
     home: "Home",
     explore: "Explore",
-    reels: "Reels",
+    reels: "LOLZ",
     messages: "Messages",
     notifications: "Notifications",
     profile: "Profile",
