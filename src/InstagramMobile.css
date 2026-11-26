@@ -1247,3 +1247,9 @@
   background: var(--panel-2);
 }
 
+
+/* Keep the hidden call monitor mounted for incoming-call checks,
+   but remove its empty floating shell from unrelated pages. */
+.app-shell .lolz-call-dock:has(.lolz-calls:empty) {
+  display: none !important;
+}
