@@ -3817,6 +3817,10 @@ export default function App() {
                 onStartCheckout={startPremiumCheckout}
                 onCancelSubscription={cancelPremiumSubscription}
                 subscriptionEnd={subscriptionInfo?.next_billing_time || null}
+                canCancelSubscription={
+                  subscriptionInfo?.status === "active" &&
+                  Boolean(subscriptionInfo?.paypal_subscription_id)
+                }
                 isPremium={isPremium}
               />
             </section>
