@@ -368,24 +368,30 @@ async function getCallParticipants(call: JsonObject): Promise<string[]> {
 
   if (callType === "group") {
     const groupId = requireString(call.group_id, "call group");
-    const { data, error } = await admin
-      .from("group_members")
-      .select("user_id")
-      .eq("group_id", groupId);
+    const [{ data: members, error }, { data: group, error: groupError }] = await Promise.all([
+      admin.from("group_members").select("user_id").eq("group_id", groupId),
+      admin.from("groups").select("created_by").eq("id", groupId).maybeSingle(),
+    ]);
 
-    if (error) throw new HttpError("Could not load group call recipients.", 500);
-    return (data || []).map((row: JsonObject) => String(row.user_id));
+    if (error || groupError) throw new HttpError("Could not load group call recipients.", 500);
+    return [...new Set([
+      ...(members || []).map((row: JsonObject) => String(row.user_id)),
+      ...(group?.created_by ? [String(group.created_by)] : []),
+    ])];
   }
 
   if (callType === "channel") {
     const channelId = requireString(call.channel_id, "call channel");
-    const { data, error } = await admin
-      .from("channel_members")
-      .select("user_id")
-      .eq("channel_id", channelId);
+    const [{ data: members, error }, { data: channel, error: channelError }] = await Promise.all([
+      admin.from("channel_members").select("user_id").eq("channel_id", channelId),
+      admin.from("channels").select("created_by").eq("id", channelId).maybeSingle(),
+    ]);
 
-    if (error) throw new HttpError("Could not load channel call recipients.", 500);
-    return (data || []).map((row: JsonObject) => String(row.user_id));
+    if (error || channelError) throw new HttpError("Could not load channel call recipients.", 500);
+    return [...new Set([
+      ...(members || []).map((row: JsonObject) => String(row.user_id)),
+      ...(channel?.created_by ? [String(channel.created_by)] : []),
+    ])];
   }
 
   throw new HttpError("Unsupported call type.");
@@ -614,7 +620,10 @@ async function handleAction(userId: string, body: JsonObject) {
     if (membersError) throw new HttpError("Could not load group recipients.", 500);
 
     const result = await createAndSendNotifications(
-      (members || []).map((row: JsonObject) => String(row.user_id)),
+      [...new Set([
+        ...(members || []).map((row: JsonObject) => String(row.user_id)),
+        ...(group?.created_by ? [String(group.created_by)] : []),
+      ])],
       userId,
       "group_message",
       { group_id: String(message.group_id), message_id: String(message.id) },
@@ -641,7 +650,10 @@ async function handleAction(userId: string, body: JsonObject) {
     if (membersError) throw new HttpError("Could not load channel recipients.", 500);
 
     const result = await createAndSendNotifications(
-      (members || []).map((row: JsonObject) => String(row.user_id)),
+      [...new Set([
+        ...(members || []).map((row: JsonObject) => String(row.user_id)),
+        ...(channel?.created_by ? [String(channel.created_by)] : []),
+      ])],
       userId,
       "channel_post",
       { channel_id: String(post.channel_id), post_id: String(post.id) },
@@ -725,7 +737,10 @@ async function handleAction(userId: string, body: JsonObject) {
     if (adminsError) throw new HttpError("Could not load group administrators.", 500);
 
     const result = await createAndSendNotifications(
-      (admins || []).map((row: JsonObject) => String(row.user_id)),
+      [...new Set([
+        ...(admins || []).map((row: JsonObject) => String(row.user_id)),
+        ...(group?.created_by ? [String(group.created_by)] : []),
+      ])],
       userId,
       "group_join",
       { group_id: groupId },
