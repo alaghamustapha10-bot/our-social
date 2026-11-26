@@ -1672,15 +1672,26 @@ export default function App() {
         conversation = data;
       }
 
-      const { error: messageError } = await supabase.from("messages").insert({
-        conversation_id: conversation.id,
-        sender_id: user.id,
-        content: text,
-        message_type: "text",
-        media_url: null,
-      });
+      const { data: storyReplyMessage, error: messageError } = await supabase
+        .from("messages")
+        .insert({
+          conversation_id: conversation.id,
+          sender_id: user.id,
+          content: text,
+          message_type: "text",
+          media_url: null,
+        })
+        .select("id")
+        .single();
 
       if (messageError) throw messageError;
+
+      if (storyReplyMessage?.id) {
+        void dispatchLolzPush(supabase, {
+          action: "direct_message",
+          message_id: storyReplyMessage.id,
+        });
+      }
 
       await loadConversations();
 
