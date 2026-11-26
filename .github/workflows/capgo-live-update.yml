@@ -1,0 +1,53 @@
+name: LOLZ Capgo Live Updates
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.*"
+      - "capacitor.config.json"
+      - ".github/workflows/capgo-live-update.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: capgo-live-update-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  upload-production-bundle:
+    name: Build and publish OTA update to Capgo Production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web assets
+        run: npm run build
+
+      - name: Upload bundle to Capgo Production
+        env:
+          CAPGO_TOKEN: ${{ secrets.CAPGO_TOKEN }}
+        run: |
+          if [ -z "$CAPGO_TOKEN" ]; then
+            echo "::error::Missing GitHub Actions secret CAPGO_TOKEN. Add a Capgo API key in repository Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+
+          npx @capgo/cli@latest bundle upload -a "$CAPGO_TOKEN" --channel=production
