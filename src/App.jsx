@@ -18,6 +18,7 @@ import "./InstagramDirect.css";
 import "./InstagramMobile.css";
 import Calls from "./Calls";
 import Premium from "./Premium";
+import StoryViewer from "./StoryViewer";
 import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 
@@ -215,6 +216,7 @@ function Avatar({ url, name, size = "normal" }) {
 export default function App() {
   const { t, isArabic } = useTranslation();
   const [isPremium, setIsPremium] = useState(false);
+  const [subscriptionInfo, setSubscriptionInfo] = useState(null);
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
 
@@ -283,6 +285,8 @@ export default function App() {
 
   const [posts, setPosts] = useState([]);
   const [stories, setStories] = useState([]);
+  const [activeStoryId, setActiveStoryId] = useState(null);
+  const closeStoryViewer = useCallback(() => setActiveStoryId(null), []);
   const [likedPosts, setLikedPosts] = useState([]);
   const [savedPosts, setSavedPosts] = useState([]);
 
@@ -444,12 +448,16 @@ export default function App() {
   }, [messageFile]);
 
   const loadPremiumStatus = useCallback(async (userId) => {
-    if (!userId) return;
+    if (!userId) {
+      setIsPremium(false);
+      setSubscriptionInfo(null);
+      return;
+    }
 
     try {
       const { data, error } = await supabase
         .from("lolz_subscriptions")
-        .select("status")
+        .select("status,paypal_subscription_id,next_billing_time,cancelled_at")
         .eq("user_id", userId)
         .order("updated_at", { ascending: false })
         .limit(1)
@@ -457,12 +465,21 @@ export default function App() {
 
       if (error) throw error;
 
-      setIsPremium(
-        String(data?.status || "").toLowerCase() === "active"
-      );
+      const status = String(data?.status || "").toLowerCase();
+      const accessEnd = data?.next_billing_time
+        ? new Date(data.next_billing_time).getTime()
+        : 0;
+      const isWithinPaidPeriod =
+        status === "cancelled" &&
+        Number.isFinite(accessEnd) &&
+        accessEnd > Date.now();
+
+      setSubscriptionInfo(data || null);
+      setIsPremium(status === "active" || isWithinPaidPeriod);
     } catch (error) {
       console.error("Premium status error:", error);
       setIsPremium(false);
+      setSubscriptionInfo(null);
     }
   }, []);
 
@@ -544,13 +561,48 @@ export default function App() {
       });
     }
 
+    const { data: authData } = await supabase.auth.getUser();
+    const currentUserId = authData?.user?.id;
+    const ownStories = data.filter((story) => story.user_id === currentUserId);
+    const viewCounts = new Map();
+
+    await Promise.all(
+      ownStories.map(async (story) => {
+        const { data: viewers, error: viewersError } = await supabase.rpc(
+          "get_lolz_story_viewers",
+          { p_story_id: String(story.id) }
+        );
+        if (!viewersError) viewCounts.set(String(story.id), viewers?.length || 0);
+      })
+    );
+
     setStories(
       data.map((story) => ({
         ...story,
+        view_count: viewCounts.get(String(story.id)) || 0,
         author: profileMap[story.user_id] || {},
       }))
     );
   }, []);
+
+  const recordStoryView = useCallback(async (story) => {
+    if (!user?.id || !story?.id || story.user_id === user.id) return;
+
+    const { error } = await supabase
+      .from("story_views")
+      .upsert(
+        {
+          story_id: String(story.id),
+          viewer_id: user.id,
+          viewed_at: new Date().toISOString(),
+        },
+        { onConflict: "story_id,viewer_id", ignoreDuplicates: true }
+      );
+
+    if (error) {
+      console.warn("Could not record story view:", error.message);
+    }
+  }, [user?.id]);
 
   const loadFollowing = useCallback(async (userId) => {
     if (!userId) return;
@@ -702,6 +754,7 @@ export default function App() {
         setUser(null);
         setProfile(null);
         setIsPremium(false);
+        setSubscriptionInfo(null);
       } else {
         setUser((prev) => {
           if (prev?.id !== session.user.id) {
@@ -714,6 +767,73 @@ export default function App() {
 
     return () => subscription?.unsubscribe();
   }, [startApp]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const url = new URL(window.location.href);
+    const paypalState = url.searchParams.get("paypal");
+    const subscriptionId = url.searchParams.get("subscription_id");
+
+    if (paypalState === "cancel") {
+      setNotice(
+        isArabic
+          ? "تم إلغاء عملية الاشتراك في PayPal."
+          : "The PayPal subscription checkout was cancelled."
+      );
+      url.searchParams.delete("paypal");
+      window.history.replaceState({}, "", url.toString());
+      return;
+    }
+
+    if (paypalState !== "return" || !subscriptionId) return;
+
+    let active = true;
+    (async () => {
+      setNotice(
+        isArabic
+          ? "جارٍ التحقق من اشتراك PayPal..."
+          : "Verifying your PayPal subscription..."
+      );
+
+      const { data, error } = await supabase.functions.invoke(
+        "paypal-subscription",
+        {
+          body: {
+            action: "sync",
+            subscription_id: subscriptionId,
+          },
+        }
+      );
+
+      if (!active) return;
+
+      if (error || data?.error) {
+        setNotice(
+          error?.message ||
+            data?.error ||
+            (isArabic
+              ? "تعذر التحقق من الاشتراك."
+              : "Could not verify the subscription.")
+        );
+      } else {
+        await loadPremiumStatus(user.id);
+        setNotice(
+          isArabic
+            ? "تم التحقق من حالة اشتراكك."
+            : "Your subscription status has been verified."
+        );
+      }
+
+      url.searchParams.delete("paypal");
+      url.searchParams.delete("subscription_id");
+      window.history.replaceState({}, "", url.toString());
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id, isArabic, loadPremiumStatus]);
 
   function findPost(postId) {
     return (
@@ -1760,7 +1880,7 @@ export default function App() {
 
       const { data, error } = await supabase.functions.invoke(
         "paypal-subscription",
-        { body: {} }
+        { body: { action: "create" } }
       );
 
       if (error) throw error;
@@ -1778,6 +1898,37 @@ export default function App() {
         error.message || "تعذر الاتصال بـ PayPal. يرجى المحاولة مرة أخرى."
       );
     }
+  }
+
+  async function cancelPremiumSubscription() {
+    const subscriptionId = subscriptionInfo?.paypal_subscription_id;
+    if (!subscriptionId) {
+      throw new Error(
+        isArabic
+          ? "لم يتم العثور على رقم اشتراك PayPal."
+          : "The PayPal subscription ID could not be found."
+      );
+    }
+
+    const { data, error } = await supabase.functions.invoke(
+      "paypal-subscription",
+      {
+        body: {
+          action: "cancel",
+          subscription_id: subscriptionId,
+        },
+      }
+    );
+
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+
+    await loadPremiumStatus(user.id);
+    setNotice(
+      isArabic
+        ? "تم إلغاء التجديد. ستبقى المزايا حتى نهاية الفترة المدفوعة إن كانت متاحة."
+        : "Renewal was cancelled. Benefits remain until the paid period ends, where applicable."
+    );
   }
 
   const displayName =
@@ -1971,7 +2122,11 @@ export default function App() {
                     <button
                       type="button"
                       className="story-item add-story"
-                      onClick={() => storyInput.current?.click()}
+                      onClick={() => {
+                        const ownStory = stories.find((item) => item.user_id === user.id);
+                        if (ownStory) setActiveStoryId(ownStory.id);
+                        else storyInput.current?.click();
+                      }}
                     >
                       <div className="story-ring add-ring">
                         <Avatar url={profile?.avatar_url} name={displayName} size="large" />
@@ -1980,12 +2135,12 @@ export default function App() {
                       <span>{t("Your story")}</span>
                     </button>
 
-                    {stories.map((story) => (
+                    {stories.filter((story) => story.user_id !== user.id).map((story) => (
                       <button
                         type="button"
                         className="story-item"
                         key={story.id}
-                        onClick={() => window.open(story.media_url, "_blank")}
+                        onClick={() => setActiveStoryId(story.id)}
                       >
                         <div className="story-ring">
                           <Avatar
@@ -3089,6 +3244,8 @@ export default function App() {
               <Premium
                 isArabic={isArabic}
                 onStartCheckout={startPremiumCheckout}
+                onCancelSubscription={cancelPremiumSubscription}
+                subscriptionEnd={subscriptionInfo?.next_billing_time || null}
                 isPremium={isPremium}
               />
             </section>
@@ -3121,6 +3278,17 @@ export default function App() {
             showIdleControls={showIdleCallControls}
           />
         </div>
+      )}
+
+      {activeStoryId && (
+        <StoryViewer
+          stories={stories}
+          startStoryId={activeStoryId}
+          currentUserId={user.id}
+          isArabic={isArabic}
+          onView={recordStoryView}
+          onClose={closeStoryViewer}
+        />
       )}
     </div>
   );
