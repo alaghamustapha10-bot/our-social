@@ -15,6 +15,7 @@ import {
   Settings,
   Crown,
   Bookmark,
+  Flag,
 } from "lucide-react";
 import { useState } from "react";
 import "./Navigation.css";
@@ -35,6 +36,7 @@ const COPY = {
     channels: "القنوات",
     premium: "LOLZ Premium",
     settings: "الإعدادات",
+    moderation: "مراجعة البلاغات",
     logout: "تسجيل الخروج",
     close: "إغلاق",
   },
@@ -53,6 +55,7 @@ const COPY = {
     channels: "Channels",
     premium: "LOLZ Premium",
     settings: "Settings",
+    moderation: "Reports review",
     logout: "Log out",
     close: "Close",
   },
@@ -64,7 +67,7 @@ function getLocale() {
   return lang.startsWith("ar") || document.documentElement.dir === "rtl" ? "ar" : "en";
 }
 
-export default function Navigation({ page, setPage, onCreate, onLogout, username }) {
+export default function Navigation({ page, setPage, onCreate, onLogout, username, isAdmin = false }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const t = COPY[getLocale()];
   const safeUsername = username || (getLocale() === "ar" ? "مستخدم" : "User");
@@ -85,6 +88,7 @@ export default function Navigation({ page, setPage, onCreate, onLogout, username
     { id: "channels", label: t.channels, icon: Radio },
     { id: "premium", label: t.premium, icon: Crown },
     { id: "settings", label: t.settings, icon: Settings },
+    ...(isAdmin ? [{ id: "moderation", label: t.moderation, icon: Flag }] : []),
   ];
 
   const mobileItems = [
