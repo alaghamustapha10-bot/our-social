@@ -147,6 +147,7 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
     let profiles = [];
     let likeRows = [];
     let commentRows = [];
+    let viewCountMap = {};
 
     if (userIds.length) {
       const result = await supabase
@@ -177,16 +178,8 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
 
       likeRows = likesResult.data || [];
       commentRows = (commentsResult.data || []).filter((comment) => !blockedUserIds.includes(comment.user_id));
-      const viewCountMap = Object.fromEntries(
+      viewCountMap = Object.fromEntries(
         (viewCountsResult.data || []).map((item) => [String(item.video_id), Number(item.view_count || 0)])
-      );
-
-      setVideos(
-        videoRows.map((video) => ({
-          ...video,
-          profile: profileMap[video.user_id] || null,
-          view_count: viewCountMap[String(video.id)] || 0,
-        }))
       );
     }
 
@@ -211,6 +204,14 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
 
     const commentProfileMap = Object.fromEntries(
       commentProfiles.map((p) => [p.id, p])
+    );
+
+    setVideos(
+      videoRows.map((video) => ({
+        ...video,
+        profile: profileMap[video.user_id] || null,
+        view_count: viewCountMap[String(video.id)] || 0,
+      }))
     );
 
     const likeMap = {};
