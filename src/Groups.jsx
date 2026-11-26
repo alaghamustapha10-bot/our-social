@@ -28,6 +28,7 @@ import {
   Square,
   Trash2,
   Loader2,
+  Flag,
 } from "lucide-react";
 
 import { supabase } from "./supabase";
@@ -89,7 +90,7 @@ function MemberAvatar({ profile }) {
   );
 }
 
-export default function Groups({ user, onCallContextChange }) {
+export default function Groups({ user, onCallContextChange, onReport }) {
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -1844,6 +1845,22 @@ export default function Groups({ user, onCallContextChange }) {
                                     message.created_at
                                   )}
                                 </small>
+                                {!mine && (
+                                  <button
+                                    type="button"
+                                    className="groups-report-message"
+                                    onClick={() =>
+                                      onReport?.({
+                                        type: "group_message",
+                                        id: message.id,
+                                        targetUserId: message.sender_id,
+                                      })
+                                    }
+                                  >
+                                    <Flag size={12} />
+                                    Report
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </article>
