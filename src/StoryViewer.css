@@ -1,0 +1,174 @@
+.lolz-story-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(5, 5, 9, .94);
+  backdrop-filter: blur(14px);
+}
+.lolz-story-frame {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 430px);
+  height: min(850px, calc(100dvh - 36px));
+  min-height: 420px;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #101015;
+  color: #fff;
+  box-shadow: 0 24px 90px rgba(0,0,0,.45);
+}
+.lolz-story-media,
+.lolz-story-media img,
+.lolz-story-media video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.lolz-story-media img,
+.lolz-story-media video {
+  object-fit: contain;
+  background: #09090d;
+}
+.lolz-story-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg,rgba(0,0,0,.62),transparent 25%,transparent 68%,rgba(0,0,0,.5));
+}
+.lolz-story-progress {
+  position: absolute;
+  z-index: 3;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  gap: 4px;
+}
+.lolz-story-progress-track {
+  flex: 1;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(255,255,255,.35);
+}
+.lolz-story-progress-track i {
+  display: block;
+  height: 100%;
+  background: #fff;
+  border-radius: inherit;
+  transition: width .08s linear;
+}
+.lolz-story-header {
+  position: absolute;
+  z-index: 4;
+  top: 24px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.lolz-story-author,
+.lolz-story-tools {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.lolz-story-author img {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border: 1px solid rgba(255,255,255,.7);
+  border-radius: 50%;
+  object-fit: cover;
+}
+.lolz-story-author strong {
+  max-width: 170px;
+  overflow: hidden;
+  color: #fff;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lolz-story-author time {
+  color: rgba(255,255,255,.75);
+  font-size: 11px;
+}
+.lolz-story-tools button,
+.lolz-story-arrows button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0,0,0,.28);
+  color: #fff;
+  cursor: pointer;
+}
+.lolz-story-hit {
+  position: absolute;
+  z-index: 2;
+  top: 80px;
+  bottom: 76px;
+  width: 35%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.lolz-story-hit-left { left: 0; }
+.lolz-story-hit-right { right: 0; }
+.lolz-story-caption {
+  position: absolute;
+  z-index: 3;
+  right: 20px;
+  bottom: 68px;
+  left: 20px;
+  margin: 0;
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.65;
+  text-align: center;
+  text-shadow: 0 1px 5px rgba(0,0,0,.7);
+  pointer-events: none;
+}
+.lolz-story-views {
+  position: absolute;
+  z-index: 4;
+  bottom: 18px;
+  left: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.lolz-story-arrows {
+  position: absolute;
+  z-index: 4;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 8px;
+}
+.lolz-story-arrows button:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+}
+@media (max-width: 600px) {
+  .lolz-story-overlay { padding: 0; }
+  .lolz-story-frame {
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    border-radius: 0;
+  }
+}
