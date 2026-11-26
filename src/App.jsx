@@ -333,8 +333,19 @@ export default function App() {
 
     if (status === "ended") {
       setActiveCallContext(null);
+      const contextPage =
+        context?.callType === "private"
+          ? "messages"
+          : context?.callType === "group"
+            ? "groups"
+            : context?.callType === "channel"
+              ? "channels"
+              : null;
+      setSelectedCallContext(
+        contextPage === activePage ? context : null
+      );
     }
-  }, []);
+  }, [activePage]);
 
   const currentCallContext = activeCallContext || selectedCallContext;
   const callActionsRef = useRef(null);
@@ -1802,6 +1813,9 @@ export default function App() {
   const unreadCount = notifications.filter((item) => !item.is_read).length;
 
   function goTo(page) {
+    if (page !== activePage && !activeCallContext) {
+      setSelectedCallContext(null);
+    }
     setActivePage(page);
     setNotice("");
     setOpenComments(null);
