@@ -32,15 +32,20 @@ export default function ModerationDialog({
     if (busy) return;
     setBusy(true);
     try {
-      if (isBlock) await onConfirmBlock?.(target.targetUserId);
-      else await onSubmitReport?.({
-        type: target.type,
-        id: target.id,
-        targetUserId: target.targetUserId || null,
-        reason,
-        details: details.trim(),
-      });
+      const result = isBlock
+        ? await onConfirmBlock?.(target.targetUserId)
+        : await onSubmitReport?.({
+            type: target.type,
+            id: target.id,
+            targetUserId: target.targetUserId || null,
+            reason,
+            details: details.trim(),
+          });
+
+      if (result === false) return;
       onClose?.();
+    } catch (error) {
+      console.error("Moderation action failed:", error);
     } finally {
       setBusy(false);
     }
