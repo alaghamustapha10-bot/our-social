@@ -386,7 +386,7 @@ export default function Lolz({ user }) {
     <main className="lolz-page">
       <header className="lolz-header">
         <div className="lolz-heading-copy">
-          <span className="lolz-kicker">OUR SOCIAL · SHORT VIDEOS</span>
+          <span className="lolz-kicker">LOLZ · VIDEO FEED</span>
           <h1>LOLZ<span>✦</span></h1>
           <p>لحظات قصيرة، ومجتمع لا يتوقف.</p>
         </div>
