@@ -179,19 +179,28 @@ const translations = {
 
 
 function useTranslation() {
-  const savedLang =
+  const [savedLang, setSavedLang] = useState(() =>
     typeof window !== "undefined"
-      ? localStorage.getItem("lolz_lang") || document.documentElement.lang
-      : "ar";
+      ? localStorage.getItem("lolz_lang") || document.documentElement.lang || "en"
+      : "en"
+  );
 
-  const isArabic = savedLang !== "en";
+  useEffect(() => {
+    const syncLanguage = (event) => {
+      const next = event?.detail?.language || document.documentElement.lang || "en";
+      setSavedLang(next);
+    };
+    window.addEventListener("lolz:preferences-changed", syncLanguage);
+    return () => window.removeEventListener("lolz:preferences-changed", syncLanguage);
+  }, []);
 
+  const isArabic = savedLang === "ar";
   const t = useCallback((value) => {
     if (!isArabic || !value) return value;
     return translations[value] || value;
   }, [isArabic]);
 
-  return { t, isArabic };
+  return { t, isArabic, language: savedLang };
 }
 
 

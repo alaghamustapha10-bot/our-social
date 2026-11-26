@@ -337,3 +337,30 @@ select:focus-visible {
     right: 10px;
   }
 }
+
+
+/* LOLZ personalized accessibility and accent preferences */
+:root {
+  --accent: #8b5cf6;
+  --font-scale: 1;
+}
+
+body {
+  font-size: calc(16px * var(--font-scale, 1));
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-color: var(--accent);
+}
+
+:root[data-reduce-motion="true"] *,
+:root[data-reduce-motion="true"] *::before,
+:root[data-reduce-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+}
