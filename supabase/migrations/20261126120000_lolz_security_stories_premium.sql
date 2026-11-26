@@ -50,7 +50,7 @@ create policy "LOLZ moderators can review reports"
   with check ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
 
 revoke update, delete on public.content_reports from anon, authenticated;
-grant select, insert on public.content_reports to authenticated;
+grant select, insert, update on public.content_reports to authenticated;
 
 create table if not exists public.user_blocks (
   blocker_id uuid not null references auth.users(id) on delete cascade,
