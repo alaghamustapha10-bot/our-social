@@ -123,7 +123,7 @@ function subscriptionRow(
 }
 
 async function saveSubscription(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   row: JsonObject,
 ) {
   const subscriptionId = String(row.paypal_subscription_id || "");
@@ -155,7 +155,7 @@ async function saveSubscription(
 
 async function authenticateUser(
   request: Request,
-  admin: ReturnType<typeof createClient>,
+  admin: any,
 ) {
   const authorization = request.headers.get("Authorization") || "";
   const match = authorization.match(/^Bearer\s+(.+)$/i);
@@ -198,7 +198,7 @@ async function verifyPayPalWebhook(
 
 async function handleWebhook(
   request: Request,
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   rawBody: string,
 ) {
   let event: JsonObject;
