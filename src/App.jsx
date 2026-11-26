@@ -13,6 +13,7 @@ import Navigation from "./Navigation";
 import Lolz from "./Lolz";
 import "./App.css";
 import "./InstagramRedesign.css";
+import "./InstagramExperience.css";
 import Calls from "./Calls";
 import Premium from "./Premium";
 import { Capacitor } from "@capacitor/core";
