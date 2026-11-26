@@ -311,6 +311,8 @@ export default function App() {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [selectedProfilePosts, setSelectedProfilePosts] = useState([]);
   const [blockedUserIds, setBlockedUserIds] = useState([]);
+  const [blockedProfiles, setBlockedProfiles] = useState([]);
+  const [blockedLoading, setBlockedLoading] = useState(false);
   const [moderationTarget, setModerationTarget] = useState(null);
   const [moderationReports, setModerationReports] = useState([]);
   const [moderationLoading, setModerationLoading] = useState(false);
@@ -656,6 +658,34 @@ export default function App() {
 
     setBlockedUserIds((data || []).map((item) => item.blocked_id));
   }, []);
+
+  const loadBlockedProfiles = useCallback(async () => {
+    if (!user?.id) return;
+
+    setBlockedLoading(true);
+    try {
+      if (!blockedUserIds.length) {
+        setBlockedProfiles([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id,username,display_name,avatar_url")
+        .in("id", blockedUserIds);
+
+      if (error) throw error;
+      setBlockedProfiles(data || []);
+    } catch (error) {
+      setNotice(
+        isArabic
+          ? "تعذر تحميل الحسابات المحظورة: " + error.message
+          : "Could not load blocked accounts: " + error.message
+      );
+    } finally {
+      setBlockedLoading(false);
+    }
+  }, [user?.id, blockedUserIds, isArabic]);
 
   const loadFollowStats = useCallback(async (userId) => {
     if (!userId) return;
@@ -1479,6 +1509,31 @@ export default function App() {
     );
   }
 
+  async function unblockUser(targetUserId) {
+    if (!user?.id || !targetUserId) return;
+
+    const { error } = await supabase
+      .from("user_blocks")
+      .delete()
+      .eq("blocker_id", user.id)
+      .eq("blocked_id", targetUserId);
+
+    if (error) {
+      setNotice(
+        isArabic
+          ? "تعذر إلغاء الحظر: " + error.message
+          : "Could not unblock account: " + error.message
+      );
+      return;
+    }
+
+    setBlockedUserIds((current) => current.filter((id) => id !== targetUserId));
+    setBlockedProfiles((current) => current.filter((item) => item.id !== targetUserId));
+    setNotice(isArabic ? "تم إلغاء الحظر." : "Account unblocked.");
+    void loadStories();
+    void loadPosts(user.id);
+  }
+
   async function markNotificationRead(notificationId) {
     const { error } = await supabase
       .from("notifications")
@@ -1525,7 +1580,10 @@ export default function App() {
     if (activePage === "moderation" && user?.app_metadata?.role === "admin") {
       void loadReports();
     }
-  }, [activePage, user?.app_metadata?.role, loadReports]);
+    if (activePage === "blocked") {
+      void loadBlockedProfiles();
+    }
+  }, [activePage, user?.app_metadata?.role, loadReports, loadBlockedProfiles]);
 
   // MESSAGING
 
