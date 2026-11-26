@@ -615,7 +615,7 @@ async function handleAction(userId: string, body: JsonObject) {
 
     const [{ data: members, error: membersError }, { data: group }] = await Promise.all([
       admin.from("group_members").select("user_id").eq("group_id", message.group_id),
-      admin.from("groups").select("name").eq("id", message.group_id).maybeSingle(),
+      admin.from("groups").select("name, created_by").eq("id", message.group_id).maybeSingle(),
     ]);
     if (membersError) throw new HttpError("Could not load group recipients.", 500);
 
@@ -645,7 +645,7 @@ async function handleAction(userId: string, body: JsonObject) {
 
     const [{ data: members, error: membersError }, { data: channel }] = await Promise.all([
       admin.from("channel_members").select("user_id").eq("channel_id", post.channel_id),
-      admin.from("channels").select("name").eq("id", post.channel_id).maybeSingle(),
+      admin.from("channels").select("name, created_by").eq("id", post.channel_id).maybeSingle(),
     ]);
     if (membersError) throw new HttpError("Could not load channel recipients.", 500);
 
@@ -732,7 +732,7 @@ async function handleAction(userId: string, body: JsonObject) {
 
     const [{ data: admins, error: adminsError }, { data: group }] = await Promise.all([
       admin.from("group_members").select("user_id").eq("group_id", groupId).in("role", ["owner", "admin"]),
-      admin.from("groups").select("name").eq("id", groupId).maybeSingle(),
+      admin.from("groups").select("name, created_by").eq("id", groupId).maybeSingle(),
     ]);
     if (adminsError) throw new HttpError("Could not load group administrators.", 500);
 
