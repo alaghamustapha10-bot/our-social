@@ -26,7 +26,13 @@ import { dispatchLolzPush } from "./pushNotifications";
 
 import "./Channels.css";
 
-export default function Channels({ user, onCallContextChange, onReport }) {
+export default function Channels({
+  user,
+  onCallContextChange,
+  onReport,
+  initialChannelId = null,
+  onInitialChannelOpened,
+}) {
   const [channels, setChannels] = useState([]);
   const [selected, setSelected] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -151,6 +157,22 @@ export default function Channels({ user, onCallContextChange, onReport }) {
   useEffect(() => {
     loadChannels();
   }, [loadChannels]);
+
+  useEffect(() => {
+    if (!initialChannelId || !channels.length) return;
+
+    const targetChannel = channels.find(
+      (channel) => String(channel.id) === String(initialChannelId)
+    );
+
+    if (!targetChannel) return;
+
+    if (String(selected?.id || "") !== String(targetChannel.id)) {
+      setSelected(targetChannel);
+    }
+
+    onInitialChannelOpened?.();
+  }, [initialChannelId, channels, selected?.id, onInitialChannelOpened]);
 
   useEffect(() => {
     if (!selected) {
