@@ -2510,6 +2510,7 @@ export default function App() {
               <Channels
                 user={user}
                 onCallContextChange={handleCallContextChange}
+                onReport={(target) => setModerationTarget(target)}
               />
             </section>
           )}
@@ -2519,6 +2520,7 @@ export default function App() {
               <Groups
                 user={user}
                 onCallContextChange={handleCallContextChange}
+                onReport={(target) => setModerationTarget(target)}
               />
             </section>
           )}
