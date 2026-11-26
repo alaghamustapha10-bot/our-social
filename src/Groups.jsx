@@ -26,6 +26,7 @@ import {
   RefreshCw,
   Mic,
   Square,
+  ImagePlus,
   Trash2,
   Loader2,
   Flag,
@@ -130,6 +131,9 @@ export default function Groups({
   const [voiceFile, setVoiceFile] = useState(null);
   const [voicePreviewUrl, setVoicePreviewUrl] = useState("");
   const [uploadingVoice, setUploadingVoice] = useState(false);
+  const [messageMediaFile, setMessageMediaFile] = useState(null);
+  const [messageMediaPreviewUrl, setMessageMediaPreviewUrl] = useState("");
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   const messagesEndRef = useRef(null);
   const channelRef = useRef(null);
@@ -143,6 +147,9 @@ export default function Groups({
   const recordingGroupIdRef = useRef(null);
   const recordingCancelledRef = useRef(false);
   const recordingPointerRef = useRef(false);
+  const recordingStartXRef = useRef(0);
+  const sendVoiceMessageRef = useRef(null);
+  const messageMediaInputRef = useRef(null);
 
   const notify = useCallback((message) => {
     setNotice(message);
@@ -169,6 +176,44 @@ export default function Groups({
       (data || []).map((item) => [item.id, item])
     );
   }, []);
+
+  useEffect(() => {
+    if (!messageMediaFile) {
+      setMessageMediaPreviewUrl("");
+      return undefined;
+    }
+
+    const previewUrl = URL.createObjectURL(messageMediaFile);
+    setMessageMediaPreviewUrl(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [messageMediaFile]);
+
+  const clearMessageMedia = useCallback(() => {
+    setMessageMediaFile(null);
+    if (messageMediaInputRef.current) {
+      messageMediaInputRef.current.value = "";
+    }
+  }, []);
+
+  const handleMessageMediaChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      setError("Choose an image or video file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 100 * 1024 * 1024) {
+      setError("Maximum media size is 100 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setError("");
+    setMessageMediaFile(file);
+  };
 
   // CLEAR VOICE PREVIEW
   const clearVoicePreview = useCallback(() => {
@@ -353,9 +398,10 @@ export default function Groups({
           )
         );
 
-        setVoiceFile(file);
+        recordingPointerRef.current = false;
         setRecordingSeconds(duration);
-        setVoicePreviewUrl(URL.createObjectURL(file));
+        setIsRecording(false);
+        void sendVoiceMessageRef.current?.(file);
       };
 
       recorder.start(250);
@@ -1108,16 +1154,116 @@ export default function Groups({
     }
   };
 
+  // SEND IMAGE OR VIDEO TO THE GROUP
+  const sendMediaMessage = async (fileToSend = messageMediaFile) => {
+    if (
+      !fileToSend ||
+      !selectedGroup?.id ||
+      !selectedGroup?.myRole ||
+      uploadingMedia ||
+      sending
+    ) {
+      return;
+    }
+
+    const targetGroupId = selectedGroup.id;
+    const caption = messageText.trim();
+    const messageType = fileToSend.type.startsWith("image/") ? "image" : "video";
+    let storagePath = null;
+
+    setUploadingMedia(true);
+    setError("");
+
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!authData.user || authData.user.id !== user?.id) {
+        throw new Error("Please sign in again before sending media.");
+      }
+
+      const safeName = fileToSend.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const fileName = `${messageType}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
+      storagePath = `${authData.user.id}/messages/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("social-media")
+        .upload(storagePath, fileToSend, {
+          cacheControl: "3600",
+          contentType: fileToSend.type,
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from("social-media")
+        .getPublicUrl(storagePath);
+      const mediaUrl = publicUrlData?.publicUrl;
+      if (!mediaUrl) throw new Error("Could not create a media URL.");
+
+      if (selectedGroup?.id !== targetGroupId) {
+        throw new Error("The selected group changed before the media could be sent.");
+      }
+
+      const { data, error: insertError } = await supabase
+        .from("group_messages")
+        .insert({
+          group_id: targetGroupId,
+          sender_id: authData.user.id,
+          content: caption || (messageType === "image" ? "Photo" : "Video"),
+          message_type: messageType,
+          media_url: mediaUrl,
+          file_name: fileToSend.name,
+          mime_type: fileToSend.type,
+        })
+        .select("*")
+        .single();
+
+      if (insertError) throw insertError;
+
+      void dispatchLolzPush(supabase, {
+        action: "group_message",
+        message_id: data.id,
+      });
+
+      setMessages((current) => [
+        ...current,
+        { ...data, sender: profiles[authData.user.id] || null },
+      ]);
+      setMessageText("");
+      clearMessageMedia();
+      void loadGroups();
+    } catch (err) {
+      if (storagePath) {
+        const { error: cleanupError } = await supabase.storage
+          .from("social-media")
+          .remove([storagePath]);
+        if (cleanupError) console.warn("Could not remove unsent group media:", cleanupError.message);
+      }
+
+      console.error("Send group media error:", err);
+      setError(err.message || "Media could not be sent.");
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
   // SEND TEXT MESSAGE
   const sendMessage = async (event) => {
     event.preventDefault();
 
     const content = messageText.trim();
 
+    if (messageMediaFile) {
+      await sendMediaMessage();
+      return;
+    }
+
     if (
       !content ||
       !selectedGroup?.myRole ||
-      sending
+      sending ||
+      uploadingMedia
     ) {
       return;
     }
@@ -1190,9 +1336,9 @@ export default function Groups({
   };
 
   // SEND VOICE MESSAGE
-  const sendVoiceMessage = async () => {
+  const sendVoiceMessage = async (voiceFileToSend = voiceFile) => {
     if (
-      !voiceFile ||
+      !voiceFileToSend ||
       !selectedGroup?.id ||
       !selectedGroup?.myRole ||
       uploadingVoice
@@ -1223,7 +1369,7 @@ export default function Groups({
         );
       }
 
-      const extension = voiceFile.name.split(".").pop() || "webm";
+      const extension = voiceFileToSend.name.split(".").pop() || "webm";
 
       const fileName = `voice-${Date.now()}-${Math.random()
         .toString(36)
@@ -1233,9 +1379,9 @@ export default function Groups({
 
       const { error: uploadError } = await supabase.storage
         .from("social-media")
-        .upload(storagePath, voiceFile, {
+        .upload(storagePath, voiceFileToSend, {
           cacheControl: "3600",
-          contentType: voiceFile.type || "audio/webm",
+          contentType: voiceFileToSend.type || "audio/webm",
           upsert: false,
         });
 
@@ -1273,7 +1419,7 @@ export default function Groups({
           message_type: "audio",
           media_url: mediaUrl,
           file_name: fileName,
-          mime_type: voiceFile.type || "audio/webm",
+          mime_type: voiceFileToSend.type || "audio/webm",
         })
         .select("*")
         .single();
@@ -1308,6 +1454,8 @@ export default function Groups({
       setUploadingVoice(false);
     }
   };
+
+  sendVoiceMessageRef.current = sendVoiceMessage;
 
   // LEAVE GROUP
   const leaveGroup = async () => {
