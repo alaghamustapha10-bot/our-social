@@ -41,15 +41,30 @@ jobs:
       - name: Build web assets
         run: npm run build
 
-      - name: Upload bundle to Capgo Production
+      - name: Register LOLZ app and production channel in Capgo
         env:
           CAPGO_TOKEN: ${{ secrets.CAPGO_TOKEN }}
         run: |
           if [ -z "$CAPGO_TOKEN" ]; then
-            echo "::error::Missing GitHub Actions secret CAPGO_TOKEN. Add a Capgo API key in repository Settings > Secrets and variables > Actions."
+            echo "::error::Missing GitHub Actions secret CAPGO_TOKEN."
             exit 1
           fi
 
+          if ! npx @capgo/cli@latest app list --apikey "$CAPGO_TOKEN" | grep -Fq "com.oursocial.app"; then
+            npx @capgo/cli@latest app add com.oursocial.app --name "LOLZ" --apikey "$CAPGO_TOKEN"
+          fi
+
+          if ! npx @capgo/cli@latest channel list com.oursocial.app --apikey "$CAPGO_TOKEN" | grep -Eiq '(^|[^[:alnum:]_])production([^[:alnum:]_]|$)'; then
+            npx @capgo/cli@latest channel add production com.oursocial.app --apikey "$CAPGO_TOKEN"
+          fi
+
+          npx @capgo/cli@latest channel set production com.oursocial.app \
+            --state default --android --prod --device --apikey "$CAPGO_TOKEN"
+
+      - name: Upload bundle to Capgo Production
+        env:
+          CAPGO_TOKEN: ${{ secrets.CAPGO_TOKEN }}
+        run: |
           npx @capgo/cli@latest bundle upload \
             --apikey "$CAPGO_TOKEN" \
             --channel=production \
