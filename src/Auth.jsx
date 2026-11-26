@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
+import { getAuthRedirectUrl } from "./authRedirect";
 import "./Auth.css";
-
-const GOOGLE_REDIRECT_URL = "com.lolz.app://login-callback";
 
 const translations = {
   en: {
@@ -146,6 +145,8 @@ export default function Auth() {
     setMessageType("");
 
     try {
+      const redirectTo = getAuthRedirectUrl();
+
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -164,6 +165,7 @@ export default function Auth() {
           email: email.trim(),
           password,
           options: {
+            emailRedirectTo: redirectTo,
             data: {
               username: cleanUsername,
             },
@@ -194,9 +196,7 @@ export default function Auth() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: isNative
-            ? GOOGLE_REDIRECT_URL
-            : window.location.origin,
+          redirectTo: getAuthRedirectUrl(),
           skipBrowserRedirect: isNative,
         },
       });

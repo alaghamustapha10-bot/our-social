@@ -5,8 +5,7 @@ import { Browser } from "@capacitor/browser";
 import { supabase } from "./supabase";
 import Auth from "./Auth";
 import { PreferencesProvider } from "./PreferencesProvider";
-
-const CALLBACK_URL = "com.lolz.app://login-callback";
+import { NATIVE_AUTH_CALLBACK_URL } from "./authRedirect";
 
 function isTemporaryUsername(username) {
   return /^user_[0-9a-f]{8}$/i.test(username || "");
@@ -83,19 +82,30 @@ export default function AuthGate({ children }) {
       profileFailed: "تعذر تحميل ملفك الشخصي.",
       retry: "إعادة المحاولة",
       callbackFailed:
-        "تعذر إكمال تسجيل الدخول عبر Google. حاول مرة أخرى.",
+        "تعذر إكمال تسجيل الدخول. حاول مرة أخرى.",
     },
   };
 
   const t = translations[language];
 
-  // GOOGLE OAUTH CALLBACK
+  // Handle Supabase PKCE callbacks from Google OAuth and confirmed signups.
   useEffect(() => {
     let mounted = true;
     let appUrlListener = null;
 
     async function handleCallbackUrl(url) {
-      if (!url || !url.startsWith(CALLBACK_URL)) {
+      let callbackUrl;
+
+      try {
+        callbackUrl = new URL(url);
+      } catch {
+        return;
+      }
+
+      if (
+        callbackUrl.protocol !== "com.oursocial.app:" ||
+        callbackUrl.hostname !== "login-callback"
+      ) {
         return;
       }
 
@@ -108,26 +118,28 @@ export default function AuthGate({ children }) {
       try {
         setAuthError("");
 
-        const callbackUrl = new URL(url);
-
+        const hashParams = new URLSearchParams(
+          callbackUrl.hash.replace(/^#/, ""),
+        );
         const callbackError =
           callbackUrl.searchParams.get("error_description") ||
-          callbackUrl.searchParams.get("error");
+          callbackUrl.searchParams.get("error") ||
+          hashParams.get("error_description") ||
+          hashParams.get("error");
 
         if (callbackError) {
           throw new Error(callbackError);
         }
 
-        const code = callbackUrl.searchParams.get("code");
+        const code =
+          callbackUrl.searchParams.get("code") ||
+          hashParams.get("code");
 
         if (!code) {
-          throw new Error(
-            "Google authorization code is missing."
-          );
+          throw new Error("Authentication authorization code is missing.");
         }
 
-        const { error } =
-          await supabase.auth.exchangeCodeForSession(code);
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (error) {
           throw error;
@@ -135,40 +147,32 @@ export default function AuthGate({ children }) {
 
         await Browser.close().catch(() => {});
       } catch (error) {
-        console.error("Google callback error:", error);
+        console.error("Authentication callback error:", error);
 
         processedUrls.current.delete(url);
 
         if (mounted) {
-          setAuthError(
-            error.message || t.callbackFailed
-          );
+          setAuthError(error.message || t.callbackFailed);
         }
       }
     }
 
     async function initialize() {
       try {
-        // Listen for a deep link while the app is running.
         appUrlListener = await CapacitorApp.addListener(
           "appUrlOpen",
           ({ url }) => {
-            handleCallbackUrl(url);
-          }
+            void handleCallbackUrl(url);
+          },
         );
 
-        // Handle a deep link that launched the app.
         const launch = await CapacitorApp.getLaunchUrl();
 
         if (launch?.url) {
           await handleCallbackUrl(launch.url);
         }
 
-        // Restore the existing Supabase session.
-        const {
-          data,
-          error,
-        } = await supabase.auth.getSession();
+        const { data, error } = await supabase.auth.getSession();
 
         if (error) {
           throw error;
@@ -179,15 +183,10 @@ export default function AuthGate({ children }) {
           setLoading(false);
         }
       } catch (error) {
-        console.error(
-          "Authentication initialization error:",
-          error
-        );
+        console.error("Authentication initialization error:", error);
 
         if (mounted) {
-          setAuthError(
-            error.message || t.callbackFailed
-          );
+          setAuthError(error.message || t.callbackFailed);
           setLoading(false);
         }
       }
@@ -195,20 +194,17 @@ export default function AuthGate({ children }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event, nextSession) => {
-        if (mounted) {
-          setSession(nextSession);
-          setLoading(false);
-        }
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (mounted) {
+        setSession(nextSession);
+        setLoading(false);
       }
-    );
+    });
 
-    initialize();
+    void initialize();
 
     return () => {
       mounted = false;
-
       subscription.unsubscribe();
       appUrlListener?.remove();
     };
@@ -261,7 +257,7 @@ export default function AuthGate({ children }) {
       }
     }
 
-    loadProfile();
+    void loadProfile();
 
     return () => {
       active = false;
@@ -293,7 +289,6 @@ export default function AuthGate({ children }) {
     setSavingUsername(true);
 
     try {
-      // Check whether another account owns this username.
       const {
         data: existing,
         error: checkError,
