@@ -1990,6 +1990,12 @@ export default function Groups({
                         const isAudio =
                           message.message_type === "audio" &&
                           Boolean(message.media_url);
+                        const isImage =
+                          message.message_type === "image" &&
+                          Boolean(message.media_url);
+                        const isVideo =
+                          message.message_type === "video" &&
+                          Boolean(message.media_url);
 
                         return (
                           <article
@@ -2026,6 +2032,22 @@ export default function Groups({
                                     >
                                       Your browser does not support audio playback.
                                     </audio>
+                                  </div>
+                                ) : isImage ? (
+                                  <div className="groups-media-message">
+                                    <img src={message.media_url} alt={message.content || "Group image"} loading="lazy" />
+                                    {message.content && !["Photo", "Video"].includes(message.content) && (
+                                      <p>{message.content}</p>
+                                    )}
+                                  </div>
+                                ) : isVideo ? (
+                                  <div className="groups-media-message">
+                                    <video controls preload="metadata" playsInline src={message.media_url}>
+                                      Your browser does not support video playback.
+                                    </video>
+                                    {message.content && !["Photo", "Video"].includes(message.content) && (
+                                      <p>{message.content}</p>
+                                    )}
                                   </div>
                                 ) : (
                                   message.content
@@ -2119,6 +2141,32 @@ export default function Groups({
                     </div>
                   )}
 
+                  {messageMediaFile && messageMediaPreviewUrl && (
+                    <div className="groups-media-preview">
+                      <div className="groups-media-preview-file">
+                        {messageMediaFile.type.startsWith("image/") ? (
+                          <img src={messageMediaPreviewUrl} alt="Selected image" />
+                        ) : (
+                          <video src={messageMediaPreviewUrl} muted playsInline />
+                        )}
+                        <div>
+                          <strong>{messageMediaFile.name}</strong>
+                          <small>{(messageMediaFile.size / (1024 * 1024)).toFixed(1)} MB</small>
+                        </div>
+                      </div>
+                      <button type="button" onClick={clearMessageMedia} disabled={uploadingMedia} aria-label="Remove attachment">
+                        <X size={17} />
+                      </button>
+                    </div>
+                  )}
+
+                  {uploadingMedia && (
+                    <div className="groups-media-uploading">
+                      <Loader2 size={16} className="groups-spinning" />
+                      Uploading media...
+                    </div>
+                  )}
+
                   {/* RECORDING INDICATOR */}
                   {isRecording && (
                     <div className="groups-recording-indicator">
@@ -2127,7 +2175,7 @@ export default function Groups({
                       <strong>
                         {formatDuration(recordingSeconds)}
                       </strong>
-                      <span>Release to finish</span>
+                      <span>Swipe left to cancel · release to send</span>
                     </div>
                   )}
 
@@ -2136,6 +2184,25 @@ export default function Groups({
                     onSubmit={sendMessage}
                   >
                     <input
+                      ref={messageMediaInputRef}
+                      type="file"
+                      accept="image/*,video/*"
+                      hidden
+                      onChange={handleMessageMediaChange}
+                    />
+
+                    <button
+                      type="button"
+                      className="groups-attach-button"
+                      onClick={() => messageMediaInputRef.current?.click()}
+                      disabled={sending || uploadingMedia || uploadingVoice || isRecording}
+                      title="Attach photo or video"
+                      aria-label="Attach photo or video"
+                    >
+                      <ImagePlus size={19} />
+                    </button>
+
+                    <input
                       value={messageText}
                       onChange={(event) =>
                         setMessageText(event.target.value)
@@ -2143,6 +2210,7 @@ export default function Groups({
                       placeholder="Write a message..."
                       disabled={
                         sending ||
+                        uploadingMedia ||
                         isRecording ||
                         Boolean(voiceFile) ||
                         uploadingVoice
@@ -2156,6 +2224,7 @@ export default function Groups({
                       }`}
                       disabled={
                         sending ||
+                        uploadingMedia ||
                         uploadingVoice ||
                         Boolean(voiceFile)
                       }
@@ -2173,8 +2242,14 @@ export default function Groups({
                         }
 
                         event.preventDefault();
-                        recordingGroupIdRef.current =
-                          selectedGroup.id;
+                        try {
+                          event.currentTarget.setPointerCapture(event.pointerId);
+                        } catch {
+                          // Pointer capture is best-effort on touch devices.
+                        }
+                        recordingPointerRef.current = true;
+                        recordingStartXRef.current = event.clientX;
+                        recordingGroupIdRef.current = selectedGroup.id;
 
                         startVoiceRecording();
                       }}
@@ -2185,9 +2260,11 @@ export default function Groups({
                           stopVoiceRecording();
                         }
                       }}
-                      onPointerLeave={() => {
-                        if (recordingPointerRef.current) {
-                          stopVoiceRecording();
+                      onPointerMove={(event) => {
+                        if (!recordingPointerRef.current) return;
+                        if (event.clientX - recordingStartXRef.current < -85) {
+                          cancelRecording();
+                          setError("Voice recording cancelled.");
                         }
                       }}
                       onPointerCancel={() => {
@@ -2210,7 +2287,8 @@ export default function Groups({
                       type="submit"
                       disabled={
                         sending ||
-                        !messageText.trim() ||
+                        uploadingMedia ||
+                        (!messageText.trim() && !messageMediaFile) ||
                         isRecording ||
                         Boolean(voiceFile) ||
                         uploadingVoice
