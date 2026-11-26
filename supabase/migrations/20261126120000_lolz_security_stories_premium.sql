@@ -237,6 +237,41 @@ create policy "LOLZ block filter on messages"
     and sender_id = auth.uid()
   );
 
+-- Private media bucket for direct-message attachments. New DM uploads are not
+-- public URLs; only the conversation participants can create short-lived URLs.
+insert into storage.buckets (id, name, public)
+values ('private-messages', 'private-messages', false)
+on conflict (id) do update set public = false;
+
+drop policy if exists "LOLZ users upload their own private message media" on storage.objects;
+create policy "LOLZ users upload their own private message media"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'private-messages'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "LOLZ conversation members read private message media" on storage.objects;
+create policy "LOLZ conversation members read private message media"
+  on storage.objects for select to authenticated
+  using (
+    bucket_id = 'private-messages'
+    and exists (
+      select 1
+      from public.messages m
+      where m.media_url = storage.objects.name
+        and public.lolz_conversation_is_allowed(m.conversation_id::text)
+    )
+  );
+
+drop policy if exists "LOLZ users delete their own private message media" on storage.objects;
+create policy "LOLZ users delete their own private message media"
+  on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'private-messages'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
 create table if not exists public.story_views (
   story_id text not null,
   viewer_id uuid not null references auth.users(id) on delete cascade,
