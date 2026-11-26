@@ -89,10 +89,16 @@ export default function Navigation({ page, setPage, onCreate, onLogout, username
 
   const mobileItems = [
     { id: "home", label: t.home, icon: Home },
-    { id: "discover", label: t.explore, icon: Search },
-    { id: "create", label: t.create, icon: PlusSquare },
     { id: "lolz", label: t.reels, icon: Clapperboard },
+    { id: "create", label: t.create, icon: PlusSquare },
+    { id: "messages", label: t.messages, icon: MessageCircle },
     { id: "profile", label: t.profile, icon: UserRound },
+  ];
+
+  const mobileMoreItems = [
+    { id: "discover", label: t.explore, icon: Search },
+    { id: "activity", label: t.notifications, icon: Heart },
+    ...secondaryItems,
   ];
 
   function selectPage(id) {
@@ -197,9 +203,17 @@ export default function Navigation({ page, setPage, onCreate, onLogout, username
       </nav>
 
       {moreOpen && (
-        <div className="os-mobile-more-panel">
-          {secondaryItems.map((item) => renderItem(item, true))}
-          <button type="button" className="os-link mobile-link" onClick={() => { setMoreOpen(false); onLogout?.(); }}>
+        <div className="os-mobile-more-panel" role="dialog" aria-modal="true" aria-label={t.more}>
+          <div className="os-mobile-more-header">
+            <strong>{t.more}</strong>
+            <button type="button" onClick={() => setMoreOpen(false)} aria-label={t.close}>
+              <X aria-hidden="true" />
+            </button>
+          </div>
+          <div className="os-mobile-more-list">
+            {mobileMoreItems.map((item) => renderItem(item, true))}
+          </div>
+          <button type="button" className="os-link mobile-link os-mobile-logout" onClick={() => { setMoreOpen(false); onLogout?.(); }}>
             <LogOut aria-hidden="true" />
             <span>{t.logout}</span>
           </button>
