@@ -23,6 +23,44 @@ create index if not exists content_reports_status_created_idx
 create index if not exists content_reports_target_idx
   on public.content_reports(target_type, target_id);
 
+-- Prevent report spam even when a client bypasses the intended UI.
+create or replace function public.limit_lolz_report_rate()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $
+declare
+  recent_report_count integer;
+begin
+  if auth.uid() is null or new.reporter_id <> auth.uid() then
+    raise exception 'Report owner does not match the signed-in user'
+      using errcode = '42501';
+  end if;
+
+  new.created_at := now();
+
+  select count(*) into recent_report_count
+  from public.content_reports
+  where reporter_id = new.reporter_id
+    and created_at > now() - interval '1 hour';
+
+  if recent_report_count >= 20 then
+    raise exception 'Report limit reached. Try again later.'
+      using errcode = 'P0001';
+  end if;
+
+  return new;
+end;
+$;
+
+drop trigger if exists limit_lolz_report_rate_trigger on public.content_reports;
+create trigger limit_lolz_report_rate_trigger
+before insert on public.content_reports
+for each row execute function public.limit_lolz_report_rate();
+
+revoke all on function public.limit_lolz_report_rate() from public;
+
 alter table public.content_reports enable row level security;
 
 drop policy if exists "Users can submit their own reports" on public.content_reports;
