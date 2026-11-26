@@ -39,4 +39,5 @@ jobs:
         with:
           deno-version: v2.x
       - name: Check PayPal Edge Function
-        run: deno check supabase/functions/paypal-subscription/index.ts
+        working-directory: supabase/functions
+        run: deno check paypal-subscription/index.ts
