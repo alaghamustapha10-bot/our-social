@@ -12,6 +12,31 @@ end;$$;
 drop trigger if exists lolz_protect_verified_profile_fields_trigger on public.profiles;
 create trigger lolz_protect_verified_profile_fields_trigger before update on public.profiles for each row execute function public.lolz_protect_verified_profile_fields();
 revoke all on function public.lolz_protect_verified_profile_fields() from public;
+
+-- New profile rows cannot claim verification unless created by a trusted admin.
+create or replace function public.lolz_protect_verified_profile_insert()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $
+declare caller_role text;
+begin
+  caller_role := coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '');
+  if caller_role not in ('admin', 'owner') then
+    new.is_verified := false;
+    new.verified_at := null;
+    new.verified_by := null;
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists lolz_protect_verified_profile_insert_trigger on public.profiles;
+create trigger lolz_protect_verified_profile_insert_trigger
+before insert on public.profiles
+for each row execute function public.lolz_protect_verified_profile_insert();
+
+revoke all on function public.lolz_protect_verified_profile_insert() from public;
 create table if not exists public.lolz_admin_premium_grants(user_id uuid primary key references auth.users(id) on delete cascade,granted_by uuid not null references auth.users(id) on delete restrict,granted_at timestamptz not null default now(),revoked_at timestamptz);
 create index if not exists lolz_admin_premium_grants_active_idx on public.lolz_admin_premium_grants(user_id) where revoked_at is null;
 alter table public.lolz_admin_premium_grants enable row level security;
