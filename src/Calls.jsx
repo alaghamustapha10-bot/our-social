@@ -8,6 +8,7 @@ import {
 
 import { Room, RoomEvent } from "livekit-client";
 import { createPortal } from "react-dom";
+import { dispatchLolzPush } from "./pushNotifications";
 
 import {
   Phone,
@@ -743,6 +744,12 @@ export default function Calls({
         throw new Error(data?.error || "تعذر إنشاء المكالمة");
       }
 
+      // Deliver the incoming-call alert independently of LiveKit connection state.
+      void dispatchLolzPush(supabase, {
+        action: "call",
+        call_id: data.call.id,
+      });
+
       let admin = false;
 
       if (isGroupOrChannel) {
@@ -1232,6 +1239,11 @@ export default function Calls({
     try {
       await invokeCallAction({
         action: "reject",
+        call_id: id,
+      });
+
+      void dispatchLolzPush(supabase, {
+        action: "missed_call",
         call_id: id,
       });
     } catch (err) {
