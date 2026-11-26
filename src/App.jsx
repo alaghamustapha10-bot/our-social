@@ -79,7 +79,7 @@ const translations = {
   "posts": "منشورات",
   "FIND YOUR COMMUNITY": "اعثر على مجتمعك",
   "Discover": "استكشف",
-  "Explore posts from the LOLZ community.": "اكتشف منشورات مجتمع LOLZ.",
+  "Explore posts from the LOLZ community.": "اكتشف أحدث منشورات مجتمع LOLZ ✨.",
   "GROW YOUR COMMUNITY": "وسّع مجتمعك",
   "Discover people": "اكتشف الأشخاص",
   "Find people and connect with the community.": "اعثر على أشخاص وتواصل مع المجتمع.",
