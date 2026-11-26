@@ -844,3 +844,349 @@
   .os-sidebar .os-user { justify-content: center; padding-inline: 0; }
   .os-sidebar .os-avatar { width: 37px; height: 37px; }
 }
+
+
+/* =========================================================
+   LOLZ — Instagram menus, post actions and Reels action rail
+========================================================= */
+
+/* Desktop sidebar and popover menus */
+.os-sidebar {
+  border-inline-end: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.os-brand,
+.os-user,
+.os-link {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.os-link {
+  min-height: 48px;
+  border-radius: 12px;
+}
+
+.os-link.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.os-more-menu {
+  z-index: 1200;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: 0 16px 55px rgba(0,0,0,.24);
+  animation: lolz-menu-in .16s ease-out;
+}
+
+.os-more-menu .os-link {
+  min-height: 43px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.os-more-menu .os-logout {
+  margin-top: 5px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 10px 10px;
+}
+
+.os-more-backdrop {
+  display: none;
+}
+
+@keyframes lolz-menu-in {
+  from { opacity: 0; transform: translateY(7px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Instagram feed action placement: heart, comment, save */
+.post-actions {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding-top: 8px;
+}
+
+.post-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+}
+
+.post-actions button:hover {
+  background: var(--panel-2);
+}
+
+.post-actions button > span:not(.post-action-icon) {
+  display: none;
+}
+
+.post-action-icon {
+  display: grid;
+  place-items: center;
+}
+
+.post-action-icon svg {
+  display: block;
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+}
+
+.post-actions button.liked {
+  color: #ff486d;
+}
+
+.post-actions button.liked .post-action-icon svg {
+  fill: #ff486d;
+  stroke: #ff486d;
+}
+
+.post-actions button.saved { color: var(--accent); }
+.post-actions button:last-child { margin-inline-start: auto; }
+
+.post-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 36px;
+}
+
+.post-stats button {
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+/* Subtle post overflow menu button */
+.post-menu {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  min-height: 38px !important;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.post-menu:hover { background: var(--panel-2); }
+
+/* Reels: place reactions in the familiar right-side lower rail */
+@media (max-width: 768px) {
+  .lolz-video-actions {
+    top: auto !important;
+    right: 12px !important;
+    left: auto !important;
+    bottom: 116px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 17px;
+    transform: none !important;
+  }
+
+  .lolz-video-actions button {
+    min-width: 48px;
+    min-height: 48px;
+    gap: 3px;
+    color: #fff;
+    font-size: 11px;
+    text-shadow: 0 2px 6px rgba(0,0,0,.7);
+  }
+
+  .lolz-action-icon {
+    width: 47px;
+    height: 47px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(15,15,20,.20);
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+  }
+
+  .lolz-video-actions button.is-liked { color: #ff456d; }
+  .lolz-video-actions button.is-active { color: #b7afff; }
+  .lolz-video-bottom { padding-inline-start: 72px !important; }
+  .lolz-mobile-close { min-height: 40px; }
+
+  /* More opens as a proper bottom sheet, not a floating list */
+  .os-more-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 1090 !important;
+    display: block !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: rgba(0,0,0,.48) !important;
+    backdrop-filter: blur(3px);
+  }
+
+  .os-mobile-more-panel {
+    position: fixed !important;
+    inset-inline: 0 !important;
+    inset-block-end: 0 !important;
+    z-index: 1100 !important;
+    display: flex !important;
+    flex-direction: column;
+    max-height: min(78dvh, 640px) !important;
+    padding: 8px 14px max(14px, env(safe-area-inset-bottom)) !important;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-bottom: 0;
+    border-radius: 23px 23px 0 0;
+    background: var(--panel);
+    box-shadow: 0 -18px 60px rgba(0,0,0,.24);
+    animation: lolz-sheet-in .2s ease-out;
+  }
+
+  .os-mobile-more-header {
+    position: sticky;
+    top: -8px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 50px;
+    margin: -8px -2px 8px;
+    padding: 5px 2px 8px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+
+  .os-mobile-more-header::before {
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    width: 38px;
+    height: 4px;
+    border-radius: 99px;
+    background: var(--muted-2);
+    content: "";
+    transform: translateX(-50%);
+  }
+
+  .os-mobile-more-header strong {
+    padding-top: 8px;
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .os-mobile-more-header button {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    margin-top: 6px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--panel-2);
+    color: var(--text);
+  }
+
+  .os-mobile-more-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 7px;
+    padding: 3px 0 12px;
+  }
+
+  .os-mobile-more-list .os-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    min-height: 49px;
+    padding: 0 11px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--panel-2);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 650;
+  }
+
+  .os-mobile-more-list .os-link.active {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .os-mobile-more-list .os-link svg {
+    width: 19px;
+    height: 19px;
+    flex: 0 0 19px;
+  }
+
+  .os-mobile-logout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 45px;
+    margin-top: 4px;
+    border: 1px solid rgba(229,72,97,.20);
+    border-radius: 13px;
+    background: rgba(229,72,97,.08);
+    color: #e54861;
+    font-size: 13px;
+    font-weight: 750;
+  }
+
+  @keyframes lolz-sheet-in {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* A call button is only shown inside its own conversation.
+     Only an active/minimized call stays globally accessible. */
+  .app-shell .lolz-call-dock:has(.lolz-private-call-actions)
+    :not(:has(.lolz-incoming-call))
+    :not(:has(.lolz-call-active-panel))
+    :not(:has(.lolz-call-connecting))
+    :not(:has(.lolz-call-error)) {
+    display: none !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .os-mobile-more-list { gap: 6px; }
+  .os-mobile-more-list .os-link { gap: 8px; padding-inline: 9px; font-size: 11px; }
+  .lolz-video-actions { right: 8px !important; bottom: 105px !important; }
+  .lolz-action-icon { width: 43px; height: 43px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os-more-menu,
+  .os-mobile-more-panel { animation: none !important; }
+}
