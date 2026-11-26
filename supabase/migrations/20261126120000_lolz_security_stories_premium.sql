@@ -38,7 +38,16 @@ create policy "Users can submit their own reports"
 drop policy if exists "Users can read their own reports" on public.content_reports;
 create policy "Users can read their own reports"
   on public.content_reports for select to authenticated
-  using (reporter_id = auth.uid());
+  using (
+    reporter_id = auth.uid()
+    or (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+  );
+
+drop policy if exists "LOLZ moderators can review reports" on public.content_reports;
+create policy "LOLZ moderators can review reports"
+  on public.content_reports for update to authenticated
+  using ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin')
+  with check ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
 
 revoke update, delete on public.content_reports from anon, authenticated;
 grant select, insert on public.content_reports to authenticated;
@@ -88,7 +97,16 @@ alter table public.story_views enable row level security;
 drop policy if exists "Viewers can record their own story views" on public.story_views;
 create policy "Viewers can record their own story views"
   on public.story_views for insert to authenticated
-  with check (viewer_id = auth.uid());
+  with check (
+    viewer_id = auth.uid()
+    and exists (
+      select 1
+      from public.stories s
+      where s.id::text = story_id
+        and s.user_id <> auth.uid()
+        and s.expires_at > now()
+    )
+  );
 
 drop policy if exists "Viewers can read their own story views" on public.story_views;
 create policy "Viewers can read their own story views"
