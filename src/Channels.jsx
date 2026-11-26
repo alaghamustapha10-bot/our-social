@@ -387,6 +387,7 @@ export default function Channels({
 
       recorder.onerror = () => {
         recordingCancelledRef.current = true;
+        recordingPointerRef.current = false;
         stopMediaStream();
         mediaRecorderRef.current = null;
         recordingChannelIdRef.current = null;
@@ -444,6 +445,7 @@ export default function Channels({
     } catch (err) {
       stopMediaStream();
       mediaRecorderRef.current = null;
+      recordingPointerRef.current = false;
       recordingChannelIdRef.current = null;
       recordingStartedAtRef.current = null;
 
@@ -1054,6 +1056,18 @@ export default function Channels({
                           متصفحك لا يدعم تشغيل الصوت.
                         </audio>
                       </div>
+                    ) : post.message_type === "image" && post.media_url ? (
+                      <div className="channel-media-message">
+                        <img src={post.media_url} alt={post.content || "صورة من القناة"} loading="lazy" />
+                        {post.content && !["Photo", "Video"].includes(post.content) && <p>{post.content}</p>}
+                      </div>
+                    ) : post.message_type === "video" && post.media_url ? (
+                      <div className="channel-media-message">
+                        <video controls preload="metadata" playsInline src={post.media_url}>
+                          متصفحك لا يدعم تشغيل الفيديو.
+                        </video>
+                        {post.content && !["Photo", "Video"].includes(post.content) && <p>{post.content}</p>}
+                      </div>
                     ) : (
                       <p>{post.content}</p>
                     )}
@@ -1137,18 +1151,63 @@ export default function Channels({
                   </div>
                 )}
 
+                {mediaFile && mediaPreviewUrl && (
+                  <div className="channel-media-preview">
+                    <div className="channel-media-preview-file">
+                      {mediaFile.type.startsWith("image/") ? (
+                        <img src={mediaPreviewUrl} alt="Selected image" />
+                      ) : (
+                        <video src={mediaPreviewUrl} muted playsInline />
+                      )}
+                      <div>
+                        <strong>{mediaFile.name}</strong>
+                        <small>{(mediaFile.size / (1024 * 1024)).toFixed(1)} MB</small>
+                      </div>
+                    </div>
+                    <button type="button" onClick={clearMediaFile} disabled={uploadingMedia} aria-label="حذف المرفق">
+                      <X size={17} />
+                    </button>
+                  </div>
+                )}
+
+                {uploadingMedia && (
+                  <div className="channel-media-uploading">
+                    <Loader2 size={16} className="channel-spin" />
+                    جارٍ رفع الصورة أو الفيديو...
+                  </div>
+                )}
+
                 {!voicePreviewUrl && (
                   <form className="channel-composer" onSubmit={publishPost}>
+                    <input
+                      ref={mediaInputRef}
+                      type="file"
+                      accept="image/*,video/*"
+                      hidden
+                      onChange={handleMediaChange}
+                    />
+
+                    <button
+                      type="button"
+                      className="channel-attach-button"
+                      onClick={() => mediaInputRef.current?.click()}
+                      disabled={loading || uploadingMedia || uploadingVoice || isRecording}
+                      title="إرفاق صورة أو فيديو"
+                      aria-label="إرفاق صورة أو فيديو"
+                    >
+                      <ImagePlus size={19} />
+                    </button>
+
                     <input
                       value={content}
                       onChange={(event) => setContent(event.target.value)}
                       placeholder="اكتب منشوراً في القناة..."
-                      disabled={loading || isRecording || uploadingVoice}
+                      disabled={loading || isRecording || uploadingVoice || uploadingMedia}
                     />
 
                     <button
                       type="submit"
-                      disabled={loading || !content.trim() || isRecording}
+                      disabled={loading || (!content.trim() && !mediaFile) || isRecording || uploadingMedia}
                       title="نشر المنشور"
                       aria-label="نشر المنشور"
                     >
@@ -1160,26 +1219,31 @@ export default function Channels({
                       className={`channel-voice-button ${
                         isRecording ? "recording" : ""
                       }`}
-                      disabled={loading || uploadingVoice}
+                      disabled={loading || uploadingVoice || uploadingMedia || Boolean(mediaFile)}
                       onPointerDown={(event) => {
+                        if (event.button !== undefined && event.button !== 0) return;
                         event.preventDefault();
 
-                        if (!isRecording) {
-                          event.currentTarget.setPointerCapture?.(
-                            event.pointerId
-                          );
-                          startVoiceRecording();
+                        try {
+                          event.currentTarget.setPointerCapture(event.pointerId);
+                        } catch {
+                          // Pointer capture is best-effort on touch devices.
+                        }
+
+                        recordingPointerRef.current = true;
+                        recordingStartXRef.current = event.clientX;
+                        startVoiceRecording();
+                      }}
+                      onPointerMove={(event) => {
+                        if (!recordingPointerRef.current) return;
+                        if (event.clientX - recordingStartXRef.current < -85) {
+                          cancelRecording();
+                          setError("تم إلغاء التسجيل الصوتي.");
                         }
                       }}
                       onPointerUp={(event) => {
                         event.preventDefault();
-
-                        if (isRecording) {
-                          stopVoiceRecording();
-                        }
-                      }}
-                      onPointerLeave={() => {
-                        if (isRecording) {
+                        if (recordingPointerRef.current) {
                           stopVoiceRecording();
                         }
                       }}
@@ -1199,7 +1263,7 @@ export default function Channels({
 
                 <div className="channel-voice-hint">
                   <Mic size={13} />
-                  اضغط مطولاً على زر الميكروفون لتسجيل رسالة صوتية.
+                  اضغط مطولاً للتسجيل، اسحب لليسار للإلغاء، واترك لإرسال الصوت.
                 </div>
               </div>
             )}
