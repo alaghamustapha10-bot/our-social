@@ -15,6 +15,7 @@ import {
   Sparkles,
   Mic,
   Square,
+  ImagePlus,
   Trash2,
   Loader2,
   Flag,
@@ -57,6 +58,9 @@ export default function Channels({
   const [voiceFile, setVoiceFile] = useState(null);
   const [voicePreviewUrl, setVoicePreviewUrl] = useState("");
   const [uploadingVoice, setUploadingVoice] = useState(false);
+  const [mediaFile, setMediaFile] = useState(null);
+  const [mediaPreviewUrl, setMediaPreviewUrl] = useState("");
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   const postsContainerRef = useRef(null);
   const scrollToBottomRef = useRef(false);
@@ -67,6 +71,10 @@ export default function Channels({
   const recordingChannelIdRef = useRef(null);
   const recordingCancelledRef = useRef(false);
   const recordingStartedAtRef = useRef(null);
+  const recordingPointerRef = useRef(false);
+  const recordingStartXRef = useRef(0);
+  const publishVoiceMessageRef = useRef(null);
+  const mediaInputRef = useRef(null);
 
   const isAdmin = role === "owner" || role === "admin";
 
@@ -196,6 +204,42 @@ export default function Channels({
     }
   }, []);
 
+  useEffect(() => {
+    if (!mediaFile) {
+      setMediaPreviewUrl("");
+      return undefined;
+    }
+
+    const previewUrl = URL.createObjectURL(mediaFile);
+    setMediaPreviewUrl(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [mediaFile]);
+
+  const clearMediaFile = useCallback(() => {
+    setMediaFile(null);
+    if (mediaInputRef.current) mediaInputRef.current.value = "";
+  }, []);
+
+  const handleMediaChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      setError("يرجى اختيار صورة أو فيديو.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 100 * 1024 * 1024) {
+      setError("الحد الأقصى لحجم الملف هو 100 ميغابايت.");
+      event.target.value = "";
+      return;
+    }
+
+    setError("");
+    setMediaFile(file);
+  };
+
   const clearVoicePreview = useCallback(() => {
     setVoiceFile(null);
 
@@ -209,6 +253,7 @@ export default function Channels({
   }, []);
 
   const cancelRecording = useCallback(() => {
+    recordingPointerRef.current = false;
     recordingCancelledRef.current = true;
 
     const recorder = mediaRecorderRef.current;
@@ -302,8 +347,18 @@ export default function Channels({
       recordingChannelIdRef.current = selected.id;
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
       });
+
+      if (!recordingPointerRef.current || selected?.id !== recordingChannelIdRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        recordingChannelIdRef.current = null;
+        return;
+      }
 
       mediaStreamRef.current = stream;
 
@@ -375,11 +430,10 @@ export default function Channels({
           { type: mimeType }
         );
 
-        const previewUrl = URL.createObjectURL(file);
-
-        setVoiceFile(file);
-        setVoicePreviewUrl(previewUrl);
+        recordingPointerRef.current = false;
+        setIsRecording(false);
         recordingChannelIdRef.current = null;
+        void publishVoiceMessageRef.current?.(file);
       };
 
       recordingStartedAtRef.current = Date.now();
@@ -399,6 +453,7 @@ export default function Channels({
   };
 
   const stopVoiceRecording = () => {
+    recordingPointerRef.current = false;
     const recorder = mediaRecorderRef.current;
 
     if (!recorder || recorder.state === "inactive") return;
@@ -525,10 +580,91 @@ export default function Channels({
     }
   };
 
+  const publishMediaPost = async (fileToSend = mediaFile) => {
+    if (!fileToSend || !selected?.id || !isAdmin || loading || uploadingMedia) return;
+
+    const channelAtUpload = selected;
+    const caption = content.trim();
+    const messageType = fileToSend.type.startsWith("image/") ? "image" : "video";
+    const stickToBottom = isNearBottom();
+    let filePath = null;
+
+    setUploadingMedia(true);
+    setError("");
+
+    try {
+      const fileName = messageType + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "-" + fileToSend.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      filePath = user.id + "/messages/" + fileName;
+
+      const { error: uploadError } = await supabase.storage
+        .from("social-media")
+        .upload(filePath, fileToSend, {
+          cacheControl: "3600",
+          contentType: fileToSend.type,
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from("social-media")
+        .getPublicUrl(filePath);
+      const mediaUrl = publicUrlData?.publicUrl;
+      if (!mediaUrl) throw new Error("تعذر إنشاء رابط الوسائط.");
+
+      if (selected?.id !== channelAtUpload.id) {
+        throw new Error("تم تغيير القناة قبل اكتمال رفع الملف.");
+      }
+
+      const { data: newPost, error: publishError } = await supabase
+        .from("channel_posts")
+        .insert({
+          channel_id: channelAtUpload.id,
+          sender_id: user.id,
+          content: caption || (messageType === "image" ? "Photo" : "Video"),
+          message_type: messageType,
+          media_url: mediaUrl,
+          file_name: fileToSend.name,
+          mime_type: fileToSend.type,
+        })
+        .select("id")
+        .single();
+
+      if (publishError) throw publishError;
+
+      if (newPost?.id) {
+        void dispatchLolzPush(supabase, {
+          action: "channel_post",
+          post_id: newPost.id,
+        });
+      }
+
+      setContent("");
+      clearMediaFile();
+      await loadPosts(channelAtUpload, stickToBottom);
+    } catch (err) {
+      if (filePath) {
+        const { error: cleanupError } = await supabase.storage
+          .from("social-media")
+          .remove([filePath]);
+        if (cleanupError) console.warn("Could not remove unsent channel media:", cleanupError.message);
+      }
+
+      setError(err.message || "تعذر نشر الوسائط في القناة.");
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
   const publishPost = async (event) => {
     event.preventDefault();
 
-    if (!content.trim() || !selected || !role || loading) return;
+    if ((!content.trim() && !mediaFile) || !selected || !isAdmin || loading || uploadingMedia) return;
+
+    if (mediaFile) {
+      await publishMediaPost();
+      return;
+    }
 
     const stickToBottom = isNearBottom();
 
@@ -565,9 +701,9 @@ export default function Channels({
     }
   };
 
-  const publishVoiceMessage = async () => {
+  const publishVoiceMessage = async (voiceFileToSend = voiceFile) => {
     if (
-      !voiceFile ||
+      !voiceFileToSend ||
       !selected?.id ||
       !isAdmin ||
       loading ||
@@ -585,14 +721,14 @@ export default function Channels({
     try {
       const fileName = `voice-${Date.now()}-${Math.random()
         .toString(36)
-        .slice(2, 8)}.${voiceFile.name.split(".").pop() || "webm"}`;
+        .slice(2, 8)}.${voiceFileToSend.name.split(".").pop() || "webm"}`;
 
       const filePath = `${user.id}/messages/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("social-media")
-        .upload(filePath, voiceFile, {
-          contentType: voiceFile.type || "audio/webm",
+        .upload(filePath, voiceFileToSend, {
+          contentType: voiceFileToSend.type || "audio/webm",
           upsert: false,
         });
 
@@ -617,7 +753,7 @@ export default function Channels({
           message_type: "audio",
           media_url: mediaUrl,
           file_name: fileName,
-          mime_type: voiceFile.type || "audio/webm",
+          mime_type: voiceFileToSend.type || "audio/webm",
         })
         .select("id")
         .single();
@@ -642,6 +778,8 @@ export default function Channels({
       setUploadingVoice(false);
     }
   };
+
+  publishVoiceMessageRef.current = publishVoiceMessage;
 
   const leaveChannel = async () => {
     if (!selected || loading) return;
