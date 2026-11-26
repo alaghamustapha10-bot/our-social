@@ -1694,6 +1694,7 @@ export default function App() {
         void dispatchLolzPush(supabase, {
           action: "direct_message",
           message_id: storyReplyMessage.id,
+          story_reply: true,
         });
       }
 
