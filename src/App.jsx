@@ -365,6 +365,26 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform() || !user?.id || !pushTokenRef.current) return;
+
+    void supabase
+      .from("push_tokens")
+      .upsert(
+        {
+          user_id: user.id,
+          token: pushTokenRef.current,
+          platform: Capacitor.getPlatform(),
+          language: document.documentElement.lang === "en" ? "en" : "ar",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "token" }
+      )
+      .then(({ error }) => {
+        if (error) console.error("Could not attach the device push token to the signed-in user:", error);
+      });
+  }, [user?.id]);
+
   const [posts, setPosts] = useState([]);
   const [stories, setStories] = useState([]);
   const [activeStoryId, setActiveStoryId] = useState(null);
@@ -2600,6 +2620,11 @@ export default function App() {
   }
 
   pushActionHandlerRef.current = async (data = {}) => {
+    if (!userRef.current?.id) {
+      pendingPushActionRef.current = data;
+      return;
+    }
+
     const notificationId = data.notification_id;
     if (notificationId && userRef.current?.id) {
       const { error } = await supabase
