@@ -1470,6 +1470,68 @@ export default function App() {
     setProfileLoading(false);
   }
 
+  async function replyToStory(story, text) {
+    if (!user?.id || !story?.user_id || story.user_id === user.id) return false;
+
+    if (blockedUserIds.includes(story.user_id)) {
+      setNotice(isArabic ? "لا يمكنك الرد على قصة حساب محظور." : "You cannot reply to a blocked account's story.");
+      return false;
+    }
+
+    const firstUser = [user.id, story.user_id].sort()[0];
+    const secondUser = [user.id, story.user_id].sort()[1];
+
+    try {
+      let { data: conversation, error } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("user_one", firstUser)
+        .eq("user_two", secondUser)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!conversation) {
+        const { data, error: createError } = await supabase
+          .from("conversations")
+          .insert({ user_one: firstUser, user_two: secondUser })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        conversation = data;
+      }
+
+      const { error: messageError } = await supabase.from("messages").insert({
+        conversation_id: conversation.id,
+        sender_id: user.id,
+        content: text,
+        message_type: "text",
+        media_url: null,
+      });
+
+      if (messageError) throw messageError;
+
+      await createNotification(story.user_id, "story_reply");
+      await loadConversations();
+
+      setNotice(
+        isArabic
+          ? "تم إرسال ردك على القصة."
+          : "Your story reply was sent."
+      );
+      return true;
+    } catch (error) {
+      console.error("Story reply failed:", error);
+      setNotice(
+        isArabic
+          ? "تعذر إرسال الرد: " + error.message
+          : "Could not send story reply: " + error.message
+      );
+      return false;
+    }
+  }
+
   async function reportContent(report) {
     if (!user?.id || !report?.type || !report?.id || !report?.reason) return false;
 
@@ -3795,6 +3857,7 @@ export default function App() {
           isArabic={isArabic}
           onView={recordStoryView}
           onReport={setModerationTarget}
+          onReply={replyToStory}
           onClose={closeStoryViewer}
         />
       )}
