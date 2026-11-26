@@ -18,6 +18,8 @@ import "./InstagramDirect.css";
 import "./InstagramMobile.css";
 import Calls from "./Calls";
 import Premium from "./Premium";
+import AdminDashboard from "./AdminDashboard";
+import VerifiedBadge from "./VerifiedBadge";
 import StoryViewer from "./StoryViewer";
 import ModerationDialog from "./ModerationDialog";
 import "./ModerationPage.css";
@@ -562,6 +564,15 @@ export default function App() {
     }
 
     try {
+      const { data: grant, error: grantError } = await supabase
+        .from("lolz_admin_premium_grants")
+        .select("user_id").eq("user_id", userId)
+        .is("revoked_at", null).maybeSingle();
+      if (!grantError && grant) {
+        setSubscriptionInfo(null);
+        setIsPremium(true);
+        return;
+      }
       const { data, error } = await supabase
         .from("lolz_subscriptions")
         .select("status,paypal_subscription_id,next_billing_time,cancelled_at")
@@ -847,7 +858,7 @@ export default function App() {
   }, []);
 
   const loadReports = useCallback(async () => {
-    if (user?.app_metadata?.role !== "admin") return;
+    if (!["admin", "owner"].includes(user?.app_metadata?.role)) return;
 
     setModerationLoading(true);
     try {
@@ -891,7 +902,7 @@ export default function App() {
   }, [user?.app_metadata?.role, isArabic]);
 
   async function updateReportStatus(reportId, status) {
-    if (user?.app_metadata?.role !== "admin") return;
+    if (!["admin", "owner"].includes(user?.app_metadata?.role)) return;
 
     const { error } = await supabase
       .from("content_reports")
@@ -1449,7 +1460,7 @@ export default function App() {
     try {
       let query = supabase
         .from("profiles")
-        .select("id,username,display_name,full_name,avatar_url,bio")
+        .select("id,username,display_name,full_name,avatar_url,bio,is_verified")
         .neq("id", user.id)
         .limit(30);
 
@@ -1864,7 +1875,7 @@ export default function App() {
   }, [activePage, user?.id, loadNotifications]);
 
   useEffect(() => {
-    if (activePage === "moderation" && user?.app_metadata?.role === "admin") {
+    if (activePage === "moderation" && ["admin", "owner"].includes(user?.app_metadata?.role)) {
       void loadReports();
     }
     if (activePage === "blocked") {
@@ -2538,7 +2549,21 @@ export default function App() {
         { body: { action: "create" } }
       );
 
-      if (error) throw error;
+      if (error || data?.error) {
+        let detail = data?.error || "";
+        const response = error?.context;
+        if (!detail && response && typeof response.clone === "function") {
+          const payload = await response.clone().json().catch(() => null);
+          detail = payload?.error || payload?.message || "";
+        }
+        if (!detail && (error?.name === "FunctionsFetchError" ||
+          /Failed to send a request to the Edge Function/i.test(error?.message || ""))) {
+          detail = isArabic
+            ? "تعذر الوصول إلى وظيفة paypal-subscription. تأكد من نشرها على مشروع Supabase الصحيح، ثم افحص Edge Functions → Logs واتصال الشبكة."
+            : "Could not reach paypal-subscription. Confirm it is deployed to the correct Supabase project, then check Edge Functions → Logs and the network connection.";
+        }
+        throw new Error(detail || error?.message || "PayPal checkout request failed.");
+      }
 
       if (!data?.approval_url) {
         throw new Error(
@@ -2739,7 +2764,7 @@ export default function App() {
         onCreate={createPost}
         onLogout={logout}
         username={displayName}
-        isAdmin={user?.app_metadata?.role === "admin"}
+        isAdmin={["admin", "owner"].includes(user?.app_metadata?.role)}
       />
 
       <main className="main-area">
@@ -2977,7 +3002,7 @@ export default function App() {
                 <div className="ig-mini-profile">
                   <Avatar url={profile?.avatar_url} name={displayName} />
                   <div className="ig-mini-profile-copy">
-                    <strong>{displayName}</strong>
+                    <strong>{displayName} <VerifiedBadge verified={profile?.is_verified} /></strong>
                     <span>@{profile?.username || "user"}</span>
                   </div>
                   <button type="button" className="ig-text-button" onClick={() => goTo("profile")}>
@@ -3081,7 +3106,7 @@ export default function App() {
                             className="person-name"
                             onClick={() => openUserProfile(person.id)}
                           >
-                            {name}
+                            {name} <VerifiedBadge verified={person.is_verified} />
                           </button>
                           <span className="person-handle">
                             @{person.username || "member"}
@@ -3203,6 +3228,7 @@ export default function App() {
                       {selectedProfile.display_name ||
                         selectedProfile.full_name ||
                         selectedProfile.username}
+                      <VerifiedBadge verified={selectedProfile.is_verified} />
                     </h1>
                     <p className="profile-handle">
                       @{selectedProfile.username || "member"}
@@ -3320,7 +3346,7 @@ export default function App() {
                   {editProfile ? t("Close editor") : t("Edit profile")}
                 </button>
 
-                <h1>{displayName}</h1>
+                <h1>{displayName} <VerifiedBadge verified={profile?.is_verified} /></h1>
                 <p className="profile-handle">
                   @{profile?.username || "user"}
                 </p>
@@ -3355,7 +3381,7 @@ export default function App() {
                       />
 
                       <div className="edit-profile-photo-info">
-                        <strong>{displayName}</strong>
+                        <strong>{displayName} <VerifiedBadge verified={profile?.is_verified} /></strong>
                         <span>@{profile?.username || "user"}</span>
                         <label htmlFor="avatar-upload" className="avatar-edit">
                           {t("Edit photo")}
@@ -4086,7 +4112,13 @@ export default function App() {
             </section>
           )}
 
-          {activePage === "moderation" && user?.app_metadata?.role === "admin" && (
+          {activePage === "admin" && ["admin", "owner"].includes(user?.app_metadata?.role) && (
+            <section className="other-page">
+              <AdminDashboard supabase={supabase} user={user} isArabic={isArabic} />
+            </section>
+          )}
+
+          {activePage === "moderation" && ["admin", "owner"].includes(user?.app_metadata?.role) && (
             <section className="other-page lolz-moderation-page">
               <span className="eyebrow">{isArabic ? "مركز الثقة والأمان" : "TRUST & SAFETY"}</span>
               <h1>{isArabic ? "مراجعة البلاغات" : "Report review"}</h1>
@@ -4313,7 +4345,7 @@ function PostList({
                   onClick={() => onOpenProfile?.(post.user_id)}
                   className="post-author-name"
                 >
-                  {name}
+                  {name} <VerifiedBadge verified={author.is_verified} />
                 </button>
 
                 <span>
@@ -4501,6 +4533,7 @@ function PostList({
                         {comment.author?.display_name ||
                           comment.author?.username ||
                           t("Member")}
+                        <VerifiedBadge verified={comment.author?.is_verified} />
                       </strong>
                       <p>{comment.content}</p>
                       {comment.user_id !== currentUserId && (

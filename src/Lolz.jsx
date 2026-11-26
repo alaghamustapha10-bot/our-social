@@ -17,6 +17,7 @@ import {
 import { supabase } from "./supabase";
 import { dispatchLolzPush } from "./pushNotifications";
 import "./Lolz.css";
+import VerifiedBadge from "./VerifiedBadge";
 
 function formatDate(date) {
   return new Date(date).toLocaleDateString(
@@ -153,7 +154,7 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
     if (userIds.length) {
       const result = await supabase
         .from("profiles")
-        .select("id, username, display_name, full_name, avatar_url")
+        .select("id, username, display_name, full_name, avatar_url, is_verified")
         .in("id", userIds);
 
       profiles = result.data || [];
@@ -193,7 +194,7 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
     if (commentUserIds.length) {
       const result = await supabase
         .from("profiles")
-        .select("id, username, display_name, full_name, avatar_url")
+        .select("id, username, display_name, full_name, avatar_url, is_verified")
         .in("id", commentUserIds);
 
       commentProfiles = result.data || [];
@@ -735,7 +736,7 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
                       )}
 
                       <div className="lolz-user-details">
-                        <strong>{displayName(profile)}</strong>
+                        <strong>{displayName(profile)} <VerifiedBadge verified={profile?.is_verified} /></strong>
                         <span>
                           {profile?.username
                             ? `@${profile.username}`
@@ -767,7 +768,7 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
                     )}
 
                     <div className="lolz-user-details">
-                      <strong>{displayName(profile)}</strong>
+                      <strong>{displayName(profile)} <VerifiedBadge verified={profile?.is_verified} /></strong>
                       <span>
                         {profile?.username
                           ? `@${profile.username}`
@@ -817,7 +818,7 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
                           )}
 
                           <div className="lolz-comment-content">
-                            <strong>{displayName(comment.profile)}</strong>
+                            <strong>{displayName(comment.profile)} <VerifiedBadge verified={comment.profile?.is_verified} /></strong>
                             <p>{comment.content}</p>
                             {comment.user_id !== user?.id && (
                               <button

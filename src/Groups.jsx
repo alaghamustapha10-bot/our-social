@@ -36,6 +36,7 @@ import { supabase } from "./supabase";
 import Calls from "./Calls";
 import { dispatchLolzPush } from "./pushNotifications";
 import "./Groups.css";
+import VerifiedBadge from "./VerifiedBadge";
 
 function getInitials(name = "G") {
   return name.trim().slice(0, 2).toUpperCase();
@@ -167,7 +168,7 @@ export default function Groups({
 
     const { data, error: profileError } = await supabase
       .from("profiles")
-      .select("id, username, full_name, display_name, avatar_url")
+      .select("id, username, full_name, display_name, avatar_url, is_verified")
       .in("id", uniqueIds);
 
     if (profileError) throw profileError;
@@ -2019,7 +2020,7 @@ export default function Groups({
                             <div className="groups-message-content">
                               {!mine && (
                                 <strong className="groups-message-author">
-                                  {senderName}
+                                  {senderName} <VerifiedBadge verified={sender?.is_verified} size={14} />
                                 </strong>
                               )}
 
@@ -2414,6 +2415,7 @@ export default function Groups({
                           <div className="groups-member-copy">
                             <strong>
                               {memberName}
+                              <VerifiedBadge verified={member.profile?.is_verified} size={14} />
                               {isMe ? " (You)" : ""}
                             </strong>
 

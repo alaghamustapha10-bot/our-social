@@ -16,6 +16,7 @@ import {
   Crown,
   Bookmark,
   Flag,
+  ShieldCheck,
   Ban,
 } from "lucide-react";
 import { useState } from "react";
@@ -37,6 +38,7 @@ const COPY = {
     channels: "القنوات",
     premium: "LOLZ Premium",
     settings: "الإعدادات",
+    admin: "لوحة الإدارة",
     moderation: "مراجعة البلاغات",
     blocked: "الحسابات المحظورة",
     logout: "تسجيل الخروج",
@@ -57,6 +59,7 @@ const COPY = {
     channels: "Channels",
     premium: "LOLZ Premium",
     settings: "Settings",
+    admin: "Admin dashboard",
     moderation: "Reports review",
     blocked: "Blocked accounts",
     logout: "Log out",
@@ -92,7 +95,7 @@ export default function Navigation({ page, setPage, onCreate, onLogout, username
     { id: "premium", label: t.premium, icon: Crown },
     { id: "settings", label: t.settings, icon: Settings },
     { id: "blocked", label: t.blocked, icon: Ban },
-    ...(isAdmin ? [{ id: "moderation", label: t.moderation, icon: Flag }] : []),
+    ...(isAdmin ? [{ id: "admin", label: t.admin, icon: ShieldCheck }, { id: "moderation", label: t.moderation, icon: Flag }] : []),
   ];
 
   const mobileItems = [

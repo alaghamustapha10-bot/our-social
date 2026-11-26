@@ -46,3 +46,6 @@ jobs:
       - name: Check LOLZ Push Edge Function
         working-directory: supabase/functions
         run: deno check lolz-push/index.ts
+      - name: Check LOLZ Admin Edge Function
+        working-directory: supabase/functions
+        run: deno check lolz-admin/index.ts
