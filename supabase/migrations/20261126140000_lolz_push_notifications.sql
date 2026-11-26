@@ -39,6 +39,51 @@ where p.ctid = r.ctid
 create unique index if not exists push_tokens_token_unique
   on public.push_tokens(token);
 
+-- Re-associate a device token with the currently authenticated account when a
+-- device changes accounts. A normal RLS-protected upsert cannot update a row
+-- previously owned by another user, so this narrowly scoped RPC handles it.
+create or replace function public.register_lolz_push_token(
+  p_token text,
+  p_platform text default 'android',
+  p_language text default 'ar'
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required'
+      using errcode = '42501';
+  end if;
+
+  if p_token is null or length(trim(p_token)) < 20 then
+    raise exception 'Invalid push token'
+      using errcode = '22023';
+  end if;
+
+  insert into public.push_tokens (
+    user_id, token, platform, language, updated_at
+  )
+  values (
+    auth.uid(),
+    trim(p_token),
+    coalesce(nullif(trim(p_platform), ''), 'android'),
+    case when lower(coalesce(p_language, 'ar')) = 'en' then 'en' else 'ar' end,
+    now()
+  )
+  on conflict (token) do update set
+    user_id = excluded.user_id,
+    platform = excluded.platform,
+    language = excluded.language,
+    updated_at = now();
+end;
+$;
+
+revoke all on function public.register_lolz_push_token(text, text, text) from public;
+grant execute on function public.register_lolz_push_token(text, text, text) to authenticated;
+
 create index if not exists push_tokens_user_updated_idx
   on public.push_tokens(user_id, updated_at desc);
 
@@ -56,7 +101,12 @@ grant select, insert, update, delete on public.push_tokens to authenticated;
 
 -- Notification metadata carries the destination needed when a user taps a push.
 alter table public.notifications
-  add column if not exists data jsonb not null default '{}'::jsonb;
+  add column if not exists data jsonb not null default '{}'::jsonb,
+  add column if not exists source_event_key text;
+
+create unique index if not exists notifications_source_event_unique
+  on public.notifications(source_event_key)
+  where source_event_key is not null;
 
 create index if not exists notifications_recipient_created_idx
   on public.notifications(recipient_id, created_at desc);
