@@ -90,6 +90,54 @@ async function paypalRequest(
   return data as JsonObject;
 }
 
+async function validateLolzPremiumPlan(
+  token: string,
+  planId: string,
+): Promise<void> {
+  const plan = await paypalRequest(
+    token,
+    `/v1/billing/plans/${encodeURIComponent(planId)}`,
+  );
+
+  if (String(plan.status || "").toUpperCase() !== "ACTIVE") {
+    throw new HttpError("The LOLZ Premium PayPal plan is not active", 503);
+  }
+
+  const cycles = Array.isArray(plan.billing_cycles)
+    ? plan.billing_cycles as JsonObject[]
+    : [];
+
+  const regularCycles = cycles.filter(
+    (cycle) => String(cycle.tenure_type || "").toUpperCase() === "REGULAR",
+  );
+
+  if (cycles.length !== 1 || regularCycles.length !== 1) {
+    throw new HttpError(
+      "The LOLZ Premium plan must have one regular monthly billing cycle and no trial cycle",
+      503,
+    );
+  }
+
+  const cycle = regularCycles[0];
+  const frequency = (cycle.frequency || {}) as JsonObject;
+  const pricingScheme = (cycle.pricing_scheme || {}) as JsonObject;
+  const fixedPrice = (pricingScheme.fixed_price || {}) as JsonObject;
+
+  const matchesPrice =
+    String(fixedPrice.value || "") === "2.99" &&
+    String(fixedPrice.currency_code || "").toUpperCase() === "EUR";
+  const matchesFrequency =
+    String(frequency.interval_unit || "").toUpperCase() === "MONTH" &&
+    Number(frequency.interval_count || 1) === 1;
+
+  if (!matchesPrice || !matchesFrequency) {
+    throw new HttpError(
+      "The PayPal plan must be exactly EUR 2.99 per month to match the LOLZ Premium offer",
+      503,
+    );
+  }
+}
+
 function normalizeStatus(value: unknown): string {
   const status = String(value || "").toUpperCase();
   if (status === "ACTIVE") return "active";
@@ -317,6 +365,8 @@ Deno.serve(async (request: Request) => {
       }
 
       const planId = requiredEnv("PAYPAL_PLAN_ID");
+      await validateLolzPremiumPlan(token, planId);
+
       const appBaseUrl = (
         Deno.env.get("APP_BASE_URL") || "https://our-social-public.vercel.app"
       ).replace(/\/$/, "");
