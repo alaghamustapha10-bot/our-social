@@ -74,13 +74,11 @@ export default function StoryViewer({
       setProgress(value);
       if (value >= 100) {
         window.clearInterval(timer);
-        setActiveIndex((current) => {
-          if (current >= orderedStories.length - 1) {
-            onClose?.();
-            return current;
-          }
-          return current + 1;
-        });
+        if (activeIndex >= orderedStories.length - 1) {
+          onClose?.();
+        } else {
+          setActiveIndex(activeIndex + 1);
+        }
       }
     }, 80);
 
