@@ -128,6 +128,115 @@ create policy "Users can remove their own blocks"
 
 grant select, insert, delete on public.user_blocks to authenticated;
 
+-- Shared server-side block check. Both sides of a block are prevented from
+-- interacting with or viewing one another's content.
+create or replace function public.lolz_users_not_blocked(p_user_a uuid, p_user_b uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $
+  select
+    p_user_a is not null
+    and p_user_b is not null
+    and not exists (
+      select 1
+      from public.user_blocks b
+      where (b.blocker_id = p_user_a and b.blocked_id = p_user_b)
+         or (b.blocker_id = p_user_b and b.blocked_id = p_user_a)
+    );
+$;
+
+revoke all on function public.lolz_users_not_blocked(uuid, uuid) from public;
+grant execute on function public.lolz_users_not_blocked(uuid, uuid) to authenticated;
+
+-- Restrict reads of core feed, profile, story, and LOLZ media rows even if an
+-- older permissive SELECT policy also exists. The caller still needs an
+-- applicable permissive policy; this policy only adds a block condition.
+do $
+declare
+  item record;
+begin
+  for item in
+    select * from (values
+      ('profiles', 'id'),
+      ('posts', 'user_id'),
+      ('stories', 'user_id'),
+      ('lolz_videos', 'user_id'),
+      ('comments', 'user_id'),
+      ('lolz_comments', 'user_id'),
+      ('channel_posts', 'user_id')
+    ) as targets(table_name, user_column)
+  loop
+    if exists (
+      select 1
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = item.table_name
+        and column_name = item.user_column
+    ) then
+      execute format('alter table public.%I enable row level security', item.table_name);
+      execute format(
+        'drop policy if exists %I on public.%I',
+        'LOLZ block filter for ' || item.table_name,
+        item.table_name
+      );
+      execute format(
+        'create policy %I on public.%I as restrictive for select to authenticated using (public.lolz_users_not_blocked(auth.uid(), %I))',
+        'LOLZ block filter for ' || item.table_name,
+        item.table_name,
+        item.user_column
+      );
+    end if;
+  end loop;
+end;
+$;
+
+-- Blocked users cannot see or create a private conversation with each other.
+alter table public.conversations enable row level security;
+drop policy if exists "LOLZ block filter on conversations" on public.conversations;
+create policy "LOLZ block filter on conversations"
+  on public.conversations as restrictive for all to authenticated
+  using (
+    auth.uid() in (user_one, user_two)
+    and public.lolz_users_not_blocked(user_one, user_two)
+  )
+  with check (
+    auth.uid() in (user_one, user_two)
+    and public.lolz_users_not_blocked(user_one, user_two)
+  );
+
+create or replace function public.lolz_conversation_is_allowed(p_conversation_id text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $
+  select exists (
+    select 1
+    from public.conversations c
+    where c.id::text = p_conversation_id
+      and auth.uid() in (c.user_one, c.user_two)
+      and public.lolz_users_not_blocked(c.user_one, c.user_two)
+  );
+$;
+
+revoke all on function public.lolz_conversation_is_allowed(text) from public;
+grant execute on function public.lolz_conversation_is_allowed(text) to authenticated;
+
+-- Enforce the block relationship for all private-message reads and writes.
+alter table public.messages enable row level security;
+drop policy if exists "LOLZ block filter on messages" on public.messages;
+create policy "LOLZ block filter on messages"
+  on public.messages as restrictive for all to authenticated
+  using (public.lolz_conversation_is_allowed(conversation_id::text))
+  with check (
+    public.lolz_conversation_is_allowed(conversation_id::text)
+    and sender_id = auth.uid()
+  );
+
 create table if not exists public.story_views (
   story_id text not null,
   viewer_id uuid not null references auth.users(id) on delete cascade,
