@@ -102,9 +102,11 @@ export default function AuthGate({ children }) {
         return;
       }
 
+      const expectedCallback = new URL(NATIVE_AUTH_CALLBACK_URL);
       if (
-        callbackUrl.protocol !== "com.oursocial.app:" ||
-        callbackUrl.hostname !== "login-callback"
+        callbackUrl.protocol !== expectedCallback.protocol ||
+        callbackUrl.hostname !== expectedCallback.hostname ||
+        callbackUrl.pathname !== expectedCallback.pathname
       ) {
         return;
       }
@@ -121,28 +123,45 @@ export default function AuthGate({ children }) {
         const hashParams = new URLSearchParams(
           callbackUrl.hash.replace(/^#/, ""),
         );
+        const getParam = (name) =>
+          callbackUrl.searchParams.get(name) || hashParams.get(name);
+
         const callbackError =
-          callbackUrl.searchParams.get("error_description") ||
-          callbackUrl.searchParams.get("error") ||
-          hashParams.get("error_description") ||
-          hashParams.get("error");
+          getParam("error_description") ||
+          getParam("error");
 
         if (callbackError) {
           throw new Error(callbackError);
         }
 
-        const code =
-          callbackUrl.searchParams.get("code") ||
-          hashParams.get("code");
+        const code = getParam("code");
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) throw error;
+        } else {
+          const tokenHash = getParam("token_hash");
+          const type = getParam("type");
 
-        if (!code) {
-          throw new Error("Authentication authorization code is missing.");
-        }
+          if (tokenHash && type) {
+            const { error } = await supabase.auth.verifyOtp({
+              token_hash: tokenHash,
+              type,
+            });
+            if (error) throw error;
+          } else {
+            const accessToken = getParam("access_token");
+            const refreshToken = getParam("refresh_token");
 
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+            if (!accessToken || !refreshToken) {
+              throw new Error("Authentication callback is missing its session data.");
+            }
 
-        if (error) {
-          throw error;
+            const { error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            if (error) throw error;
+          }
         }
 
         await Browser.close().catch(() => {});
@@ -156,7 +175,6 @@ export default function AuthGate({ children }) {
         }
       }
     }
-
     async function initialize() {
       try {
         appUrlListener = await CapacitorApp.addListener(
