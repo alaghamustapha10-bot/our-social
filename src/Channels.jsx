@@ -626,8 +626,6 @@ export default function Channels({
           content: caption || (messageType === "image" ? "Photo" : "Video"),
           message_type: messageType,
           media_url: mediaUrl,
-          file_name: fileToSend.name,
-          mime_type: fileToSend.type,
         })
         .select("id")
         .single();
@@ -754,8 +752,6 @@ export default function Channels({
           content: "",
           message_type: "audio",
           media_url: mediaUrl,
-          file_name: fileName,
-          mime_type: voiceFileToSend.type || "audio/webm",
         })
         .select("id")
         .single();
