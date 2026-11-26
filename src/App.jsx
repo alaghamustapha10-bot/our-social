@@ -1495,6 +1495,19 @@ export default function App() {
       current.includes(targetUserId) ? current : [...current, targetUserId]
     );
     setPeople((current) => current.filter((person) => person.id !== targetUserId));
+    setStories((current) => current.filter((story) => story.user_id !== targetUserId));
+
+    const activeOtherId = activeConversation
+      ? (activeConversation.user_one === user.id
+        ? activeConversation.user_two
+        : activeConversation.user_one)
+      : null;
+
+    if (activeOtherId === targetUserId) {
+      setActiveConversation(null);
+      setConversationMessages([]);
+      setMessageText("");
+    }
 
     if (selectedProfile?.id === targetUserId) {
       setSelectedProfile(null);
@@ -1599,7 +1612,12 @@ export default function App() {
 
       if (error) throw error;
 
-      const rows = data || [];
+      const rows = (data || []).filter((conversation) => {
+        const otherId = conversation.user_one === user.id
+          ? conversation.user_two
+          : conversation.user_one;
+        return !blockedUserIds.includes(otherId);
+      });
 
       if (!rows.length) {
         setConversations([]);
@@ -1659,7 +1677,7 @@ export default function App() {
     } catch (error) {
       setNotice(t("Could not load conversations: ") + error.message);
     }
-  }, [t, user?.id]);
+  }, [t, user?.id, blockedUserIds]);
 
   const loadMessages = useCallback(async (conversationId) => {
     if (!conversationId) return;
@@ -1740,6 +1758,10 @@ export default function App() {
 
   async function openConversationWith(person) {
     if (!user || !person?.id || person.id === user.id) return;
+    if (blockedUserIds.includes(person.id)) {
+      setNotice(isArabic ? "هذا الحساب محظور. أزل الحظر أولاً." : "This account is blocked. Unblock it first.");
+      return;
+    }
 
     setNotice("");
 
@@ -1945,6 +1967,15 @@ export default function App() {
     event.preventDefault();
 
     if (!user || !activeConversation) return;
+
+    const otherId = activeConversation.user_one === user.id
+      ? activeConversation.user_two
+      : activeConversation.user_one;
+
+    if (blockedUserIds.includes(otherId)) {
+      setNotice(isArabic ? "لا يمكنك مراسلة حساب محظور." : "You cannot message a blocked account.");
+      return;
+    }
 
     const content = messageText.trim();
     const file = messageFile;
