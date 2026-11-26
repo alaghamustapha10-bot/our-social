@@ -43,3 +43,6 @@ jobs:
       - name: Check PayPal Edge Function
         working-directory: supabase/functions
         run: deno check paypal-subscription/index.ts
+      - name: Check LOLZ Push Edge Function
+        working-directory: supabase/functions
+        run: deno check lolz-push/index.ts
