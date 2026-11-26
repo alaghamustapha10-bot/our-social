@@ -1252,6 +1252,24 @@ export default function App() {
     return data.publicUrl;
   }
 
+  async function uploadPrivateMessageMedia(file, conversationId) {
+    if (!file || !user?.id || !conversationId) return null;
+
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120);
+    const path = `${user.id}/messages/${conversationId}/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+
+    const { error } = await supabase.storage
+      .from("private-messages")
+      .upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type || "application/octet-stream",
+      });
+
+    if (error) throw error;
+    return path;
+  }
+
   const searchPeople = useCallback(async (term = "") => {
     if (!user?.id) return;
 
@@ -1702,7 +1720,32 @@ export default function App() {
 
       if (error) throw error;
 
-      setConversationMessages(data || []);
+      const resolvedMessages = await Promise.all(
+        (data || []).map(async (message) => {
+          const storedPath = message.media_url;
+
+          // Legacy attachments are existing public URLs. New attachments store
+          // only a private bucket path and receive a short-lived signed URL.
+          if (!storedPath || /^https?:\/\//i.test(storedPath)) return message;
+
+          const { data: signedData, error: signedError } = await supabase.storage
+            .from("private-messages")
+            .createSignedUrl(storedPath, 60 * 60 * 24);
+
+          if (signedError) {
+            console.warn("Could not sign private message media:", signedError.message);
+            return { ...message, media_url: null, media_unavailable: true };
+          }
+
+          return {
+            ...message,
+            media_url: signedData?.signedUrl || null,
+            media_storage_path: storedPath,
+          };
+        })
+      );
+
+      setConversationMessages(resolvedMessages);
     } catch (error) {
       setNotice(t("Could not load messages: ") + error.message);
     } finally {
@@ -1727,11 +1770,7 @@ export default function App() {
           if (!newMessage?.id || !newMessage?.conversation_id) return;
 
           if (activeConversation?.id === newMessage.conversation_id) {
-            setConversationMessages((current) =>
-              current.some((message) => message.id === newMessage.id)
-                ? current
-                : [...current, newMessage]
-            );
+            void loadMessages(newMessage.conversation_id);
           }
 
           setConversations((current) => {
@@ -1762,7 +1801,7 @@ export default function App() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [activePage, activeConversation?.id, user?.id, loadConversations]);
+  }, [activePage, activeConversation?.id, user?.id, loadConversations, loadMessages]);
 
   async function openConversationWith(person) {
     if (!user || !person?.id || person.id === user.id) return;
@@ -2018,7 +2057,7 @@ export default function App() {
 
         messageType = "audio";
         uploadedFile = audioFile;
-        mediaUrl = await uploadMedia(audioFile, "messages");
+        mediaUrl = await uploadPrivateMessageMedia(audioFile, activeConversation.id);
 
         if (!mediaUrl) {
           throw new Error(t("Could not upload the media file."));
@@ -2040,7 +2079,7 @@ export default function App() {
           : "video";
 
         uploadedFile = file;
-        mediaUrl = await uploadMedia(file, "messages");
+        mediaUrl = await uploadPrivateMessageMedia(file, activeConversation.id);
 
         if (!mediaUrl) {
           throw new Error(t("Could not upload the media file."));
