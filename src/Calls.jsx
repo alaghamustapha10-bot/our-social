@@ -1623,6 +1623,7 @@ export default function Calls({
 
       {connecting && (
         <div
+          className="lolz-call-connecting"
           style={{
             padding: "10px",
             color: "#aeb5c2",
@@ -1638,6 +1639,7 @@ export default function Calls({
 
       {error && (
         <div
+          className="lolz-call-error"
           style={{
             padding: "10px 12px",
             margin: "8px 0",
