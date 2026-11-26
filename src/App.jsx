@@ -15,6 +15,7 @@ import "./App.css";
 import "./InstagramRedesign.css";
 import "./InstagramExperience.css";
 import "./InstagramDirect.css";
+import "./InstagramMobile.css";
 import Calls from "./Calls";
 import Premium from "./Premium";
 import { Capacitor } from "@capacitor/core";
