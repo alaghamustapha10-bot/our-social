@@ -455,9 +455,15 @@ export default function App() {
     return () => URL.revokeObjectURL(previewUrl);
   }, [messageFile]);
 
-  const loadPremiumStatus = useCallback(async (userId) => {
+  const loadPremiumStatus = useCallback(async (userId, accountRole = null) => {
     if (!userId) {
       setIsPremium(false);
+      setSubscriptionInfo(null);
+      return;
+    }
+
+    if (accountRole === "admin" || accountRole === "owner") {
+      setIsPremium(true);
       setSubscriptionInfo(null);
       return;
     }
@@ -844,7 +850,7 @@ export default function App() {
 
       const currentUser = authData.user;
       setUser(currentUser);
-      await loadPremiumStatus(currentUser.id);
+      await loadPremiumStatus(currentUser.id, currentUser.app_metadata?.role);
 
       const { data: profileData } = await supabase
         .from("profiles")
@@ -959,7 +965,7 @@ export default function App() {
               : "Could not verify the subscription.")
         );
       } else {
-        await loadPremiumStatus(user.id);
+        await loadPremiumStatus(user.id, user.app_metadata?.role);
         setNotice(
           isArabic
             ? "تم التحقق من حالة اشتراكك."
@@ -2206,7 +2212,7 @@ export default function App() {
     if (error) throw error;
     if (data?.error) throw new Error(data.error);
 
-    await loadPremiumStatus(user.id);
+    await loadPremiumStatus(user.id, user.app_metadata?.role);
     setNotice(
       isArabic
         ? "تم إلغاء التجديد. ستبقى المزايا حتى نهاية الفترة المدفوعة إن كانت متاحة."
