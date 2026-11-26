@@ -310,6 +310,8 @@ export default function App() {
 
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [selectedProfilePosts, setSelectedProfilePosts] = useState([]);
+  const [profileReels, setProfileReels] = useState([]);
+  const [selectedProfileReels, setSelectedProfileReels] = useState([]);
   const [blockedUserIds, setBlockedUserIds] = useState([]);
   const [blockedProfiles, setBlockedProfiles] = useState([]);
   const [blockedLoading, setBlockedLoading] = useState(false);
@@ -495,6 +497,45 @@ export default function App() {
       setIsPremium(false);
       setSubscriptionInfo(null);
     }
+  }, []);
+
+  const fetchProfileReels = useCallback(async (userId) => {
+    if (!userId) return [];
+
+    const { data, error } = await supabase
+      .from("lolz_videos")
+      .select("id,user_id,video_url,caption,created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Could not load profile reels:", error.message);
+      return [];
+    }
+
+    const rows = data || [];
+    if (!rows.length) return [];
+
+    const { data: counts, error: countError } = await supabase.rpc(
+      "get_lolz_video_view_counts",
+      { p_video_ids: rows.map((item) => String(item.id)) }
+    );
+
+    if (countError) {
+      console.warn("Could not load profile reel view counts:", countError.message);
+    }
+
+    const countMap = Object.fromEntries(
+      (counts || []).map((item) => [
+        String(item.video_id),
+        Number(item.view_count || 0),
+      ])
+    );
+
+    return rows.map((item) => ({
+      ...item,
+      view_count: countMap[String(item.id)] || 0,
+    }));
   }, []);
 
   const loadPosts = useCallback(async (userId) => {
@@ -879,6 +920,7 @@ export default function App() {
 
       await Promise.all([
         loadPosts(currentUser.id),
+        fetchProfileReels(currentUser.id).then(setProfileReels),
         loadStories(),
         loadFollowing(currentUser.id),
         loadBlockedUsers(currentUser.id),
@@ -890,7 +932,7 @@ export default function App() {
     }
 
     setLoading(false);
-  }, [loadFollowStats, loadFollowing, loadBlockedUsers, loadNotifications, loadPosts, loadPremiumStatus, loadStories, t]);
+  }, [loadFollowStats, loadFollowing, loadBlockedUsers, loadNotifications, loadPosts, fetchProfileReels, loadPremiumStatus, loadStories, t]);
 
   useEffect(() => {
     startApp();
@@ -1400,7 +1442,7 @@ export default function App() {
 
       if (error) throw error;
 
-      const [postsResult, followersResult, followingResult] =
+      const [postsResult, followersResult, followingResult, profileReels] =
         await Promise.all([
           supabase
             .from("posts")
@@ -1417,6 +1459,8 @@ export default function App() {
             .from("follows")
             .select("*", { count: "exact", head: true })
             .eq("follower_id", personId),
+
+          fetchProfileReels(personId),
         ]);
 
       if (postsResult.error) throw postsResult.error;
@@ -1438,6 +1482,7 @@ export default function App() {
       }
 
       setSelectedProfile(person);
+      setSelectedProfileReels(profileReels);
 
       setSelectedProfilePosts(
         profilePosts.map((post) => ({
@@ -1599,6 +1644,7 @@ export default function App() {
     if (selectedProfile?.id === targetUserId) {
       setSelectedProfile(null);
       setSelectedProfilePosts([]);
+      setSelectedProfileReels([]);
       setActivePage("people");
     }
 
@@ -2934,6 +2980,16 @@ export default function App() {
                     posts={selectedProfilePosts}
                     {...postListProps}
                   />
+
+                  <div className="section-heading profile-post-heading profile-reel-heading">
+                    <h2>{isArabic ? "مقاطع LOLZ" : "LOLZ videos"}</h2>
+                    <span>{selectedProfileReels.length}</span>
+                  </div>
+                  <ProfileReelsGrid
+                    reels={selectedProfileReels}
+                    isArabic={isArabic}
+                    onOpen={() => goTo("lolz")}
+                  />
                 </>
               )}
             </section>
@@ -3146,6 +3202,16 @@ export default function App() {
                 <h2>{t("Your posts")}</h2>
               </div>
               <PostList posts={visiblePosts} {...postListProps} />
+
+              <div className="section-heading profile-post-heading profile-reel-heading">
+                <h2>{isArabic ? "مقاطع LOLZ" : "Your LOLZ videos"}</h2>
+                <span>{profileReels.length}</span>
+              </div>
+              <ProfileReelsGrid
+                reels={profileReels}
+                isArabic={isArabic}
+                onOpen={() => goTo("lolz")}
+              />
             </section>
           )}
 
