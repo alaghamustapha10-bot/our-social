@@ -42,6 +42,7 @@ export default function Calls({
   canStart = true,
   canEnd = false,
   onCallStateChange = null,
+  onCallActionsReady = null,
 }) {
   const [incomingCall, setIncomingCall] = useState(null);
   const [incomingProfile, setIncomingProfile] = useState(null);
@@ -93,6 +94,7 @@ export default function Calls({
   const checkingRef = useRef(false);
   const endingRef = useRef(false);
   const remoteTracksRef = useRef(new Map());
+  const startCallRef = useRef(null);
 
   const isPrivate = callType === "private";
   const isGroupOrChannel =
@@ -784,6 +786,23 @@ export default function Calls({
       }
     }
   };
+
+  startCallRef.current = startCall;
+
+  useEffect(() => {
+    if (!isPrivate || !onCallActionsReady) return;
+
+    onCallActionsReady({
+      startAudio: () => {
+        if (startCallRef.current) void startCallRef.current(false);
+      },
+      startVideo: () => {
+        if (startCallRef.current) void startCallRef.current(true);
+      },
+    });
+
+    return () => onCallActionsReady(null);
+  }, [isPrivate, onCallActionsReady]);
 
   const checkCalls = useCallback(async () => {
     if (
@@ -1785,10 +1804,10 @@ export default function Calls({
             >
               <div>
                 <strong style={{ display: "block", fontSize: "16px" }}>
-                  {activeMediaType === "video"
-                    ? "مكالمة فيديو LOLZ"
-                    : isPrivate
-                      ? "مكالمة LOLZ"
+                  {isPrivate
+                    ? `مكالمة مع ${getDisplayName(conversation?.otherProfile, "المستخدم")}`
+                    : activeMediaType === "video"
+                      ? "مكالمة فيديو LOLZ"
                       : callType === "channel"
                         ? "مكالمة القناة"
                         : "مكالمة جماعية LOLZ"}
@@ -1834,6 +1853,25 @@ export default function Calls({
               </div>
             </div>
 
+            {isPrivate && activeMediaType === "audio" && (
+              <div className="ig-call-voice-stage">
+                <div className="ig-call-portrait">
+                  {conversation?.otherProfile?.avatar_url ? (
+                    <img
+                      src={conversation.otherProfile.avatar_url}
+                      alt={getDisplayName(conversation.otherProfile)}
+                    />
+                  ) : (
+                    <span>
+                      {getDisplayName(conversation?.otherProfile, "U").slice(0, 1).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <strong>{getDisplayName(conversation?.otherProfile, "المستخدم")}</strong>
+                <span>{connectedAt ? "المكالمة جارية" : "جارٍ الاتصال..."}</span>
+              </div>
+            )}
+
             {isGroupOrChannel && isRecordingActive && (
               <div
                 style={{
@@ -1866,6 +1904,7 @@ export default function Calls({
             )}
 
             <div
+              className="ig-call-remote-media"
               ref={remoteMediaRef}
               style={{
                 display: "flex",
@@ -1877,6 +1916,7 @@ export default function Calls({
             />
 
             <div
+              className="ig-call-local-media"
               ref={localVideoRef}
               style={{
                 display: "flex",
