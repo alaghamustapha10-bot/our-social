@@ -252,18 +252,11 @@ export default function App() {
       const currentUser = userRef.current;
       if (!active || !currentUser?.id || !tokenValue) return;
 
-      const { error } = await supabase
-        .from("push_tokens")
-        .upsert(
-          {
-            user_id: currentUser.id,
-            token: tokenValue,
-            platform: Capacitor.getPlatform(),
-            language: document.documentElement.lang === "en" ? "en" : "ar",
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "token" }
-        );
+      const { error } = await supabase.rpc("register_lolz_push_token", {
+        p_token: tokenValue,
+        p_platform: Capacitor.getPlatform(),
+        p_language: document.documentElement.lang === "en" ? "en" : "ar",
+      });
 
       if (error) console.error("Saving push token failed:", error);
     };
@@ -369,17 +362,11 @@ export default function App() {
     if (!Capacitor.isNativePlatform() || !user?.id || !pushTokenRef.current) return;
 
     void supabase
-      .from("push_tokens")
-      .upsert(
-        {
-          user_id: user.id,
-          token: pushTokenRef.current,
-          platform: Capacitor.getPlatform(),
-          language: document.documentElement.lang === "en" ? "en" : "ar",
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "token" }
-      )
+      .rpc("register_lolz_push_token", {
+        p_token: pushTokenRef.current,
+        p_platform: Capacitor.getPlatform(),
+        p_language: document.documentElement.lang === "en" ? "en" : "ar",
+      })
       .then(({ error }) => {
         if (error) console.error("Could not attach the device push token to the signed-in user:", error);
       });
