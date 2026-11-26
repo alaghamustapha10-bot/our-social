@@ -2045,6 +2045,7 @@ export default function App() {
       let mediaUrl = null;
       let messageType = "text";
       let uploadedFile = null;
+      let messageSaved = false;
 
       if (audioFile) {
         if (!audioFile.type.startsWith("audio/")) {
@@ -2105,6 +2106,7 @@ export default function App() {
       });
 
       if (error) throw error;
+      messageSaved = true;
 
       setMessageText("");
       setMessageFile(null);
@@ -2117,6 +2119,18 @@ export default function App() {
       await loadMessages(activeConversation.id);
       await loadConversations();
     } catch (error) {
+      if (
+        mediaUrl &&
+        !messageSaved &&
+        !/^https?:\/\//i.test(mediaUrl)
+      ) {
+        const { error: cleanupError } = await supabase.storage
+          .from("private-messages")
+          .remove([mediaUrl]);
+        if (cleanupError) {
+          console.warn("Could not clean up an unsent private attachment:", cleanupError.message);
+        }
+      }
       setNotice(t("Could not send message: ") + error.message);
     } finally {
       setMessageSending(false);
