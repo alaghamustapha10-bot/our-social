@@ -271,6 +271,7 @@ export default function App() {
               description: isArabic ? "مكالمات LOLZ الواردة والفائتة" : "Incoming and missed LOLZ calls",
               importance: 5,
               visibility: 1,
+              sound: "default",
               vibration: true,
             },
             {
@@ -279,6 +280,7 @@ export default function App() {
               description: isArabic ? "الرسائل الخاصة ورسائل المجموعات" : "Direct and group messages",
               importance: 4,
               visibility: 1,
+              sound: "default",
               vibration: true,
             },
             {
@@ -287,6 +289,7 @@ export default function App() {
               description: isArabic ? "الإعجابات والتعليقات والمتابعات" : "Likes, comments and follows",
               importance: 3,
               visibility: 1,
+              sound: "default",
               vibration: true,
             },
           ];
