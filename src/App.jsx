@@ -4008,6 +4008,21 @@ function PostList({
                           t("Member")}
                       </strong>
                       <p>{comment.content}</p>
+                      {comment.user_id !== currentUserId && (
+                        <button
+                          type="button"
+                          className="comment-report-button"
+                          onClick={() =>
+                            onReport?.({
+                              type: "comment",
+                              id: comment.id,
+                              targetUserId: comment.user_id,
+                            })
+                          }
+                        >
+                          {isArabic ? "الإبلاغ عن التعليق" : "Report comment"}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
