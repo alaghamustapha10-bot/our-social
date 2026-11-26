@@ -2831,7 +2831,13 @@ export default function App() {
             </section>
           )}
 
-          {activePage === "lolz" && <Lolz user={user} />}
+          {activePage === "lolz" && (
+            <Lolz
+              user={user}
+              blockedUserIds={blockedUserIds}
+              onReport={(target) => setModerationTarget(target)}
+            />
+          )}
 
           {activePage === "profile" && (
             <section className="profile-page">
@@ -3345,6 +3351,21 @@ export default function App() {
                                       <p>{message.content}</p>
                                     )}
                                     <time>{timeAgo(message.created_at, isArabic)}</time>
+                                    {!mine && (
+                                      <button
+                                        type="button"
+                                        className="comment-report-button"
+                                        onClick={() =>
+                                          setModerationTarget({
+                                            type: "message",
+                                            id: message.id,
+                                            targetUserId: message.sender_id,
+                                          })
+                                        }
+                                      >
+                                        {isArabic ? "الإبلاغ عن الرسالة" : "Report message"}
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               );
