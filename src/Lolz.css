@@ -1235,3 +1235,37 @@
     transition-duration: .01ms !important;
   }
 }
+
+
+.lolz-report-button {
+  display: grid;
+  width: 39px;
+  height: 39px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 13px;
+  background: rgba(15,15,25,.55);
+  color: #fff;
+  cursor: pointer;
+  pointer-events: auto;
+  backdrop-filter: blur(12px);
+  transition: background .2s ease, transform .2s ease;
+}
+.lolz-report-button:hover {
+  transform: scale(1.06);
+  background: rgba(216,74,90,.85);
+}
+.lolz-comment-report {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--lolz-muted);
+  font-size: 10px;
+  cursor: pointer;
+}
+.lolz-comment-report:hover {
+  color: #d84a5a;
+  text-decoration: underline;
+}

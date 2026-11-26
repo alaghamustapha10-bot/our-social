@@ -1,11 +1,19 @@
 {
   "appId": "com.oursocial.app",
-  "appName": "OUR SOCIAL",
+  "appName": "LOLZ",
   "webDir": "dist",
   "plugins": {
+    "PushNotifications": {
+      "presentationOptions": [
+        "badge",
+        "sound",
+        "alert",
+        "banner",
+        "list"
+      ]
+    },
     "extConfig": {},
     "CapacitorUpdater": {
-      "version": "0.0.0",
       "appId": "com.oursocial.app",
       "autoUpdate": "atBackground"
     }

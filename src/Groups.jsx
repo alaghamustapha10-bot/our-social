@@ -26,13 +26,17 @@ import {
   RefreshCw,
   Mic,
   Square,
+  ImagePlus,
   Trash2,
   Loader2,
+  Flag,
 } from "lucide-react";
 
 import { supabase } from "./supabase";
 import Calls from "./Calls";
+import { dispatchLolzPush } from "./pushNotifications";
 import "./Groups.css";
+import VerifiedBadge from "./VerifiedBadge";
 
 function getInitials(name = "G") {
   return name.trim().slice(0, 2).toUpperCase();
@@ -89,7 +93,13 @@ function MemberAvatar({ profile }) {
   );
 }
 
-export default function Groups({ user, onCallContextChange }) {
+export default function Groups({
+  user,
+  onCallContextChange,
+  onReport,
+  initialGroupId = null,
+  onInitialGroupOpened,
+}) {
   const [groups, setGroups] = useState([]);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -122,6 +132,9 @@ export default function Groups({ user, onCallContextChange }) {
   const [voiceFile, setVoiceFile] = useState(null);
   const [voicePreviewUrl, setVoicePreviewUrl] = useState("");
   const [uploadingVoice, setUploadingVoice] = useState(false);
+  const [messageMediaFile, setMessageMediaFile] = useState(null);
+  const [messageMediaPreviewUrl, setMessageMediaPreviewUrl] = useState("");
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   const messagesEndRef = useRef(null);
   const channelRef = useRef(null);
@@ -135,6 +148,9 @@ export default function Groups({ user, onCallContextChange }) {
   const recordingGroupIdRef = useRef(null);
   const recordingCancelledRef = useRef(false);
   const recordingPointerRef = useRef(false);
+  const recordingStartXRef = useRef(0);
+  const sendVoiceMessageRef = useRef(null);
+  const messageMediaInputRef = useRef(null);
 
   const notify = useCallback((message) => {
     setNotice(message);
@@ -152,7 +168,7 @@ export default function Groups({ user, onCallContextChange }) {
 
     const { data, error: profileError } = await supabase
       .from("profiles")
-      .select("id, username, full_name, display_name, avatar_url")
+      .select("id, username, full_name, display_name, avatar_url, is_verified")
       .in("id", uniqueIds);
 
     if (profileError) throw profileError;
@@ -161,6 +177,44 @@ export default function Groups({ user, onCallContextChange }) {
       (data || []).map((item) => [item.id, item])
     );
   }, []);
+
+  useEffect(() => {
+    if (!messageMediaFile) {
+      setMessageMediaPreviewUrl("");
+      return undefined;
+    }
+
+    const previewUrl = URL.createObjectURL(messageMediaFile);
+    setMessageMediaPreviewUrl(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [messageMediaFile]);
+
+  const clearMessageMedia = useCallback(() => {
+    setMessageMediaFile(null);
+    if (messageMediaInputRef.current) {
+      messageMediaInputRef.current.value = "";
+    }
+  }, []);
+
+  const handleMessageMediaChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      setError("Choose an image or video file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 100 * 1024 * 1024) {
+      setError("Maximum media size is 100 MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setError("");
+    setMessageMediaFile(file);
+  };
 
   // CLEAR VOICE PREVIEW
   const clearVoicePreview = useCallback(() => {
@@ -345,9 +399,10 @@ export default function Groups({ user, onCallContextChange }) {
           )
         );
 
-        setVoiceFile(file);
+        recordingPointerRef.current = false;
         setRecordingSeconds(duration);
-        setVoicePreviewUrl(URL.createObjectURL(file));
+        setIsRecording(false);
+        void sendVoiceMessageRef.current?.(file);
       };
 
       recorder.start(250);
@@ -865,6 +920,22 @@ export default function Groups({ user, onCallContextChange }) {
     setError("");
   };
 
+  useEffect(() => {
+    if (!initialGroupId || !groups.length) return;
+
+    const targetGroup = groups.find(
+      (group) => String(group.id) === String(initialGroupId)
+    );
+
+    if (!targetGroup) return;
+
+    if (String(selectedGroup?.id || "") !== String(targetGroup.id)) {
+      openGroup(targetGroup);
+    }
+
+    onInitialGroupOpened?.();
+  }, [initialGroupId, groups, selectedGroup?.id, openGroup, onInitialGroupOpened]);
+
   // CREATE GROUP
   const createGroup = async (event) => {
     event.preventDefault();
@@ -1001,6 +1072,11 @@ export default function Groups({ user, onCallContextChange }) {
 
       if (joinError) throw joinError;
 
+      void dispatchLolzPush(supabase, {
+        action: "group_join",
+        group_id: group.id,
+      });
+
       await loadGroups();
 
       setSelectedGroup({
@@ -1041,6 +1117,11 @@ export default function Groups({ user, onCallContextChange }) {
 
       if (joinError) throw joinError;
 
+      void dispatchLolzPush(supabase, {
+        action: "group_join",
+        group_id: String(data),
+      });
+
       setInviteInput("");
 
       await loadGroups();
@@ -1074,16 +1155,116 @@ export default function Groups({ user, onCallContextChange }) {
     }
   };
 
+  // SEND IMAGE OR VIDEO TO THE GROUP
+  const sendMediaMessage = async (fileToSend = messageMediaFile) => {
+    if (
+      !fileToSend ||
+      !selectedGroup?.id ||
+      !selectedGroup?.myRole ||
+      uploadingMedia ||
+      sending
+    ) {
+      return;
+    }
+
+    const targetGroupId = selectedGroup.id;
+    const caption = messageText.trim();
+    const messageType = fileToSend.type.startsWith("image/") ? "image" : "video";
+    let storagePath = null;
+
+    setUploadingMedia(true);
+    setError("");
+
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!authData.user || authData.user.id !== user?.id) {
+        throw new Error("Please sign in again before sending media.");
+      }
+
+      const safeName = fileToSend.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const fileName = `${messageType}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
+      storagePath = `${authData.user.id}/messages/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("social-media")
+        .upload(storagePath, fileToSend, {
+          cacheControl: "3600",
+          contentType: fileToSend.type,
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from("social-media")
+        .getPublicUrl(storagePath);
+      const mediaUrl = publicUrlData?.publicUrl;
+      if (!mediaUrl) throw new Error("Could not create a media URL.");
+
+      if (selectedGroup?.id !== targetGroupId) {
+        throw new Error("The selected group changed before the media could be sent.");
+      }
+
+      const { data, error: insertError } = await supabase
+        .from("group_messages")
+        .insert({
+          group_id: targetGroupId,
+          sender_id: authData.user.id,
+          content: caption || (messageType === "image" ? "Photo" : "Video"),
+          message_type: messageType,
+          media_url: mediaUrl,
+          file_name: fileToSend.name,
+          mime_type: fileToSend.type,
+        })
+        .select("*")
+        .single();
+
+      if (insertError) throw insertError;
+
+      void dispatchLolzPush(supabase, {
+        action: "group_message",
+        message_id: data.id,
+      });
+
+      setMessages((current) => [
+        ...current,
+        { ...data, sender: profiles[authData.user.id] || null },
+      ]);
+      setMessageText("");
+      clearMessageMedia();
+      void loadGroups();
+    } catch (err) {
+      if (storagePath) {
+        const { error: cleanupError } = await supabase.storage
+          .from("social-media")
+          .remove([storagePath]);
+        if (cleanupError) console.warn("Could not remove unsent group media:", cleanupError.message);
+      }
+
+      console.error("Send group media error:", err);
+      setError(err.message || "Media could not be sent.");
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
   // SEND TEXT MESSAGE
   const sendMessage = async (event) => {
     event.preventDefault();
 
     const content = messageText.trim();
 
+    if (messageMediaFile) {
+      await sendMediaMessage();
+      return;
+    }
+
     if (
       !content ||
       !selectedGroup?.myRole ||
-      sending
+      sending ||
+      uploadingMedia
     ) {
       return;
     }
@@ -1122,6 +1303,11 @@ export default function Groups({ user, onCallContextChange }) {
 
       if (sendError) throw sendError;
 
+      void dispatchLolzPush(supabase, {
+        action: "group_message",
+        message_id: data.id,
+      });
+
       const ownProfile =
         profiles[authData.user.id] || null;
 
@@ -1151,9 +1337,9 @@ export default function Groups({ user, onCallContextChange }) {
   };
 
   // SEND VOICE MESSAGE
-  const sendVoiceMessage = async () => {
+  const sendVoiceMessage = async (voiceFileToSend = voiceFile) => {
     if (
-      !voiceFile ||
+      !voiceFileToSend ||
       !selectedGroup?.id ||
       !selectedGroup?.myRole ||
       uploadingVoice
@@ -1184,7 +1370,7 @@ export default function Groups({ user, onCallContextChange }) {
         );
       }
 
-      const extension = voiceFile.name.split(".").pop() || "webm";
+      const extension = voiceFileToSend.name.split(".").pop() || "webm";
 
       const fileName = `voice-${Date.now()}-${Math.random()
         .toString(36)
@@ -1194,9 +1380,9 @@ export default function Groups({ user, onCallContextChange }) {
 
       const { error: uploadError } = await supabase.storage
         .from("social-media")
-        .upload(storagePath, voiceFile, {
+        .upload(storagePath, voiceFileToSend, {
           cacheControl: "3600",
-          contentType: voiceFile.type || "audio/webm",
+          contentType: voiceFileToSend.type || "audio/webm",
           upsert: false,
         });
 
@@ -1234,12 +1420,17 @@ export default function Groups({ user, onCallContextChange }) {
           message_type: "audio",
           media_url: mediaUrl,
           file_name: fileName,
-          mime_type: voiceFile.type || "audio/webm",
+          mime_type: voiceFileToSend.type || "audio/webm",
         })
         .select("*")
         .single();
 
       if (insertError) throw insertError;
+
+      void dispatchLolzPush(supabase, {
+        action: "group_message",
+        message_id: data.id,
+      });
 
       setMessages((current) => [
         ...current,
@@ -1264,6 +1455,14 @@ export default function Groups({ user, onCallContextChange }) {
       setUploadingVoice(false);
     }
   };
+
+  useEffect(() => {
+    sendVoiceMessageRef.current = sendVoiceMessage;
+  }, [sendVoiceMessage]);
+
+  useEffect(() => {
+    clearMessageMedia();
+  }, [selectedGroup?.id, clearMessageMedia]);
 
   // LEAVE GROUP
   const leaveGroup = async () => {
@@ -1798,6 +1997,12 @@ export default function Groups({ user, onCallContextChange }) {
                         const isAudio =
                           message.message_type === "audio" &&
                           Boolean(message.media_url);
+                        const isImage =
+                          message.message_type === "image" &&
+                          Boolean(message.media_url);
+                        const isVideo =
+                          message.message_type === "video" &&
+                          Boolean(message.media_url);
 
                         return (
                           <article
@@ -1815,7 +2020,7 @@ export default function Groups({ user, onCallContextChange }) {
                             <div className="groups-message-content">
                               {!mine && (
                                 <strong className="groups-message-author">
-                                  {senderName}
+                                  {senderName} <VerifiedBadge verified={sender?.is_verified} size={14} />
                                 </strong>
                               )}
 
@@ -1835,6 +2040,22 @@ export default function Groups({ user, onCallContextChange }) {
                                       Your browser does not support audio playback.
                                     </audio>
                                   </div>
+                                ) : isImage ? (
+                                  <div className="groups-media-message">
+                                    <img src={message.media_url} alt={message.content || "Group image"} loading="lazy" />
+                                    {message.content && !["Photo", "Video"].includes(message.content) && (
+                                      <p>{message.content}</p>
+                                    )}
+                                  </div>
+                                ) : isVideo ? (
+                                  <div className="groups-media-message">
+                                    <video controls preload="metadata" playsInline src={message.media_url}>
+                                      Your browser does not support video playback.
+                                    </video>
+                                    {message.content && !["Photo", "Video"].includes(message.content) && (
+                                      <p>{message.content}</p>
+                                    )}
+                                  </div>
                                 ) : (
                                   message.content
                                 )}
@@ -1844,6 +2065,22 @@ export default function Groups({ user, onCallContextChange }) {
                                     message.created_at
                                   )}
                                 </small>
+                                {!mine && (
+                                  <button
+                                    type="button"
+                                    className="groups-report-message"
+                                    onClick={() =>
+                                      onReport?.({
+                                        type: "group_message",
+                                        id: message.id,
+                                        targetUserId: message.sender_id,
+                                      })
+                                    }
+                                  >
+                                    <Flag size={12} />
+                                    Report
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </article>
@@ -1911,6 +2148,32 @@ export default function Groups({ user, onCallContextChange }) {
                     </div>
                   )}
 
+                  {messageMediaFile && messageMediaPreviewUrl && (
+                    <div className="groups-media-preview">
+                      <div className="groups-media-preview-file">
+                        {messageMediaFile.type.startsWith("image/") ? (
+                          <img src={messageMediaPreviewUrl} alt="Selected image" />
+                        ) : (
+                          <video src={messageMediaPreviewUrl} muted playsInline />
+                        )}
+                        <div>
+                          <strong>{messageMediaFile.name}</strong>
+                          <small>{(messageMediaFile.size / (1024 * 1024)).toFixed(1)} MB</small>
+                        </div>
+                      </div>
+                      <button type="button" onClick={clearMessageMedia} disabled={uploadingMedia} aria-label="Remove attachment">
+                        <X size={17} />
+                      </button>
+                    </div>
+                  )}
+
+                  {uploadingMedia && (
+                    <div className="groups-media-uploading">
+                      <Loader2 size={16} className="groups-spinning" />
+                      Uploading media...
+                    </div>
+                  )}
+
                   {/* RECORDING INDICATOR */}
                   {isRecording && (
                     <div className="groups-recording-indicator">
@@ -1919,7 +2182,7 @@ export default function Groups({ user, onCallContextChange }) {
                       <strong>
                         {formatDuration(recordingSeconds)}
                       </strong>
-                      <span>Release to finish</span>
+                      <span>Swipe left to cancel · release to send</span>
                     </div>
                   )}
 
@@ -1928,6 +2191,25 @@ export default function Groups({ user, onCallContextChange }) {
                     onSubmit={sendMessage}
                   >
                     <input
+                      ref={messageMediaInputRef}
+                      type="file"
+                      accept="image/*,video/*"
+                      hidden
+                      onChange={handleMessageMediaChange}
+                    />
+
+                    <button
+                      type="button"
+                      className="groups-attach-button"
+                      onClick={() => messageMediaInputRef.current?.click()}
+                      disabled={sending || uploadingMedia || uploadingVoice || isRecording}
+                      title="Attach photo or video"
+                      aria-label="Attach photo or video"
+                    >
+                      <ImagePlus size={19} />
+                    </button>
+
+                    <input
                       value={messageText}
                       onChange={(event) =>
                         setMessageText(event.target.value)
@@ -1935,6 +2217,7 @@ export default function Groups({ user, onCallContextChange }) {
                       placeholder="Write a message..."
                       disabled={
                         sending ||
+                        uploadingMedia ||
                         isRecording ||
                         Boolean(voiceFile) ||
                         uploadingVoice
@@ -1948,8 +2231,10 @@ export default function Groups({ user, onCallContextChange }) {
                       }`}
                       disabled={
                         sending ||
+                        uploadingMedia ||
                         uploadingVoice ||
-                        Boolean(voiceFile)
+                        Boolean(voiceFile) ||
+                        Boolean(messageMediaFile)
                       }
                       title={
                         isRecording
@@ -1965,8 +2250,14 @@ export default function Groups({ user, onCallContextChange }) {
                         }
 
                         event.preventDefault();
-                        recordingGroupIdRef.current =
-                          selectedGroup.id;
+                        try {
+                          event.currentTarget.setPointerCapture(event.pointerId);
+                        } catch {
+                          // Pointer capture is best-effort on touch devices.
+                        }
+                        recordingPointerRef.current = true;
+                        recordingStartXRef.current = event.clientX;
+                        recordingGroupIdRef.current = selectedGroup.id;
 
                         startVoiceRecording();
                       }}
@@ -1977,9 +2268,11 @@ export default function Groups({ user, onCallContextChange }) {
                           stopVoiceRecording();
                         }
                       }}
-                      onPointerLeave={() => {
-                        if (recordingPointerRef.current) {
-                          stopVoiceRecording();
+                      onPointerMove={(event) => {
+                        if (!recordingPointerRef.current) return;
+                        if (event.clientX - recordingStartXRef.current < -85) {
+                          cancelRecording();
+                          setError("Voice recording cancelled.");
                         }
                       }}
                       onPointerCancel={() => {
@@ -2002,7 +2295,8 @@ export default function Groups({ user, onCallContextChange }) {
                       type="submit"
                       disabled={
                         sending ||
-                        !messageText.trim() ||
+                        uploadingMedia ||
+                        (!messageText.trim() && !messageMediaFile) ||
                         isRecording ||
                         Boolean(voiceFile) ||
                         uploadingVoice
@@ -2121,6 +2415,7 @@ export default function Groups({ user, onCallContextChange }) {
                           <div className="groups-member-copy">
                             <strong>
                               {memberName}
+                              <VerifiedBadge verified={member.profile?.is_verified} size={14} />
                               {isMe ? " (You)" : ""}
                             </strong>
 

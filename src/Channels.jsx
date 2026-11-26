@@ -1,4 +1,3 @@
-
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -9,23 +8,32 @@ import {
   Lock,
   Globe,
   Users,
-  ArrowLeft,
+  ArrowRight,
   LogOut,
   RefreshCw,
   X,
   Sparkles,
   Mic,
   Square,
+  ImagePlus,
   Trash2,
   Loader2,
+  Flag,
 } from "lucide-react";
 
 import { supabase } from "./supabase";
 import Calls from "./Calls";
+import { dispatchLolzPush } from "./pushNotifications";
 
 import "./Channels.css";
 
-export default function Channels({ user, onCallContextChange }) {
+export default function Channels({
+  user,
+  onCallContextChange,
+  onReport,
+  initialChannelId = null,
+  onInitialChannelOpened,
+}) {
   const [channels, setChannels] = useState([]);
   const [selected, setSelected] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -44,12 +52,15 @@ export default function Channels({ user, onCallContextChange }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Voice message state
+  // حالة الرسائل الصوتية
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [voiceFile, setVoiceFile] = useState(null);
   const [voicePreviewUrl, setVoicePreviewUrl] = useState("");
   const [uploadingVoice, setUploadingVoice] = useState(false);
+  const [mediaFile, setMediaFile] = useState(null);
+  const [mediaPreviewUrl, setMediaPreviewUrl] = useState("");
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   const postsContainerRef = useRef(null);
   const scrollToBottomRef = useRef(false);
@@ -60,6 +71,12 @@ export default function Channels({ user, onCallContextChange }) {
   const recordingChannelIdRef = useRef(null);
   const recordingCancelledRef = useRef(false);
   const recordingStartedAtRef = useRef(null);
+  const recordingPointerRef = useRef(false);
+  const recordingStartXRef = useRef(0);
+  const publishVoiceMessageRef = useRef(null);
+  const mediaInputRef = useRef(null);
+
+  const isAdmin = role === "owner" || role === "admin";
 
   const isNearBottom = () => {
     const container = postsContainerRef.current;
@@ -150,6 +167,22 @@ export default function Channels({ user, onCallContextChange }) {
   }, [loadChannels]);
 
   useEffect(() => {
+    if (!initialChannelId || !channels.length) return;
+
+    const targetChannel = channels.find(
+      (channel) => String(channel.id) === String(initialChannelId)
+    );
+
+    if (!targetChannel) return;
+
+    if (String(selected?.id || "") !== String(targetChannel.id)) {
+      setSelected(targetChannel);
+    }
+
+    onInitialChannelOpened?.();
+  }, [initialChannelId, channels, selected?.id, onInitialChannelOpened]);
+
+  useEffect(() => {
     if (!selected) {
       setPosts([]);
       setMembers([]);
@@ -161,7 +194,6 @@ export default function Channels({ user, onCallContextChange }) {
     loadPosts(selected, true);
   }, [selected, loadPosts]);
 
-  // Release microphone tracks
   const stopMediaStream = useCallback(() => {
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((track) => {
@@ -172,7 +204,42 @@ export default function Channels({ user, onCallContextChange }) {
     }
   }, []);
 
-  // Clear voice preview
+  useEffect(() => {
+    if (!mediaFile) {
+      setMediaPreviewUrl("");
+      return undefined;
+    }
+
+    const previewUrl = URL.createObjectURL(mediaFile);
+    setMediaPreviewUrl(previewUrl);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [mediaFile]);
+
+  const clearMediaFile = useCallback(() => {
+    setMediaFile(null);
+    if (mediaInputRef.current) mediaInputRef.current.value = "";
+  }, []);
+
+  const handleMediaChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+      setError("يرجى اختيار صورة أو فيديو.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 100 * 1024 * 1024) {
+      setError("الحد الأقصى لحجم الملف هو 100 ميغابايت.");
+      event.target.value = "";
+      return;
+    }
+
+    setError("");
+    setMediaFile(file);
+  };
+
   const clearVoicePreview = useCallback(() => {
     setVoiceFile(null);
 
@@ -185,8 +252,8 @@ export default function Channels({ user, onCallContextChange }) {
     });
   }, []);
 
-  // Cancel current recording
   const cancelRecording = useCallback(() => {
+    recordingPointerRef.current = false;
     recordingCancelledRef.current = true;
 
     const recorder = mediaRecorderRef.current;
@@ -208,7 +275,6 @@ export default function Channels({ user, onCallContextChange }) {
     clearVoicePreview();
   }, [clearVoicePreview, stopMediaStream]);
 
-  // Recording timer
   useEffect(() => {
     if (!isRecording) return;
 
@@ -225,7 +291,6 @@ export default function Channels({ user, onCallContextChange }) {
     return () => window.clearInterval(interval);
   }, [isRecording]);
 
-  // Cancel recording if the user switches channels
   useEffect(() => {
     if (
       recordingChannelIdRef.current &&
@@ -235,7 +300,6 @@ export default function Channels({ user, onCallContextChange }) {
     }
   }, [selected?.id, cancelRecording]);
 
-  // Release microphone and preview URL when leaving the component
   useEffect(() => {
     return () => {
       const recorder = mediaRecorderRef.current;
@@ -257,7 +321,6 @@ export default function Channels({ user, onCallContextChange }) {
     };
   }, [voicePreviewUrl]);
 
-  // Start voice recording
   const startVoiceRecording = async () => {
     if (
       !selected?.id ||
@@ -271,7 +334,7 @@ export default function Channels({ user, onCallContextChange }) {
     }
 
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
-      setError("Voice recording is not supported by this browser.");
+      setError("التسجيل الصوتي غير مدعوم في هذا المتصفح.");
       return;
     }
 
@@ -284,8 +347,18 @@ export default function Channels({ user, onCallContextChange }) {
       recordingChannelIdRef.current = selected.id;
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
       });
+
+      if (!recordingPointerRef.current || selected?.id !== recordingChannelIdRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        recordingChannelIdRef.current = null;
+        return;
+      }
 
       mediaStreamRef.current = stream;
 
@@ -314,11 +387,12 @@ export default function Channels({ user, onCallContextChange }) {
 
       recorder.onerror = () => {
         recordingCancelledRef.current = true;
+        recordingPointerRef.current = false;
         stopMediaStream();
         mediaRecorderRef.current = null;
         recordingChannelIdRef.current = null;
         setIsRecording(false);
-        setError("An error occurred while recording audio.");
+        setError("حدث خطأ أثناء تسجيل الصوت.");
       };
 
       recorder.onstop = () => {
@@ -335,20 +409,19 @@ export default function Channels({ user, onCallContextChange }) {
           return;
         }
 
-        const mimeType =
-          recorder.mimeType || "audio/webm";
+        const mimeType = recorder.mimeType || "audio/webm";
 
         const extension = mimeType.includes("ogg")
           ? "ogg"
           : mimeType.includes("mp4")
-            ? "m4a"
-            : "webm";
+          ? "m4a"
+          : "webm";
 
         const audioBlob = new Blob(chunks, { type: mimeType });
 
         if (!audioBlob.size) {
           recordingChannelIdRef.current = null;
-          setError("The recording is empty. Please try again.");
+          setError("التسجيل فارغ، يرجى المحاولة مرة أخرى.");
           return;
         }
 
@@ -358,15 +431,13 @@ export default function Channels({ user, onCallContextChange }) {
           { type: mimeType }
         );
 
-        const previewUrl = URL.createObjectURL(file);
-
-        setVoiceFile(file);
-        setVoicePreviewUrl(previewUrl);
+        recordingPointerRef.current = false;
+        setIsRecording(false);
         recordingChannelIdRef.current = null;
+        void publishVoiceMessageRef.current?.(file);
       };
 
       recordingStartedAtRef.current = Date.now();
-
       recorder.start(250);
 
       setRecordingSeconds(0);
@@ -374,18 +445,17 @@ export default function Channels({ user, onCallContextChange }) {
     } catch (err) {
       stopMediaStream();
       mediaRecorderRef.current = null;
+      recordingPointerRef.current = false;
       recordingChannelIdRef.current = null;
       recordingStartedAtRef.current = null;
 
       setIsRecording(false);
-      setError(
-        err.message || "Could not access your microphone."
-      );
+      setError(err.message || "تعذر الوصول إلى الميكروفون.");
     }
   };
 
-  // Stop recording and prepare preview
   const stopVoiceRecording = () => {
+    recordingPointerRef.current = false;
     const recorder = mediaRecorderRef.current;
 
     if (!recorder || recorder.state === "inactive") return;
@@ -432,7 +502,7 @@ export default function Channels({ user, onCallContextChange }) {
       await loadChannels();
       setSelected(data);
     } catch (err) {
-      setError(err.message || "Could not create channel.");
+      setError(err.message || "تعذر إنشاء القناة.");
     } finally {
       setLoading(false);
     }
@@ -457,9 +527,16 @@ export default function Channels({ user, onCallContextChange }) {
         throw joinError;
       }
 
+      if (!joinError) {
+        void dispatchLolzPush(supabase, {
+          action: "channel_join",
+          channel_id: channel.id,
+        });
+      }
+
       await loadPosts(channel);
     } catch (err) {
-      setError(err.message || "Could not join channel.");
+      setError(err.message || "تعذر الانضمام إلى القناة.");
     } finally {
       setLoading(false);
     }
@@ -481,6 +558,11 @@ export default function Channels({ user, onCallContextChange }) {
 
       if (joinError) throw joinError;
 
+      void dispatchLolzPush(supabase, {
+        action: "channel_join",
+        channel_id: String(data),
+      });
+
       setInviteCode("");
       await loadChannels();
 
@@ -494,16 +576,95 @@ export default function Channels({ user, onCallContextChange }) {
 
       setSelected(found);
     } catch (err) {
-      setError(err.message || "Invalid invitation code.");
+      setError(err.message || "رمز الدعوة غير صحيح.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const publishMediaPost = async (fileToSend = mediaFile) => {
+    if (!fileToSend || !selected?.id || !isAdmin || loading || uploadingMedia) return;
+
+    const channelAtUpload = selected;
+    const caption = content.trim();
+    const messageType = fileToSend.type.startsWith("image/") ? "image" : "video";
+    const stickToBottom = isNearBottom();
+    let filePath = null;
+
+    setUploadingMedia(true);
+    setError("");
+
+    try {
+      const fileName = messageType + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "-" + fileToSend.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      filePath = user.id + "/messages/" + fileName;
+
+      const { error: uploadError } = await supabase.storage
+        .from("social-media")
+        .upload(filePath, fileToSend, {
+          cacheControl: "3600",
+          contentType: fileToSend.type,
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from("social-media")
+        .getPublicUrl(filePath);
+      const mediaUrl = publicUrlData?.publicUrl;
+      if (!mediaUrl) throw new Error("تعذر إنشاء رابط الوسائط.");
+
+      if (selected?.id !== channelAtUpload.id) {
+        throw new Error("تم تغيير القناة قبل اكتمال رفع الملف.");
+      }
+
+      const { data: newPost, error: publishError } = await supabase
+        .from("channel_posts")
+        .insert({
+          channel_id: channelAtUpload.id,
+          sender_id: user.id,
+          content: caption || (messageType === "image" ? "Photo" : "Video"),
+          message_type: messageType,
+          media_url: mediaUrl,
+        })
+        .select("id")
+        .single();
+
+      if (publishError) throw publishError;
+
+      if (newPost?.id) {
+        void dispatchLolzPush(supabase, {
+          action: "channel_post",
+          post_id: newPost.id,
+        });
+      }
+
+      setContent("");
+      clearMediaFile();
+      await loadPosts(channelAtUpload, stickToBottom);
+    } catch (err) {
+      if (filePath) {
+        const { error: cleanupError } = await supabase.storage
+          .from("social-media")
+          .remove([filePath]);
+        if (cleanupError) console.warn("Could not remove unsent channel media:", cleanupError.message);
+      }
+
+      setError(err.message || "تعذر نشر الوسائط في القناة.");
+    } finally {
+      setUploadingMedia(false);
     }
   };
 
   const publishPost = async (event) => {
     event.preventDefault();
 
-    if (!content.trim() || !selected || !role || loading) return;
+    if ((!content.trim() && !mediaFile) || !selected || !isAdmin || loading || uploadingMedia || uploadingVoice) return;
+
+    if (mediaFile) {
+      await publishMediaPost();
+      return;
+    }
 
     const stickToBottom = isNearBottom();
 
@@ -511,30 +672,38 @@ export default function Channels({ user, onCallContextChange }) {
     setError("");
 
     try {
-      const { error: publishError } = await supabase
+      const { data: newPost, error: publishError } = await supabase
         .from("channel_posts")
         .insert({
           channel_id: selected.id,
           sender_id: user.id,
           content: content.trim(),
           message_type: "text",
-        });
+        })
+        .select("id")
+        .single();
 
       if (publishError) throw publishError;
+
+      if (newPost?.id) {
+        void dispatchLolzPush(supabase, {
+          action: "channel_post",
+          post_id: newPost.id,
+        });
+      }
 
       setContent("");
       await loadPosts(selected, stickToBottom);
     } catch (err) {
-      setError(err.message || "Could not publish post.");
+      setError(err.message || "تعذر نشر المنشور.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Upload and publish voice message
-  const publishVoiceMessage = async () => {
+  const publishVoiceMessage = async (voiceFileToSend = voiceFile) => {
     if (
-      !voiceFile ||
+      !voiceFileToSend ||
       !selected?.id ||
       !isAdmin ||
       loading ||
@@ -552,14 +721,14 @@ export default function Channels({ user, onCallContextChange }) {
     try {
       const fileName = `voice-${Date.now()}-${Math.random()
         .toString(36)
-        .slice(2, 8)}.${voiceFile.name.split(".").pop() || "webm"}`;
+        .slice(2, 8)}.${voiceFileToSend.name.split(".").pop() || "webm"}`;
 
       const filePath = `${user.id}/messages/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("social-media")
-        .upload(filePath, voiceFile, {
-          contentType: voiceFile.type || "audio/webm",
+        .upload(filePath, voiceFileToSend, {
+          contentType: voiceFileToSend.type || "audio/webm",
           upsert: false,
         });
 
@@ -572,10 +741,10 @@ export default function Channels({ user, onCallContextChange }) {
       const mediaUrl = publicUrlData?.publicUrl;
 
       if (!mediaUrl) {
-        throw new Error("Could not generate the audio URL.");
+        throw new Error("تعذر إنشاء رابط الرسالة الصوتية.");
       }
 
-      const { error: publishError } = await supabase
+      const { data: newPost, error: publishError } = await supabase
         .from("channel_posts")
         .insert({
           channel_id: channelAtUpload.id,
@@ -583,11 +752,18 @@ export default function Channels({ user, onCallContextChange }) {
           content: "",
           message_type: "audio",
           media_url: mediaUrl,
-          file_name: fileName,
-          mime_type: voiceFile.type || "audio/webm",
-        });
+        })
+        .select("id")
+        .single();
 
       if (publishError) throw publishError;
+
+      if (newPost?.id) {
+        void dispatchLolzPush(supabase, {
+          action: "channel_post",
+          post_id: newPost.id,
+        });
+      }
 
       clearVoicePreview();
 
@@ -595,11 +771,19 @@ export default function Channels({ user, onCallContextChange }) {
         await loadPosts(channelAtUpload, stickToBottom);
       }
     } catch (err) {
-      setError(err.message || "Could not publish voice message.");
+      setError(err.message || "تعذر نشر الرسالة الصوتية.");
     } finally {
       setUploadingVoice(false);
     }
   };
+
+  useEffect(() => {
+    publishVoiceMessageRef.current = publishVoiceMessage;
+  }, [publishVoiceMessage]);
+
+  useEffect(() => {
+    clearMediaFile();
+  }, [selected?.id, clearMediaFile]);
 
   const leaveChannel = async () => {
     if (!selected || loading) return;
@@ -621,7 +805,7 @@ export default function Channels({ user, onCallContextChange }) {
       setSelected(null);
       await loadChannels();
     } catch (err) {
-      setError(err.message || "Could not leave channel.");
+      setError(err.message || "تعذر مغادرة القناة.");
     } finally {
       setLoading(false);
     }
@@ -631,10 +815,6 @@ export default function Channels({ user, onCallContextChange }) {
     channel.name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const isAdmin = role === "owner" || role === "admin";
-
-  // Clear the old floating call context.
-  // Calls are now rendered inside the selected channel.
   useEffect(() => {
     onCallContextChange?.(null);
   }, [onCallContextChange]);
@@ -667,8 +847,8 @@ export default function Channels({ user, onCallContextChange }) {
             </div>
 
             <div>
-              <h2>Channels</h2>
-              <span>LOLZ broadcasting</span>
+              <h2>القنوات</h2>
+              <span>بث مجتمع LOLZ</span>
             </div>
           </div>
 
@@ -676,8 +856,8 @@ export default function Channels({ user, onCallContextChange }) {
             type="button"
             className="channels-create-button"
             onClick={() => setShowCreate(true)}
-            title="Create channel"
-            aria-label="Create channel"
+            title="إنشاء قناة"
+            aria-label="إنشاء قناة"
           >
             <Plus size={22} />
           </button>
@@ -689,14 +869,14 @@ export default function Channels({ user, onCallContextChange }) {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search channels..."
+            placeholder="ابحث في القنوات..."
           />
 
           {search && (
             <button
               type="button"
               onClick={() => setSearch("")}
-              aria-label="Clear search"
+              aria-label="مسح البحث"
             >
               <X size={15} />
             </button>
@@ -707,11 +887,11 @@ export default function Channels({ user, onCallContextChange }) {
           <input
             value={inviteCode}
             onChange={(event) => setInviteCode(event.target.value)}
-            placeholder="Private channel code"
+            placeholder="رمز قناة خاصة"
           />
 
           <button disabled={loading || !inviteCode.trim()}>
-            Join
+            انضمام
           </button>
         </form>
 
@@ -735,7 +915,7 @@ export default function Channels({ user, onCallContextChange }) {
               <div className="channel-list-details">
                 <strong>{channel.name}</strong>
                 <span>
-                  {channel.is_public ? "Public channel" : "Private channel"}
+                  {channel.is_public ? "قناة عامة" : "قناة خاصة"}
                 </span>
               </div>
 
@@ -750,7 +930,7 @@ export default function Channels({ user, onCallContextChange }) {
           {!filteredChannels.length && (
             <div className="channels-empty">
               <Radio size={30} />
-              <p>No channels found</p>
+              <p>لا توجد قنوات مطابقة</p>
             </div>
           )}
         </div>
@@ -766,10 +946,10 @@ export default function Channels({ user, onCallContextChange }) {
                   cancelRecording();
                   setSelected(null);
                 }}
-                title="Back to channels"
-                aria-label="Back to channels"
+                title="العودة إلى القنوات"
+                aria-label="العودة إلى القنوات"
               >
-                <ArrowLeft size={20} />
+                <ArrowRight size={20} />
               </button>
 
               <div className="channel-avatar">
@@ -782,24 +962,23 @@ export default function Channels({ user, onCallContextChange }) {
 
               <div className="channel-header-details">
                 <strong>{selected.name}</strong>
-                <span>{members.length} subscribers</span>
+                <span>{members.length} مشترك</span>
               </div>
 
               <button
                 className="channel-refresh"
                 onClick={() => loadPosts(selected)}
-                title="Refresh"
-                aria-label="Refresh channel"
+                title="تحديث"
+                aria-label="تحديث القناة"
               >
                 <RefreshCw size={18} />
               </button>
             </header>
 
             <div className="channel-description">
-              {selected.description || "Welcome to this channel."}
+              {selected.description || "مرحباً بك في هذه القناة."}
             </div>
 
-            {/* CHANNEL CALLS — INSIDE THE CHANNEL */}
             {role && (
               <div className="channel-call-section">
                 <Calls
@@ -816,7 +995,7 @@ export default function Channels({ user, onCallContextChange }) {
 
             {!role && (
               <div className="channel-join-banner">
-                <span>You are viewing this channel as a visitor.</span>
+                <span>أنت تشاهد هذه القناة كزائر.</span>
 
                 {selected.is_public && (
                   <button
@@ -824,7 +1003,7 @@ export default function Channels({ user, onCallContextChange }) {
                     disabled={loading}
                   >
                     <Users size={16} />
-                    Join channel
+                    انضمام للقناة
                   </button>
                 )}
               </div>
@@ -842,17 +1021,33 @@ export default function Channels({ user, onCallContextChange }) {
                       <strong>
                         {post.sender_id === selected.created_by
                           ? selected.name
-                          : "Channel admin"}
+                          : "مشرف القناة"}
                       </strong>
 
                       <time>{formatDate(post.created_at)}</time>
+                      {post.sender_id !== user?.id && (
+                        <button
+                          type="button"
+                          className="channel-report-post"
+                          onClick={() =>
+                            onReport?.({
+                              type: "channel_post",
+                              id: post.id,
+                              targetUserId: post.sender_id,
+                            })
+                          }
+                        >
+                          <Flag size={13} />
+                          إبلاغ
+                        </button>
+                      )}
                     </div>
 
                     {post.message_type === "audio" && post.media_url ? (
                       <div className="channel-audio-message">
                         <div className="channel-audio-label">
                           <Mic size={16} />
-                          <span>Voice message</span>
+                          <span>رسالة صوتية</span>
                         </div>
 
                         <audio
@@ -860,8 +1055,20 @@ export default function Channels({ user, onCallContextChange }) {
                           preload="metadata"
                           src={post.media_url}
                         >
-                          Your browser does not support audio playback.
+                          متصفحك لا يدعم تشغيل الصوت.
                         </audio>
+                      </div>
+                    ) : post.message_type === "image" && post.media_url ? (
+                      <div className="channel-media-message">
+                        <img src={post.media_url} alt={post.content || "صورة من القناة"} loading="lazy" />
+                        {post.content && !["Photo", "Video"].includes(post.content) && <p>{post.content}</p>}
+                      </div>
+                    ) : post.message_type === "video" && post.media_url ? (
+                      <div className="channel-media-message">
+                        <video controls preload="metadata" playsInline src={post.media_url}>
+                          متصفحك لا يدعم تشغيل الفيديو.
+                        </video>
+                        {post.content && !["Photo", "Video"].includes(post.content) && <p>{post.content}</p>}
                       </div>
                     ) : (
                       <p>{post.content}</p>
@@ -873,8 +1080,8 @@ export default function Channels({ user, onCallContextChange }) {
               {!posts.length && (
                 <div className="channels-empty">
                   <Radio size={38} />
-                  <h3>No posts yet</h3>
-                  <p>The first post will appear here.</p>
+                  <h3>لا توجد منشورات بعد</h3>
+                  <p>سيظهر أول منشور هنا.</p>
                 </div>
               )}
             </div>
@@ -884,7 +1091,7 @@ export default function Channels({ user, onCallContextChange }) {
                 {isRecording && (
                   <div className="channel-recording-indicator">
                     <span className="channel-recording-dot" />
-                    <span>Recording voice message</span>
+                    <span>جارٍ تسجيل رسالة صوتية</span>
                     <strong>
                       {formatRecordingTime(recordingSeconds)}
                     </strong>
@@ -892,8 +1099,8 @@ export default function Channels({ user, onCallContextChange }) {
                     <button
                       type="button"
                       onClick={cancelRecording}
-                      title="Cancel recording"
-                      aria-label="Cancel recording"
+                      title="إلغاء التسجيل"
+                      aria-label="إلغاء التسجيل"
                     >
                       <X size={17} />
                     </button>
@@ -904,7 +1111,7 @@ export default function Channels({ user, onCallContextChange }) {
                   <div className="channel-voice-preview">
                     <div className="channel-voice-preview-heading">
                       <Mic size={18} />
-                      <span>Voice message preview</span>
+                      <span>معاينة الرسالة الصوتية</span>
                     </div>
 
                     <audio
@@ -921,7 +1128,7 @@ export default function Channels({ user, onCallContextChange }) {
                         disabled={uploadingVoice}
                       >
                         <Trash2 size={16} />
-                        Delete
+                        حذف
                       </button>
 
                       <button
@@ -933,12 +1140,12 @@ export default function Channels({ user, onCallContextChange }) {
                         {uploadingVoice ? (
                           <>
                             <Loader2 size={17} className="channel-spin" />
-                            Uploading...
+                            جارٍ الرفع...
                           </>
                         ) : (
                           <>
                             <Send size={17} />
-                            Publish voice message
+                            نشر الرسالة الصوتية
                           </>
                         )}
                       </button>
@@ -946,20 +1153,65 @@ export default function Channels({ user, onCallContextChange }) {
                   </div>
                 )}
 
+                {mediaFile && mediaPreviewUrl && (
+                  <div className="channel-media-preview">
+                    <div className="channel-media-preview-file">
+                      {mediaFile.type.startsWith("image/") ? (
+                        <img src={mediaPreviewUrl} alt="Selected image" />
+                      ) : (
+                        <video src={mediaPreviewUrl} muted playsInline />
+                      )}
+                      <div>
+                        <strong>{mediaFile.name}</strong>
+                        <small>{(mediaFile.size / (1024 * 1024)).toFixed(1)} MB</small>
+                      </div>
+                    </div>
+                    <button type="button" onClick={clearMediaFile} disabled={uploadingMedia} aria-label="حذف المرفق">
+                      <X size={17} />
+                    </button>
+                  </div>
+                )}
+
+                {uploadingMedia && (
+                  <div className="channel-media-uploading">
+                    <Loader2 size={16} className="channel-spin" />
+                    جارٍ رفع الصورة أو الفيديو...
+                  </div>
+                )}
+
                 {!voicePreviewUrl && (
                   <form className="channel-composer" onSubmit={publishPost}>
                     <input
+                      ref={mediaInputRef}
+                      type="file"
+                      accept="image/*,video/*"
+                      hidden
+                      onChange={handleMediaChange}
+                    />
+
+                    <button
+                      type="button"
+                      className="channel-attach-button"
+                      onClick={() => mediaInputRef.current?.click()}
+                      disabled={loading || uploadingMedia || uploadingVoice || isRecording}
+                      title="إرفاق صورة أو فيديو"
+                      aria-label="إرفاق صورة أو فيديو"
+                    >
+                      <ImagePlus size={19} />
+                    </button>
+
+                    <input
                       value={content}
                       onChange={(event) => setContent(event.target.value)}
-                      placeholder="Write a channel post..."
-                      disabled={loading || isRecording || uploadingVoice}
+                      placeholder="اكتب منشوراً في القناة..."
+                      disabled={loading || isRecording || uploadingVoice || uploadingMedia}
                     />
 
                     <button
                       type="submit"
-                      disabled={loading || !content.trim() || isRecording}
-                      title="Publish post"
-                      aria-label="Publish post"
+                      disabled={loading || (!content.trim() && !mediaFile) || isRecording || uploadingMedia || uploadingVoice}
+                      title="نشر المنشور"
+                      aria-label="نشر المنشور"
                     >
                       <Send size={19} />
                     </button>
@@ -969,33 +1221,38 @@ export default function Channels({ user, onCallContextChange }) {
                       className={`channel-voice-button ${
                         isRecording ? "recording" : ""
                       }`}
-                      disabled={loading || uploadingVoice}
+                      disabled={loading || uploadingVoice || uploadingMedia || Boolean(mediaFile)}
                       onPointerDown={(event) => {
+                        if (event.button !== undefined && event.button !== 0) return;
                         event.preventDefault();
 
-                        if (!isRecording) {
-                          event.currentTarget.setPointerCapture?.(
-                            event.pointerId
-                          );
-                          startVoiceRecording();
+                        try {
+                          event.currentTarget.setPointerCapture(event.pointerId);
+                        } catch {
+                          // Pointer capture is best-effort on touch devices.
+                        }
+
+                        recordingPointerRef.current = true;
+                        recordingStartXRef.current = event.clientX;
+                        startVoiceRecording();
+                      }}
+                      onPointerMove={(event) => {
+                        if (!recordingPointerRef.current) return;
+                        if (event.clientX - recordingStartXRef.current < -85) {
+                          cancelRecording();
+                          setError("تم إلغاء التسجيل الصوتي.");
                         }
                       }}
                       onPointerUp={(event) => {
                         event.preventDefault();
-
-                        if (isRecording) {
-                          stopVoiceRecording();
-                        }
-                      }}
-                      onPointerLeave={() => {
-                        if (isRecording) {
+                        if (recordingPointerRef.current) {
                           stopVoiceRecording();
                         }
                       }}
                       onPointerCancel={cancelRecording}
                       onContextMenu={(event) => event.preventDefault()}
-                      title="Hold to record a voice message"
-                      aria-label="Hold to record a voice message"
+                      title="اضغط مطولاً لتسجيل رسالة صوتية"
+                      aria-label="اضغط مطولاً لتسجيل رسالة صوتية"
                     >
                       {isRecording ? (
                         <Square size={19} />
@@ -1008,7 +1265,7 @@ export default function Channels({ user, onCallContextChange }) {
 
                 <div className="channel-voice-hint">
                   <Mic size={13} />
-                  Hold the microphone button to record a voice message.
+                  اضغط مطولاً للتسجيل، اسحب لليسار للإلغاء، واترك لإرسال الصوت.
                 </div>
               </div>
             )}
@@ -1016,7 +1273,7 @@ export default function Channels({ user, onCallContextChange }) {
             {role === "subscriber" && (
               <div className="channel-subscriber-note">
                 <Users size={17} />
-                Only channel owners and admins can publish posts.
+                النشر متاح لمالك القناة والمشرفين فقط.
               </div>
             )}
 
@@ -1027,7 +1284,7 @@ export default function Channels({ user, onCallContextChange }) {
                 disabled={loading}
               >
                 <LogOut size={16} />
-                Leave channel
+                مغادرة القناة
               </button>
             )}
           </>
@@ -1037,16 +1294,15 @@ export default function Channels({ user, onCallContextChange }) {
               <Sparkles size={43} />
             </div>
 
-            <h2>LOLZ Channels</h2>
+            <h2>قنوات LOLZ</h2>
 
             <p>
-              Follow channels, discover updates, and stay connected
-              with the communities you love.
+              تابع القنوات، واكتشف التحديثات، وابقَ على تواصل مع المجتمعات التي تهمك.
             </p>
 
             <button onClick={() => setShowCreate(true)}>
               <Plus size={18} />
-              Create your channel
+              أنشئ قناتك
             </button>
           </div>
         )}
@@ -1055,7 +1311,7 @@ export default function Channels({ user, onCallContextChange }) {
       {error && (
         <div className="channels-error" role="alert">
           <span>{error}</span>
-          <button onClick={() => setError("")} aria-label="Close error">
+          <button onClick={() => setError("")} aria-label="إغلاق التنبيه">
             <X size={18} />
           </button>
         </div>
@@ -1073,46 +1329,44 @@ export default function Channels({ user, onCallContextChange }) {
           <form className="channel-create-modal" onSubmit={createChannel}>
             <div className="channel-modal-heading">
               <div>
-                <span className="channels-modal-eyebrow">NEW COMMUNITY</span>
-                <h2>Create a channel</h2>
-                <p>Build your own broadcasting space on LOLZ.</p>
+                <span className="channels-modal-eyebrow">مجتمع جديد</span>
+                <h2>إنشاء قناة</h2>
+                <p>أنشئ مساحة البث الخاصة بك على LOLZ.</p>
               </div>
 
               <button
                 type="button"
                 className="channel-modal-close"
                 onClick={() => setShowCreate(false)}
-                aria-label="Close"
+                aria-label="إغلاق"
               >
                 <X size={19} />
               </button>
             </div>
 
             <label>
-              Channel name
-
+              اسم القناة
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Enter channel name"
+                placeholder="أدخل اسم القناة"
                 required
                 maxLength={60}
               />
             </label>
 
             <label>
-              Description
-
+              الوصف
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="Describe your channel..."
+                placeholder="صف قناتك..."
                 rows={3}
                 maxLength={500}
               />
             </label>
 
-            <label>Privacy</label>
+            <label>الخصوصية</label>
 
             <div className="channel-privacy-options">
               <button
@@ -1122,8 +1376,8 @@ export default function Channels({ user, onCallContextChange }) {
                 onClick={() => setIsPublic(true)}
               >
                 <Globe size={18} />
-                <span>Public</span>
-                <small>Discoverable by everyone</small>
+                <span>عامة</span>
+                <small>ظاهرة للجميع</small>
               </button>
 
               <button
@@ -1133,8 +1387,8 @@ export default function Channels({ user, onCallContextChange }) {
                 onClick={() => setIsPublic(false)}
               >
                 <Lock size={18} />
-                <span>Private</span>
-                <small>Invite code required</small>
+                <span>خاصة</span>
+                <small>تتطلب رمز دعوة</small>
               </button>
             </div>
 
@@ -1144,7 +1398,7 @@ export default function Channels({ user, onCallContextChange }) {
                 className="channel-cancel"
                 onClick={() => setShowCreate(false)}
               >
-                Cancel
+                إلغاء
               </button>
 
               <button
@@ -1152,7 +1406,7 @@ export default function Channels({ user, onCallContextChange }) {
                 className="channel-submit"
                 disabled={loading || !name.trim()}
               >
-                {loading ? "Creating..." : "Create channel"}
+                {loading ? "جارٍ الإنشاء..." : "إنشاء قناة"}
               </button>
             </div>
           </form>

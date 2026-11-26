@@ -1,0 +1,51 @@
+name: LOLZ CI
+
+on:
+  push:
+    branches:
+      - feature/lolz-stories-security-premium
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  web-build:
+    name: Web production build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build web app
+        run: npm run build
+      - name: Run ESLint
+        run: npm run lint
+
+  edge-function-check:
+    name: PayPal Edge Function type check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Check PayPal Edge Function
+        working-directory: supabase/functions
+        run: deno check paypal-subscription/index.ts
+      - name: Check LOLZ Push Edge Function
+        working-directory: supabase/functions
+        run: deno check lolz-push/index.ts
+      - name: Check LOLZ Admin Edge Function
+        working-directory: supabase/functions
+        run: deno check lolz-admin/index.ts

@@ -1619,3 +1619,168 @@
     overflow: hidden !important;
   }
 }
+
+.groups-report-message,
+.channel-report-post {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: #a0a0ad;
+  font-size: 11px;
+  cursor: pointer;
+}
+.groups-report-message:hover,
+.channel-report-post:hover {
+  color: #dc5364;
+  text-decoration: underline;
+}
+
+
+/* Group photo/video attachments */
+.groups-composer .groups-attach-button {
+  width: 43px;
+  height: 43px;
+  border: 1px solid var(--g-border);
+  border-radius: 14px;
+  background: var(--g-background);
+  color: var(--g-accent);
+  box-shadow: none;
+}
+
+.groups-composer .groups-attach-button:hover:not(:disabled) {
+  background: var(--g-soft);
+  color: var(--g-accent);
+  box-shadow: none;
+}
+
+.groups-media-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 8px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--g-border);
+  border-radius: 14px;
+  background: var(--g-surface);
+}
+
+.groups-media-preview-file {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.groups-media-preview-file img,
+.groups-media-preview-file video {
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #111;
+}
+
+.groups-media-preview-file > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.groups-media-preview-file strong {
+  max-width: min(60vw, 340px);
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.groups-media-preview-file small {
+  color: var(--g-muted);
+  font-size: 10px;
+}
+
+.groups-media-preview > button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: rgb(220 53 69 / 10%);
+  color: #dc3545;
+  cursor: pointer;
+}
+
+.groups-media-preview > button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.groups-media-uploading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  color: var(--g-accent);
+  font-size: 11px;
+}
+
+.groups-media-message {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(62vw, 430px);
+}
+
+.groups-media-message img,
+.groups-media-message video {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  border-radius: 12px;
+  object-fit: contain;
+  background: #090909;
+}
+
+.groups-media-message p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.groups-recording-indicator {
+  flex-wrap: wrap;
+}
+
+.groups-recording-indicator > span:last-child {
+  margin-inline-start: auto;
+  color: var(--g-muted);
+  font-size: 10px;
+}
+
+@media (max-width: 600px) {
+  .groups-composer {
+    gap: 6px;
+    padding-inline: 8px;
+  }
+
+  .groups-composer .groups-attach-button,
+  .groups-composer .groups-voice-button,
+  .groups-composer > button[type="submit"] {
+    width: 41px;
+    height: 41px;
+    border-radius: 13px;
+  }
+
+  .groups-media-message {
+    max-width: min(76vw, 360px);
+  }
+}

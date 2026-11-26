@@ -1,0 +1,1247 @@
+/* LOLZ — mobile-first Instagram experience */
+:root {
+  --lolz-mobile-nav-height: 64px;
+  --lolz-mobile-topbar-height: 58px;
+}
+
+@media (max-width: 768px) {
+  html, body, #root {
+    min-height: 100%;
+    width: 100%;
+  }
+
+  html, body {
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
+
+  .app-shell {
+    width: 100%;
+    min-height: 100dvh;
+    overflow-x: clip;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .main-area {
+    width: 100%;
+    min-width: 0;
+    min-height: 100dvh;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .topbar.ig-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 110;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: var(--lolz-mobile-topbar-height);
+    padding: max(7px, env(safe-area-inset-top)) 10px 7px;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg) 94%, transparent);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+  }
+
+  .ig-topbar .mobile-brand {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    font-size: 18px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .ig-topbar .brand-mark {
+    width: 29px;
+    height: 29px;
+  }
+
+  .ig-topbar .topbar-search {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    margin: 0;
+  }
+
+  .ig-topbar .topbar-search input {
+    width: 100%;
+    min-width: 0;
+    min-height: 37px;
+    padding-inline: 11px;
+    font-size: 12px;
+  }
+
+  .ig-topbar-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 1px;
+    margin-inline-start: 0;
+  }
+
+  .ig-topbar-actions button,
+  .ig-topbar .top-profile {
+    width: 37px;
+    height: 40px;
+    flex: 0 0 37px;
+    border-radius: 50%;
+  }
+
+  .ig-topbar-actions svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .ig-topbar .top-profile {
+    display: none;
+  }
+
+  .page-content {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    padding: 10px 0 calc(var(--lolz-mobile-nav-height) + 18px + env(safe-area-inset-bottom));
+  }
+
+  .other-page,
+  .people-page,
+  .profile-page,
+  .premium-page,
+  .notifications-page {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .other-page > h1,
+  .people-header h1,
+  .notifications-heading h1 {
+    font-size: clamp(20px, 5.6vw, 25px);
+  }
+
+  .app-shell button,
+  .app-shell a {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  .app-shell button {
+    min-height: 40px;
+  }
+
+  /* Instagram-style fixed bottom navigation */
+  .os-mobile-nav {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    gap: 2px;
+    width: 100%;
+    min-height: var(--lolz-mobile-nav-height);
+    padding: 5px 5px max(5px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg) 95%, transparent);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+  }
+
+  .os-mobile-nav .os-link {
+    display: flex;
+    flex: 1 1 0;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+    max-width: 72px;
+    min-height: 46px;
+    padding: 0;
+    border-radius: 13px;
+    color: var(--muted);
+  }
+
+  .os-mobile-nav .os-link span { display: none; }
+  .os-mobile-nav .os-link svg { width: 23px; height: 23px; }
+  .os-mobile-nav .os-link.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .os-mobile-more-panel {
+    position: fixed;
+    inset-inline: 10px;
+    inset-block-end: calc(var(--lolz-mobile-nav-height) + 9px + env(safe-area-inset-bottom));
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    max-height: min(70dvh, 560px);
+    padding: 9px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--panel);
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+  }
+
+  .os-mobile-more-panel .os-link {
+    justify-content: flex-start;
+    min-height: 46px;
+    padding-inline: 13px;
+  }
+
+  /* Home feed: edge-to-edge stories and posts */
+  .ig-home {
+    display: block;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .ig-home-column { width: 100%; min-width: 0; }
+  .ig-home-sidebar { display: none !important; }
+
+  .stories-section {
+    margin: 0 0 10px;
+    padding: 11px 13px 7px;
+    border-inline: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .stories-list {
+    display: flex;
+    gap: 13px;
+    padding: 6px 1px 9px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .stories-list::-webkit-scrollbar { display: none; }
+  .story-item { flex: 0 0 64px; scroll-snap-align: start; }
+  .story-ring { width: 59px; height: 59px; }
+
+  .composer-card {
+    margin: 0 0 10px;
+    padding: 12px 13px;
+    border-inline: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .composer-top { align-items: flex-start; gap: 9px; }
+  .composer-top textarea { min-height: 42px; max-height: 120px; resize: vertical; }
+  .composer-bottom { gap: 8px; }
+  .feed-section > .section-heading { padding-inline: 13px; }
+  .posts-list { gap: 9px; }
+
+  .post-card {
+    margin: 0;
+    padding: 12px 13px;
+    border-inline: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .post-image { margin-inline: -13px; }
+  .post-image img,
+  .post-image video {
+    width: 100%;
+    max-height: min(72dvh, 720px);
+    object-fit: contain;
+  }
+
+  .post-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 3px;
+  }
+
+  .post-actions button {
+    min-width: 42px;
+    min-height: 42px;
+    justify-content: center;
+  }
+
+  /* Explore, people and saved content */
+  .people-page { padding: 8px 12px 14px; }
+  .people-header { gap: 10px; }
+  .people-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .people-list .person-card {
+    min-width: 0;
+    padding: 12px 9px;
+    border-radius: 14px;
+  }
+
+  .people-list .person-card button { min-height: 40px; }
+  .other-page:not(.messages-page) > .posts-list { gap: 10px; }
+
+  /* Profile */
+  .profile-page {
+    width: 100%;
+    margin: 0;
+    border-inline: 0;
+    border-radius: 0;
+  }
+
+  .profile-cover { min-height: 126px; }
+  .profile-main { padding-inline: 14px; }
+  .profile-avatar-wrap { margin-top: -43px; }
+  .profile-avatar-wrap .avatar-profile { width: 92px; height: 92px; }
+  .profile-stats {
+    display: flex;
+    justify-content: space-around;
+    gap: 8px;
+    padding-block: 14px;
+  }
+
+  .profile-stats > div { min-width: 0; text-align: center; }
+  .profile-stats strong { font-size: 17px; }
+  .profile-page > .posts-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px;
+    padding: 0 2px 2px;
+  }
+
+  .profile-page > .posts-list .post-card {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .profile-page > .posts-list .post-header,
+  .profile-page > .posts-list .post-content,
+  .profile-page > .posts-list .post-actions,
+  .profile-page > .posts-list .post-stats {
+    display: none;
+  }
+
+  .profile-page > .posts-list .post-image { margin: 0; }
+  .profile-page > .posts-list .post-image img { aspect-ratio: 1 / 1; object-fit: cover; }
+
+  /* Notifications */
+  .notifications-heading {
+    margin: 0 11px 11px;
+    padding: 13px;
+    border-radius: 14px;
+  }
+
+  .notifications-list { gap: 8px; padding-inline: 10px; }
+  .notification-item { min-height: 66px; padding: 10px; border-radius: 13px; }
+  .notification-item button { flex: 0 0 auto; }
+
+  /* Direct messages inbox */
+  .ig-dm-page:not(.conversation-open) {
+    width: 100%;
+    max-width: none;
+    padding: 0;
+  }
+
+  .ig-dm-layout {
+    display: block;
+    width: 100%;
+    height: calc(100dvh - var(--lolz-mobile-topbar-height) - var(--lolz-mobile-nav-height) - env(safe-area-inset-bottom));
+    min-height: 420px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .ig-dm-inbox { width: 100%; height: 100%; border: 0; }
+  .ig-dm-chat { display: none; }
+
+  .ig-dm-inbox-top { min-height: 65px; padding: 10px 14px; }
+  .ig-dm-account strong { font-size: 17px; }
+  .ig-dm-search { min-height: 42px; margin: 11px 13px 7px; }
+  .ig-dm-threads { padding: 3px 7px 12px; }
+  .ig-dm-thread { min-height: 72px; padding: 9px 10px; }
+  .ig-dm-thread-avatar,
+  .ig-dm-thread-avatar .avatar { width: 51px !important; height: 51px !important; flex-basis: 51px; }
+
+  /* Direct chat: true edge-to-edge screen with keyboard-safe composer */
+  .app-shell:has(.ig-dm-page.conversation-open) .ig-dm-page.conversation-open {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 12000 !important;
+    display: block !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: var(--panel) !important;
+  }
+
+  .ig-dm-page.conversation-open .ig-dm-layout {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .ig-dm-page.conversation-open .ig-dm-inbox { display: none; }
+  .ig-dm-page.conversation-open .ig-dm-chat {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .ig-dm-page.conversation-open .ig-dm-chat-header {
+    flex: 0 0 auto;
+    min-height: 64px;
+    padding: max(8px, env(safe-area-inset-top)) 9px 8px;
+  }
+
+  .ig-dm-page.conversation-open .ig-dm-message-feed {
+    flex: 1 1 0;
+    min-height: 0;
+    padding: 14px 10px 10px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ig-dm-page.conversation-open .ig-dm-composer {
+    flex: 0 0 auto;
+    margin: 7px 8px max(5px, env(safe-area-inset-bottom));
+  }
+
+  .ig-dm-page.conversation-open .ig-dm-upload-hint {
+    margin-bottom: max(6px, env(safe-area-inset-bottom));
+  }
+
+  .app-shell:has(.ig-dm-page.conversation-open) .os-mobile-nav { display: none !important; }
+
+  /* Groups list is one screen; opening a group replaces it with the chat */
+  .groups-outer-page {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - var(--lolz-mobile-topbar-height) - var(--lolz-mobile-nav-height));
+    min-height: 0;
+    padding: 0;
+  }
+
+  .groups-page {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .groups-top-heading {
+    flex: 0 0 auto;
+    min-height: 58px;
+    margin: 0;
+    padding: 7px 13px;
+  }
+
+  .groups-top-heading h1 { font-size: 20px; }
+  .groups-workspace,
+  .groups-workspace:not(.show-info) {
+    display: block !important;
+    flex: 1 1 0;
+    width: 100%;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: var(--panel);
+  }
+
+  .groups-sidebar {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  .groups-chat { display: none; }
+
+  .groups-page.group-chat-open {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 12000 !important;
+    display: block !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: var(--bg) !important;
+    color: var(--text) !important;
+  }
+
+  .groups-page.group-chat-open .groups-top-heading,
+  .groups-page.group-chat-open .groups-sidebar,
+  .groups-page.group-chat-open .groups-info { display: none !important; }
+
+  .groups-page.group-chat-open .groups-workspace {
+    position: absolute !important;
+    inset: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: var(--bg) !important;
+  }
+
+  .groups-page.group-chat-open .groups-chat {
+    position: absolute !important;
+    inset: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    background: var(--bg) !important;
+  }
+
+  .groups-page.group-chat-open .groups-chat-header {
+    flex: 0 0 auto;
+    min-height: 64px;
+    padding: max(9px, env(safe-area-inset-top)) 11px 9px;
+    background: var(--panel);
+  }
+
+  .groups-page.group-chat-open .groups-message-history {
+    flex: 1 1 0;
+    min-height: 0;
+    padding: 13px 10px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .groups-page.group-chat-open .groups-composer {
+    flex: 0 0 auto;
+    gap: 7px;
+    padding: 8px 9px max(9px, env(safe-area-inset-bottom));
+  }
+
+  .app-shell:has(.groups-page.group-chat-open) .os-mobile-nav { display: none !important; }
+
+  /* Channels list and channel conversation */
+  .channels-page {
+    position: relative;
+    display: block !important;
+    width: 100%;
+    height: calc(100dvh - var(--lolz-mobile-topbar-height) - var(--lolz-mobile-nav-height));
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: var(--panel);
+  }
+
+  .channels-sidebar {
+    display: flex !important;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  .channels-main { display: none; }
+
+  .channels-page.channel-chat-open {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 12000 !important;
+    display: block !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: var(--bg) !important;
+  }
+
+  .channels-page.channel-chat-open .channels-sidebar { display: none !important; }
+
+  .channels-page.channel-chat-open .channels-main {
+    position: absolute !important;
+    inset: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: var(--bg) !important;
+  }
+
+  .channels-page.channel-chat-open .channel-chat-header {
+    flex: 0 0 auto;
+    min-height: 64px;
+    padding: max(8px, env(safe-area-inset-top)) 11px 8px;
+    background: var(--panel);
+  }
+
+  .channels-page.channel-chat-open .channel-posts {
+    flex: 1 1 0;
+    min-height: 0;
+    padding: 13px 10px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .channels-page.channel-chat-open .channel-post {
+    gap: 9px;
+    margin-bottom: 10px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .channels-page.channel-chat-open .channel-composer-area {
+    flex: 0 0 auto;
+    padding: 8px 9px max(9px, env(safe-area-inset-bottom));
+    background: var(--panel);
+  }
+
+  .app-shell:has(.channels-page.channel-chat-open) .os-mobile-nav { display: none !important; }
+
+  /* Reels-like LOLZ video feed: full-height vertical swipe */
+  .page-content:has(.lolz-page) {
+    height: calc(100dvh - var(--lolz-mobile-topbar-height));
+    padding: 0 0 var(--lolz-mobile-nav-height);
+    overflow: hidden;
+  }
+
+  .lolz-page {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: calc(100dvh - var(--lolz-mobile-topbar-height) - var(--lolz-mobile-nav-height));
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .lolz-header {
+    display: flex;
+    flex: 0 0 48px;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    gap: 8px;
+    margin: 0;
+    padding: 5px 12px;
+    border: 0;
+    border-radius: 0;
+    background: var(--bg);
+  }
+
+  .lolz-heading-copy .lolz-kicker,
+  .lolz-heading-copy p { display: none; }
+  .lolz-heading-copy h1 { margin: 0; font-size: 21px; }
+  .lolz-create-button { min-height: 38px; padding-inline: 12px; border-radius: 999px; }
+
+  .lolz-feed-heading,
+  .lolz-feed-hint { display: none !important; }
+
+  .lolz-feed {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    min-height: 0;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scroll-snap-type: y mandatory;
+    scroll-padding: 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .lolz-feed::-webkit-scrollbar { display: none; }
+
+  .lolz-video-card {
+    position: relative;
+    display: grid;
+    flex: 0 0 100%;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+
+  .lolz-video-stage {
+    grid-row: 1;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    border-radius: 0;
+  }
+
+  .lolz-video-element {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+    object-fit: cover;
+  }
+
+  .lolz-video-actions { inset-inline-start: 9px; gap: 12px; }
+  .lolz-video-bottom { padding: 42px 13px 16px; }
+  .lolz-side-panel {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 5;
+    display: none;
+    width: 100%;
+    max-height: 72%;
+    min-height: 0;
+    padding: 15px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    background: var(--panel);
+  }
+
+  .lolz-side-panel.comments-open { display: flex; }
+  .lolz-mobile-close { display: grid; }
+
+  /* Settings, premium, dialogs and touch feedback */
+  .other-page > section[dir] {
+    width: calc(100% - 20px);
+    max-width: none !important;
+    margin-inline: 10px;
+    padding: 17px 14px !important;
+  }
+
+  .premium-page { padding: 10px 12px; }
+  .premium-support,
+  .premium-subscription-card { align-items: stretch; gap: 12px; }
+  .premium-support-btn,
+  .premium-cancel-btn { width: 100%; min-height: 44px; }
+  .premium-modal-overlay { padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); }
+
+  /* Calls always appear above chats, groups and channels */
+  .app-shell:has(.lolz-call-dock .lolz-incoming-call) .lolz-call-dock,
+  .app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-dock {
+    z-index: 20000 !important;
+  }
+
+  .app-shell:has(.lolz-call-dock .lolz-incoming-call) .lolz-calls,
+  .app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-calls {
+    min-height: 100dvh;
+    padding: max(16px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom));
+  }
+
+  .app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-active-panel {
+    width: 100%;
+    min-height: calc(100dvh - 30px);
+    padding: 14px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  .app-shell:has(.lolz-call-dock .lolz-call-active-panel:not(.is-minimized)) .lolz-call-active-panel video {
+    max-height: 56dvh !important;
+    border-radius: 15px !important;
+  }
+
+  .app-shell:has(.lolz-call-dock .lolz-incoming-call) .lolz-incoming-call {
+    width: 100%;
+    max-width: 420px;
+    min-height: 360px;
+    margin: auto !important;
+    padding: 28px 20px !important;
+  }
+
+  .lolz-call-controls { gap: 10px !important; }
+}
+
+/* Compact phones */
+@media (max-width: 390px) {
+  .ig-topbar .mobile-brand { font-size: 16px; }
+  .ig-topbar .brand-mark { width: 26px; height: 26px; }
+  .ig-topbar-actions button { width: 34px; flex-basis: 34px; }
+  .ig-topbar .topbar-search input { font-size: 11px; }
+  .os-mobile-nav .os-link svg { width: 21px; height: 21px; }
+  .ig-dm-chat-actions .ig-dm-icon-button { width: 33px; flex-basis: 33px; }
+  .groups-top-heading h1 { font-size: 18px; }
+  .lolz-create-button { min-height: 36px; padding-inline: 9px; font-size: 11px; }
+  .lolz-video-actions { inset-inline-start: 7px; }
+}
+
+/* Tablet refinements */
+@media (min-width: 769px) and (max-width: 1050px) {
+  .main-area { margin-inline-start: 86px; margin-inline-end: 0; }
+  [dir="rtl"] .main-area { margin-inline-start: 0; margin-inline-end: 86px; }
+  .os-sidebar { width: 76px; padding-inline: 9px; }
+  .os-brand-name,
+  .os-user-name,
+  .os-navigation-view .os-link span,
+  .os-sidebar-bottom .os-link span { display: none; }
+  .os-brand { justify-content: center; padding-inline: 0; }
+  .os-link { justify-content: center; padding-inline: 0; }
+  .os-sidebar .os-user { justify-content: center; padding-inline: 0; }
+  .os-sidebar .os-avatar { width: 37px; height: 37px; }
+}
+
+
+/* =========================================================
+   LOLZ — Instagram menus, post actions and Reels action rail
+========================================================= */
+
+/* Desktop sidebar and popover menus */
+.os-sidebar {
+  border-inline-end: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.os-brand,
+.os-user,
+.os-link {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.os-link {
+  min-height: 48px;
+  border-radius: 12px;
+}
+
+.os-link.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.os-more-menu {
+  z-index: 1200;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: 0 16px 55px rgba(0,0,0,.24);
+  animation: lolz-menu-in .16s ease-out;
+}
+
+.os-more-menu .os-link {
+  min-height: 43px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.os-more-menu .os-logout {
+  margin-top: 5px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 10px 10px;
+}
+
+.os-more-backdrop {
+  display: none;
+}
+
+@keyframes lolz-menu-in {
+  from { opacity: 0; transform: translateY(7px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Instagram feed action placement: heart, comment, save */
+.post-actions {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding-top: 8px;
+}
+
+.post-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+}
+
+.post-actions button:hover {
+  background: var(--panel-2);
+}
+
+.post-actions button > span:not(.post-action-icon) {
+  display: none;
+}
+
+.post-action-icon {
+  display: grid;
+  place-items: center;
+}
+
+.post-action-icon svg {
+  display: block;
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+}
+
+.post-actions button.liked {
+  color: #ff486d;
+}
+
+.post-actions button.liked .post-action-icon svg {
+  fill: #ff486d;
+  stroke: #ff486d;
+}
+
+.post-actions button.saved { color: var(--accent); }
+.post-actions button:last-child { margin-inline-start: auto; }
+
+.post-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 36px;
+}
+
+.post-stats button {
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+/* Subtle post overflow menu button */
+.post-menu {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  min-height: 38px !important;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.post-menu:hover { background: var(--panel-2); }
+
+/* Reels: place reactions in the familiar right-side lower rail */
+@media (max-width: 768px) {
+  .lolz-video-actions {
+    top: auto !important;
+    right: 12px !important;
+    left: auto !important;
+    bottom: 116px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 17px;
+    transform: none !important;
+  }
+
+  .lolz-video-actions button {
+    min-width: 48px;
+    min-height: 48px;
+    gap: 3px;
+    color: #fff;
+    font-size: 11px;
+    text-shadow: 0 2px 6px rgba(0,0,0,.7);
+  }
+
+  .lolz-action-icon {
+    width: 47px;
+    height: 47px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(15,15,20,.20);
+    backdrop-filter: blur(7px);
+    -webkit-backdrop-filter: blur(7px);
+  }
+
+  .lolz-video-actions button.is-liked { color: #ff456d; }
+  .lolz-video-actions button.is-active { color: #b7afff; }
+  .lolz-video-bottom { padding-inline-start: 72px !important; }
+  .lolz-mobile-close { min-height: 40px; }
+
+  /* More opens as a proper bottom sheet, not a floating list */
+  .os-more-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 1090 !important;
+    display: block !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: rgba(0,0,0,.48) !important;
+    backdrop-filter: blur(3px);
+  }
+
+  .os-mobile-more-panel {
+    position: fixed !important;
+    inset-inline: 0 !important;
+    inset-block-end: 0 !important;
+    z-index: 1100 !important;
+    display: flex !important;
+    flex-direction: column;
+    max-height: min(78dvh, 640px) !important;
+    padding: 8px 14px max(14px, env(safe-area-inset-bottom)) !important;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-bottom: 0;
+    border-radius: 23px 23px 0 0;
+    background: var(--panel);
+    box-shadow: 0 -18px 60px rgba(0,0,0,.24);
+    animation: lolz-sheet-in .2s ease-out;
+  }
+
+  .os-mobile-more-header {
+    position: sticky;
+    top: -8px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 50px;
+    margin: -8px -2px 8px;
+    padding: 5px 2px 8px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+  }
+
+  .os-mobile-more-header::before {
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    width: 38px;
+    height: 4px;
+    border-radius: 99px;
+    background: var(--muted-2);
+    content: "";
+    transform: translateX(-50%);
+  }
+
+  .os-mobile-more-header strong {
+    padding-top: 8px;
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .os-mobile-more-header button {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    margin-top: 6px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--panel-2);
+    color: var(--text);
+  }
+
+  .os-mobile-more-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 7px;
+    padding: 3px 0 12px;
+  }
+
+  .os-mobile-more-list .os-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    min-height: 49px;
+    padding: 0 11px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--panel-2);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 650;
+  }
+
+  .os-mobile-more-list .os-link.active {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .os-mobile-more-list .os-link svg {
+    width: 19px;
+    height: 19px;
+    flex: 0 0 19px;
+  }
+
+  .os-mobile-logout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 45px;
+    margin-top: 4px;
+    border: 1px solid rgba(229,72,97,.20);
+    border-radius: 13px;
+    background: rgba(229,72,97,.08);
+    color: #e54861;
+    font-size: 13px;
+    font-weight: 750;
+  }
+
+  @keyframes lolz-sheet-in {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+}
+
+@media (max-width: 390px) {
+  .os-mobile-more-list { gap: 6px; }
+  .os-mobile-more-list .os-link { gap: 8px; padding-inline: 9px; font-size: 11px; }
+  .lolz-video-actions { right: 8px !important; bottom: 105px !important; }
+  .lolz-action-icon { width: 43px; height: 43px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .os-more-menu,
+  .os-mobile-more-panel { animation: none !important; }
+}
+
+/* The global Calls instance powers the DM header actions, not a floating
+   duplicate. Active and incoming calls remain visible across the app. */
+.app-shell .lolz-call-dock:has(.lolz-private-call-actions):not(:has(.lolz-incoming-call)):not(:has(.lolz-call-active-panel)):not(:has(.lolz-call-connecting)):not(:has(.lolz-call-error)) {
+  display: none !important;
+}
+
+/* Post overflow menu — native Instagram-like popover */
+.post-menu-wrap {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.post-menu {
+  font-size: 19px;
+  font-weight: 850;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.post-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-end: 0;
+  z-index: 1600;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: min(220px, calc(100vw - 42px));
+  padding: 7px;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  background: var(--panel);
+  box-shadow: 0 16px 48px rgba(0,0,0,.22);
+  animation: lolz-menu-in .14s ease-out;
+}
+
+.post-dropdown-menu button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 43px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  text-align: start;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.post-dropdown-menu button:hover,
+.post-dropdown-menu button:focus-visible {
+  outline: 0;
+  background: var(--panel-2);
+}
+
+.post-menu-wrap:focus-within .post-menu {
+  background: var(--panel-2);
+}
+
+
+/* Keep the hidden call monitor mounted for incoming-call checks,
+   but remove its empty floating shell from unrelated pages. */
+.app-shell .lolz-call-dock:has(.lolz-calls:empty) {
+  display: none !important;
+}

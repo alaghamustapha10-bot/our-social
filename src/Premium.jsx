@@ -20,6 +20,7 @@ export default function Premium({
   isArabic = false,
   isPremium = false,
   subscriptionEnd = null,
+  canCancelSubscription = false,
   onStartCheckout,
   onCancelSubscription,
   onSupport,
@@ -28,6 +29,13 @@ export default function Premium({
   const [notice, setNotice] = useState("");
 
   const t = (en, ar) => (isArabic ? ar : en);
+  const formattedSubscriptionEnd = subscriptionEnd
+    ? new Date(subscriptionEnd).toLocaleDateString(isArabic ? "ar" : "en", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : null;
 
   const features = [
     {
@@ -229,10 +237,10 @@ export default function Premium({
           <div className="premium-subscription-info">
             <h3>{t("Your subscription", "اشتراكك")}</h3>
             <p>
-              {subscriptionEnd
+              {formattedSubscriptionEnd
                 ? t(
-                    `Your Premium access is scheduled until ${subscriptionEnd}.`,
-                    `ستستمر مزايا Premium حتى ${subscriptionEnd}.`
+                    `Your Premium access is scheduled until ${formattedSubscriptionEnd}.`,
+                    `ستستمر مزايا Premium حتى ${formattedSubscriptionEnd}.`
                   )
                 : t(
                     "Your Premium subscription is active.",
@@ -241,12 +249,14 @@ export default function Premium({
             </p>
           </div>
 
-          <button
-            className="premium-cancel-btn"
-            onClick={() => setModal("cancel")}
-          >
-            {t("Cancel subscription", "إلغاء الاشتراك")}
-          </button>
+          {canCancelSubscription && (
+            <button
+              className="premium-cancel-btn"
+              onClick={() => setModal("cancel")}
+            >
+              {t("Cancel subscription", "إلغاء الاشتراك")}
+            </button>
+          )}
         </section>
       )}
 
@@ -376,8 +386,8 @@ export default function Premium({
 
                 <small>
                   {t(
-                    "You will not be charged by this preview. Secure checkout must be connected first.",
-                    "لن يتم خصم أي مبلغ في هذه المعاينة. يجب ربط الدفع الآمن أولاً."
+                    "You will be redirected to PayPal's secure checkout. Premium activates after PayPal confirms your subscription.",
+                    "سيتم تحويلك إلى صفحة الدفع الآمنة في PayPal. يتم تفعيل Premium بعد تأكيد الاشتراك من PayPal."
                   )}
                 </small>
               </>

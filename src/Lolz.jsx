@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Play,
   Heart,
@@ -11,9 +11,13 @@ import {
   Video,
   Volume2,
   VolumeX,
+  Flag,
+  Eye,
 } from "lucide-react";
 import { supabase } from "./supabase";
+import { dispatchLolzPush } from "./pushNotifications";
 import "./Lolz.css";
+import VerifiedBadge from "./VerifiedBadge";
 
 function formatDate(date) {
   return new Date(date).toLocaleDateString(
@@ -22,9 +26,10 @@ function formatDate(date) {
   );
 }
 
-export default function Lolz({ user }) {
+export default function Lolz({ user, blockedUserIds = [], onReport }) {
   const fileRef = useRef(null);
   const videoRefs = useRef({});
+  const viewedVideosRef = useRef(new Set());
   const feedRef = useRef(null);
 
   const [videos, setVideos] = useState([]);
@@ -41,9 +46,52 @@ export default function Lolz({ user }) {
   const [pausedVideoId, setPausedVideoId] = useState(null);
   const [uploadOpen, setUploadOpen] = useState(false);
 
-  useEffect(() => {
-    loadVideos();
-  }, []);
+  const markVideoViewed = useCallback(async (videoId, ownerId) => {
+    if (
+      !user?.id ||
+      !videoId ||
+      !ownerId ||
+      ownerId === user.id ||
+      viewedVideosRef.current.has(String(videoId))
+    ) {
+      return;
+    }
+
+    const normalizedId = String(videoId);
+    viewedVideosRef.current.add(normalizedId);
+
+    const { data, error } = await supabase
+      .from("lolz_video_views")
+      .upsert(
+        {
+          video_id: normalizedId,
+          viewer_id: user.id,
+          viewed_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "video_id,viewer_id",
+          ignoreDuplicates: true,
+        }
+      )
+      .select("video_id")
+      .maybeSingle();
+
+    if (error) {
+      viewedVideosRef.current.delete(normalizedId);
+      console.warn("Could not record LOLZ video view:", error.message);
+      return;
+    }
+
+    if (data) {
+      setVideos((current) =>
+        current.map((item) =>
+          String(item.id) === normalizedId
+            ? { ...item, view_count: (item.view_count || 0) + 1 }
+            : item
+        )
+      );
+    }
+  }, [user?.id]);
 
   // تشغيل الفيديو الظاهر وإيقاف بقية الفيديوهات
   useEffect(() => {
@@ -58,6 +106,7 @@ export default function Lolz({ user }) {
 
           if (entry.isIntersecting && entry.intersectionRatio >= 0.65) {
             video.muted = !soundOn;
+            void markVideoViewed(video.dataset.videoId, video.dataset.ownerId);
             video.play().catch(() => {});
           } else {
             video.pause();
@@ -76,9 +125,9 @@ export default function Lolz({ user }) {
       observer.disconnect();
       elements.forEach((video) => video.pause());
     };
-  }, [videos, soundOn]);
+  }, [videos, soundOn, markVideoViewed]);
 
-  async function loadVideos() {
+  const loadVideos = useCallback(async () => {
     setLoading(true);
     setNotice("");
 
@@ -93,25 +142,26 @@ export default function Lolz({ user }) {
       return;
     }
 
-    const videoRows = data || [];
+    const videoRows = (data || []).filter((video) => !blockedUserIds.includes(video.user_id));
     const userIds = [...new Set(videoRows.map((v) => v.user_id))];
     const videoIds = videoRows.map((v) => v.id);
 
     let profiles = [];
     let likeRows = [];
     let commentRows = [];
+    let viewCountMap = {};
 
     if (userIds.length) {
       const result = await supabase
         .from("profiles")
-        .select("id, username, display_name, full_name, avatar_url")
+        .select("id, username, display_name, full_name, avatar_url, is_verified")
         .in("id", userIds);
 
       profiles = result.data || [];
     }
 
     if (videoIds.length) {
-      const [likesResult, commentsResult] = await Promise.all([
+      const [likesResult, commentsResult, viewCountsResult] = await Promise.all([
         supabase
           .from("lolz_likes")
           .select("*")
@@ -122,10 +172,17 @@ export default function Lolz({ user }) {
           .select("*")
           .in("video_id", videoIds)
           .order("created_at", { ascending: true }),
+
+        supabase.rpc("get_lolz_video_view_counts", {
+          p_video_ids: videoIds.map(String),
+        }),
       ]);
 
       likeRows = likesResult.data || [];
-      commentRows = commentsResult.data || [];
+      commentRows = (commentsResult.data || []).filter((comment) => !blockedUserIds.includes(comment.user_id));
+      viewCountMap = Object.fromEntries(
+        (viewCountsResult.data || []).map((item) => [String(item.video_id), Number(item.view_count || 0)])
+      );
     }
 
     const commentUserIds = [
@@ -137,7 +194,7 @@ export default function Lolz({ user }) {
     if (commentUserIds.length) {
       const result = await supabase
         .from("profiles")
-        .select("id, username, display_name, full_name, avatar_url")
+        .select("id, username, display_name, full_name, avatar_url, is_verified")
         .in("id", commentUserIds);
 
       commentProfiles = result.data || [];
@@ -155,6 +212,7 @@ export default function Lolz({ user }) {
       videoRows.map((video) => ({
         ...video,
         profile: profileMap[video.user_id] || null,
+        view_count: viewCountMap[String(video.id)] || 0,
       }))
     );
 
@@ -189,7 +247,11 @@ export default function Lolz({ user }) {
 
     setComments(commentMap);
     setLoading(false);
-  }
+  }, [blockedUserIds, user?.id]);
+
+  useEffect(() => {
+    void loadVideos();
+  }, [loadVideos]);
 
   async function publishVideo(e) {
     e.preventDefault();
@@ -302,6 +364,15 @@ export default function Lolz({ user }) {
     if (result.error) {
       setNotice("تعذر تحديث الإعجاب.");
       await loadVideos();
+      return;
+    }
+
+    if (!current.liked) {
+      void dispatchLolzPush(supabase, {
+        action: "social_event",
+        type: "lolz_like",
+        video_id: videoId,
+      });
     }
   }
 
@@ -325,6 +396,12 @@ export default function Lolz({ user }) {
       setNotice("تعذر نشر التعليق: " + error.message);
       return;
     }
+
+    void dispatchLolzPush(supabase, {
+      action: "social_event",
+      type: "lolz_comment",
+      video_id: videoId,
+    });
 
     setCommentText((prev) => ({
       ...prev,
@@ -386,7 +463,7 @@ export default function Lolz({ user }) {
     <main className="lolz-page">
       <header className="lolz-header">
         <div className="lolz-heading-copy">
-          <span className="lolz-kicker">OUR SOCIAL · SHORT VIDEOS</span>
+          <span className="lolz-kicker">LOLZ · VIDEO FEED</span>
           <h1>LOLZ<span>✦</span></h1>
           <p>لحظات قصيرة، ومجتمع لا يتوقف.</p>
         </div>
@@ -558,6 +635,8 @@ export default function Lolz({ user }) {
                       }
                     }}
                     className="lolz-video-element"
+                    data-video-id={video.id}
+                    data-owner-id={video.user_id}
                     src={video.video_url}
                     playsInline
                     loop
@@ -580,6 +659,23 @@ export default function Lolz({ user }) {
                   <div className="lolz-video-top">
                     <span className="lolz-label">✦ LOLZ</span>
 
+                    {video.user_id !== user?.id && (
+                      <button
+                        className="lolz-report-button"
+                        type="button"
+                        onClick={() =>
+                          onReport?.({
+                            type: "video",
+                            id: video.id,
+                            targetUserId: video.user_id,
+                          })
+                        }
+                        aria-label="Report video"
+                        title="Report video"
+                      >
+                        <Flag size={17} />
+                      </button>
+                    )}
                     <button
                       className="lolz-sound-button"
                       onClick={toggleSound}
@@ -621,6 +717,12 @@ export default function Lolz({ user }) {
                       </span>
                       <span>{videoComments.length}</span>
                     </button>
+                    <div className="lolz-view-count" aria-label="Views">
+                      <span className="lolz-action-icon">
+                        <Eye size={23} />
+                      </span>
+                      <span>{video.view_count || 0}</span>
+                    </div>
                   </div>
 
                   <div className="lolz-video-bottom">
@@ -634,7 +736,7 @@ export default function Lolz({ user }) {
                       )}
 
                       <div className="lolz-user-details">
-                        <strong>{displayName(profile)}</strong>
+                        <strong>{displayName(profile)} <VerifiedBadge verified={profile?.is_verified} /></strong>
                         <span>
                           {profile?.username
                             ? `@${profile.username}`
@@ -666,7 +768,7 @@ export default function Lolz({ user }) {
                     )}
 
                     <div className="lolz-user-details">
-                      <strong>{displayName(profile)}</strong>
+                      <strong>{displayName(profile)} <VerifiedBadge verified={profile?.is_verified} /></strong>
                       <span>
                         {profile?.username
                           ? `@${profile.username}`
@@ -716,8 +818,23 @@ export default function Lolz({ user }) {
                           )}
 
                           <div className="lolz-comment-content">
-                            <strong>{displayName(comment.profile)}</strong>
+                            <strong>{displayName(comment.profile)} <VerifiedBadge verified={comment.profile?.is_verified} /></strong>
                             <p>{comment.content}</p>
+                            {comment.user_id !== user?.id && (
+                              <button
+                                type="button"
+                                className="lolz-comment-report"
+                                onClick={() =>
+                                  onReport?.({
+                                    type: "comment",
+                                    id: comment.id,
+                                    targetUserId: comment.user_id,
+                                  })
+                                }
+                              >
+                                الإبلاغ عن التعليق
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))
