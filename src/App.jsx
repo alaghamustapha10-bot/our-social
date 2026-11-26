@@ -1950,7 +1950,9 @@ export default function App() {
 
     try {
       event.currentTarget.setPointerCapture(event.pointerId);
-    } catch {}
+    } catch {
+      // Pointer capture is best-effort; continue without it.
+    }
 
     voicePressActiveRef.current = true;
     void startVoiceRecording();
