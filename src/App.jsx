@@ -238,6 +238,8 @@ export default function App() {
   const pushActionHandlerRef = useRef(null);
   const pendingPushActionRef = useRef(null);
   const notificationReloadRef = useRef(null);
+  const [pushGroupTarget, setPushGroupTarget] = useState(null);
+  const [pushChannelTarget, setPushChannelTarget] = useState(null);
 
   useEffect(() => {
     document.documentElement.lang = isArabic ? "ar" : "en";
@@ -2645,12 +2647,21 @@ export default function App() {
     }
 
     if (data.group_id) {
+      setPushGroupTarget(String(data.group_id));
+      setPushChannelTarget(null);
       goTo("groups");
       return;
     }
 
     if (data.channel_id) {
+      setPushChannelTarget(String(data.channel_id));
+      setPushGroupTarget(null);
       goTo("channels");
+      return;
+    }
+
+    if (data.video_id) {
+      goTo("lolz");
       return;
     }
 
@@ -2806,6 +2817,8 @@ export default function App() {
             >
               <Channels
                 user={user}
+                initialChannelId={pushChannelTarget}
+                onInitialChannelOpened={() => setPushChannelTarget(null)}
                 onCallContextChange={handleCallContextChange}
                 onReport={(target) => setModerationTarget(target)}
               />
@@ -2816,6 +2829,8 @@ export default function App() {
             <section className="other-page groups-outer-page">
               <Groups
                 user={user}
+                initialGroupId={pushGroupTarget}
+                onInitialGroupOpened={() => setPushGroupTarget(null)}
                 onCallContextChange={handleCallContextChange}
                 onReport={(target) => setModerationTarget(target)}
               />
