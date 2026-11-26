@@ -17,6 +17,7 @@ import {
   Square,
   Trash2,
   Loader2,
+  Flag,
 } from "lucide-react";
 
 import { supabase } from "./supabase";
@@ -24,7 +25,7 @@ import Calls from "./Calls";
 
 import "./Channels.css";
 
-export default function Channels({ user, onCallContextChange }) {
+export default function Channels({ user, onCallContextChange, onReport }) {
   const [channels, setChannels] = useState([]);
   const [selected, setSelected] = useState(null);
   const [posts, setPosts] = useState([]);
@@ -829,6 +830,22 @@ export default function Channels({ user, onCallContextChange }) {
                       </strong>
 
                       <time>{formatDate(post.created_at)}</time>
+                      {post.sender_id !== user?.id && (
+                        <button
+                          type="button"
+                          className="channel-report-post"
+                          onClick={() =>
+                            onReport?.({
+                              type: "channel_post",
+                              id: post.id,
+                              targetUserId: post.sender_id,
+                            })
+                          }
+                        >
+                          <Flag size={13} />
+                          إبلاغ
+                        </button>
+                      )}
                     </div>
 
                     {post.message_type === "audio" && post.media_url ? (
