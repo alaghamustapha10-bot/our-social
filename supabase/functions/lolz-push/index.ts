@@ -308,17 +308,26 @@ async function createAndSendNotifications(
   let pushesSent = 0;
 
   for (const recipientId of recipients) {
+    const sourceObjectId =
+      data.message_id || data.post_id || data.call_id ||
+      data.group_id || data.channel_id || crypto.randomUUID();
     const row = {
       recipient_id: recipientId,
       actor_id: actorId,
       type,
       data,
+      source_event_key: `${type}:${String(sourceObjectId)}:${recipientId}:${actorId}`,
     };
     const { data: notification, error } = await admin
       .from("notifications")
       .insert(row)
       .select("id")
       .single();
+
+    if (error?.code === "23505") {
+      // The same server event was already recorded and delivered.
+      continue;
+    }
 
     if (error || !notification?.id) {
       console.error("Could not save LOLZ notification:", error);
