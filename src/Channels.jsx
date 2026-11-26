@@ -22,6 +22,7 @@ import {
 
 import { supabase } from "./supabase";
 import Calls from "./Calls";
+import { dispatchLolzPush } from "./pushNotifications";
 
 import "./Channels.css";
 
@@ -447,6 +448,13 @@ export default function Channels({ user, onCallContextChange, onReport }) {
         throw joinError;
       }
 
+      if (!joinError) {
+        void dispatchLolzPush(supabase, {
+          action: "channel_join",
+          channel_id: channel.id,
+        });
+      }
+
       await loadPosts(channel);
     } catch (err) {
       setError(err.message || "تعذر الانضمام إلى القناة.");
@@ -470,6 +478,11 @@ export default function Channels({ user, onCallContextChange, onReport }) {
       );
 
       if (joinError) throw joinError;
+
+      void dispatchLolzPush(supabase, {
+        action: "channel_join",
+        channel_id: String(data),
+      });
 
       setInviteCode("");
       await loadChannels();
@@ -501,16 +514,25 @@ export default function Channels({ user, onCallContextChange, onReport }) {
     setError("");
 
     try {
-      const { error: publishError } = await supabase
+      const { data: newPost, error: publishError } = await supabase
         .from("channel_posts")
         .insert({
           channel_id: selected.id,
           sender_id: user.id,
           content: content.trim(),
           message_type: "text",
-        });
+        })
+        .select("id")
+        .single();
 
       if (publishError) throw publishError;
+
+      if (newPost?.id) {
+        void dispatchLolzPush(supabase, {
+          action: "channel_post",
+          post_id: newPost.id,
+        });
+      }
 
       setContent("");
       await loadPosts(selected, stickToBottom);
@@ -564,7 +586,7 @@ export default function Channels({ user, onCallContextChange, onReport }) {
         throw new Error("تعذر إنشاء رابط الرسالة الصوتية.");
       }
 
-      const { error: publishError } = await supabase
+      const { data: newPost, error: publishError } = await supabase
         .from("channel_posts")
         .insert({
           channel_id: channelAtUpload.id,
@@ -574,9 +596,18 @@ export default function Channels({ user, onCallContextChange, onReport }) {
           media_url: mediaUrl,
           file_name: fileName,
           mime_type: voiceFile.type || "audio/webm",
-        });
+        })
+        .select("id")
+        .single();
 
       if (publishError) throw publishError;
+
+      if (newPost?.id) {
+        void dispatchLolzPush(supabase, {
+          action: "channel_post",
+          post_id: newPost.id,
+        });
+      }
 
       clearVoicePreview();
 
