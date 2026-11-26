@@ -3706,6 +3706,7 @@ export default function App() {
 
       {activeStoryId && (
         <StoryViewer
+          key={activeStoryId}
           stories={stories}
           startStoryId={activeStoryId}
           currentUserId={user.id}
