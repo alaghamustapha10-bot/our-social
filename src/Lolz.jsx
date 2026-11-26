@@ -42,10 +42,6 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
   const [pausedVideoId, setPausedVideoId] = useState(null);
   const [uploadOpen, setUploadOpen] = useState(false);
 
-  useEffect(() => {
-    void loadVideos();
-  }, [loadVideos]);
-
   // تشغيل الفيديو الظاهر وإيقاف بقية الفيديوهات
   useEffect(() => {
     const elements = Object.values(videoRefs.current).filter(Boolean);
@@ -191,6 +187,10 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
     setComments(commentMap);
     setLoading(false);
   }, [blockedUserIds, user?.id]);
+
+  useEffect(() => {
+    void loadVideos();
+  }, [loadVideos]);
 
   async function publishVideo(e) {
     e.preventDefault();
