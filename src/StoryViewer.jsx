@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Eye, Flag, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Flag, Send, Heart, X } from "lucide-react";
 import "./StoryViewer.css";
 
 export default function StoryViewer({
@@ -10,6 +10,7 @@ export default function StoryViewer({
   onClose,
   onView,
   onReport,
+  onReply,
 }) {
   const orderedStories = useMemo(() => {
     const groups = new Map();
@@ -33,6 +34,8 @@ export default function StoryViewer({
   );
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
+  const [replyText, setReplyText] = useState("");
+  const [replyBusy, setReplyBusy] = useState(false);
 
   const story = orderedStories[activeIndex] || null;
 
@@ -161,11 +164,56 @@ export default function StoryViewer({
 
         {story.caption && <p className="lolz-story-caption">{story.caption}</p>}
 
-        {story.user_id === currentUserId && (
+        {story.user_id === currentUserId ? (
           <div className="lolz-story-views">
             <Eye size={16} />
             <span>{story.view_count || 0} {isArabic ? "مشاهدة" : "views"}</span>
           </div>
+        ) : (
+          <form
+            className="lolz-story-reply"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const value = replyText.trim();
+              if (!value || replyBusy) return;
+
+              setReplyBusy(true);
+              try {
+                const sent = await onReply?.(story, value);
+                if (sent !== false) setReplyText("");
+              } finally {
+                setReplyBusy(false);
+              }
+            }}
+          >
+            <button
+              type="button"
+              className="lolz-story-heart"
+              onClick={async () => {
+                if (replyBusy) return;
+                setReplyBusy(true);
+                try {
+                  await onReply?.(story, "❤️");
+                } finally {
+                  setReplyBusy(false);
+                }
+              }}
+              disabled={replyBusy}
+              aria-label={isArabic ? "إرسال إعجاب" : "Send a heart"}
+            >
+              <Heart size={20} />
+            </button>
+            <input
+              value={replyText}
+              onChange={(event) => setReplyText(event.target.value)}
+              placeholder={isArabic ? "الرد على القصة..." : "Reply to story..."}
+              maxLength={500}
+              disabled={replyBusy}
+            />
+            <button type="submit" disabled={!replyText.trim() || replyBusy} aria-label={isArabic ? "إرسال الرد" : "Send reply"}>
+              <Send size={18} />
+            </button>
+          </form>
         )}
 
         <nav className="lolz-story-arrows" aria-label={isArabic ? "التنقل بين القصص" : "Story navigation"}>
