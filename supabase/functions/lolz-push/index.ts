@@ -11,6 +11,7 @@ type PushEvent = {
   type: string;
   actor_name: string;
   data: Record<string, unknown>;
+  message_preview?: string;
   context?: {
     group_name?: string;
     channel_name?: string;
@@ -153,6 +154,39 @@ async function getFcmAccessToken(): Promise<string> {
   return accessTokenCache;
 }
 
+function messagePreviewFor(event: PushEvent, language: string): string {
+  const preview = (event.message_preview || "").replace(/\\s+/g, " ").trim();
+  const type = String(event.data.message_type || "text");
+  const isPlaceholder = /^(photo|image|picture|video|voice message|صورة|فيديو|رسالة صوتية)$/i.test(preview);
+
+  if (type === "image") {
+    return preview && !isPlaceholder
+      ? limitMessagePreview(`📷 ${preview}`)
+      : language === "ar" ? "📷 صورة" : "📷 Photo";
+  }
+
+  if (type === "video") {
+    return preview && !isPlaceholder
+      ? limitMessagePreview(`🎬 ${preview}`)
+      : language === "ar" ? "🎬 فيديو" : "🎬 Video";
+  }
+
+  if (type === "audio") {
+    return language === "ar" ? "🎤 رسالة صوتية" : "🎤 Voice message";
+  }
+
+  return preview
+    ? limitMessagePreview(preview)
+    : language === "ar" ? "رسالة جديدة" : "New message";
+}
+
+function limitMessagePreview(value: string): string {
+  const characters = Array.from(value);
+  return characters.length > 100
+    ? `${characters.slice(0, 99).join("")}…`
+    : value;
+}
+
 function copyFor(event: PushEvent, language: string) {
   const actor = event.actor_name || (language === "ar" ? "شخص ما" : "Someone");
   const group = event.context?.group_name || (language === "ar" ? "المجموعة" : "the group");
@@ -166,9 +200,9 @@ function copyFor(event: PushEvent, language: string) {
       lolz_like: { title: "LOLZ", body: `${actor} liked your video.` },
       lolz_comment: { title: "LOLZ", body: `${actor} commented on your video.` },
       follow: { title: "New follower", body: `${actor} started following you.` },
-      story_reply: { title: "Story reply", body: `${actor} replied to your story.` },
-      message: { title: actor, body: "Sent you a message." },
-      group_message: { title: group, body: `${actor} sent a group message.` },
+      story_reply: { title: actor, body: `Replied to your story: ${messagePreviewFor(event, "en")}` },
+      message: { title: actor, body: messagePreviewFor(event, "en") },
+      group_message: { title: group, body: `${actor}: ${messagePreviewFor(event, "en")}` },
       channel_post: { title: channel, body: `${actor} posted an update.` },
       incoming_call: { title: video ? "Incoming video call" : "Incoming call", body: `${actor} is calling you.` },
       missed_call: { title: "Missed call", body: `You missed a call from ${actor}.` },
@@ -184,9 +218,9 @@ function copyFor(event: PushEvent, language: string) {
     lolz_like: { title: "LOLZ", body: `${actor} أُعجب بفيديو LOLZ الخاص بك.` },
     lolz_comment: { title: "LOLZ", body: `${actor} علّق على فيديو LOLZ الخاص بك.` },
     follow: { title: "متابع جديد", body: `${actor} بدأ بمتابعتك.` },
-    story_reply: { title: "رد على قصتك", body: `${actor} ردّ على قصتك.` },
-    message: { title: actor, body: "أرسل لك رسالة." },
-    group_message: { title: group, body: `${actor} أرسل رسالة في المجموعة.` },
+    story_reply: { title: actor, body: `رد على قصتك: ${messagePreviewFor(event, "ar")}` },
+    message: { title: actor, body: messagePreviewFor(event, "ar") },
+    group_message: { title: group, body: `${actor}: ${messagePreviewFor(event, "ar")}` },
     channel_post: { title: channel, body: `${actor} نشر تحديثاً في القناة.` },
     incoming_call: { title: video ? "مكالمة فيديو واردة" : "مكالمة واردة", body: `${actor} يتصل بك الآن.` },
     missed_call: { title: "مكالمة فائتة", body: `لديك مكالمة فائتة من ${actor}.` },
@@ -313,6 +347,7 @@ async function createAndSendNotifications(
   type: string,
   data: Record<string, unknown>,
   context: PushEvent["context"] = {},
+  messagePreview?: string,
 ) {
   const recipients = [...new Set(recipientIds)].filter((id) => id && id !== actorId);
   const actorName = await getActorName(actorId);
@@ -350,7 +385,7 @@ async function createAndSendNotifications(
     notificationsCreated += 1;
     const result = await sendToUser(
       recipientId,
-      { type, actor_name: actorName, data, context },
+      { type, actor_name: actorName, data, context, message_preview: messagePreview },
       String(notification.id),
     );
     pushesSent += result.sent;
@@ -584,7 +619,7 @@ async function handleAction(userId: string, body: JsonObject) {
     const messageId = requireString(body.message_id, "message id");
     const { data: message, error } = await admin
       .from("messages")
-      .select("id, conversation_id, sender_id, message_type")
+      .select("id, conversation_id, sender_id, message_type, content")
       .eq("id", messageId)
       .maybeSingle();
 
@@ -606,7 +641,13 @@ async function handleAction(userId: string, body: JsonObject) {
       [String(recipientId)],
       userId,
       notificationType,
-      { conversation_id: String(message.conversation_id), message_id: String(message.id) },
+      {
+        conversation_id: String(message.conversation_id),
+        message_id: String(message.id),
+        message_type: String(message.message_type || "text"),
+      },
+      {},
+      String(message.content || ""),
     );
     return { success: true, ...result };
   }
@@ -615,7 +656,7 @@ async function handleAction(userId: string, body: JsonObject) {
     const messageId = requireString(body.message_id, "group message id");
     const { data: message, error } = await admin
       .from("group_messages")
-      .select("id, group_id, sender_id")
+      .select("id, group_id, sender_id, content, message_type")
       .eq("id", messageId)
       .maybeSingle();
 
@@ -635,8 +676,13 @@ async function handleAction(userId: string, body: JsonObject) {
       ])],
       userId,
       "group_message",
-      { group_id: String(message.group_id), message_id: String(message.id) },
+      {
+        group_id: String(message.group_id),
+        message_id: String(message.id),
+        message_type: String(message.message_type || "text"),
+      },
       { group_name: group?.name || undefined },
+      String(message.content || ""),
     );
     return { success: true, ...result };
   }
