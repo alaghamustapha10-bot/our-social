@@ -38,6 +38,7 @@ import { dispatchLolzPush } from "./pushNotifications";
 import "./Groups.css";
 import VerifiedBadge from "./VerifiedBadge";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
+import VoiceTranscription from "./VoiceTranscription";
 import GroupActivities from "./GroupActivities";
 
 function getInitials(name = "G") {
@@ -2046,6 +2047,7 @@ export default function Groups({
                                     </div>
 
                                     <VoiceMessagePlayer src={message.media_url} />
+                                    <VoiceTranscription messageId={message.id} sourceType="group_message" transcript={message.transcript} isArabic={document.documentElement.lang?.startsWith("ar")} />
                                   </div>
                                 ) : isImage ? (
                                   <div className="groups-media-message">
