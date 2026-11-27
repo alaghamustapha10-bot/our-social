@@ -4,6 +4,7 @@ import PreferencesSettings from "./PreferencesSettings";
 import AccountCenter from "./AccountCenter";
 import GlobalSearch from "./GlobalSearch";
 import CreatorStudio from "./CreatorStudio";
+import MonetizationHub from "./MonetizationHub";
 import DraftsCenter from "./DraftsCenter";
 import NotificationPreferences from "./NotificationPreferences";
 import StoryHighlights from "./StoryHighlights";
@@ -1334,6 +1335,12 @@ export default function App() {
       active = false;
     };
   }, [user?.id, isArabic, loadPremiumStatus]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("lolz_commerce")) setActivePage("earn");
+  }, [user?.id]);
 
   function findPost(postId) {
     return (
@@ -3443,6 +3450,12 @@ export default function App() {
 
           {activePage === "creator" && (
             <CreatorStudio user={user} isArabic={isArabic} />
+          )}
+
+          {activePage === "earn" && (
+            <section className="other-page">
+              <MonetizationHub user={user} isArabic={isArabic} />
+            </section>
           )}
 
           {activePage === "drafts" && (
