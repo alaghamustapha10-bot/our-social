@@ -960,6 +960,8 @@ export default function Groups({
       return;
     }
 
+    if (onModerate && !(await onModerate([cleanName, cleanDescription].join("\n"), null))) return;
+
     creatingRef.current = true;
     setCreating(true);
     setError("");
@@ -1908,7 +1910,7 @@ export default function Groups({
                 </button>
               </header>
 
-              {selectedGroup.myRole && <GroupActivities groupId={selectedGroup.id} user={user} />}
+              {selectedGroup.myRole && <GroupActivities groupId={selectedGroup.id} user={user} onModerate={onModerate} />}
 
               {!selectedGroup.myRole ? (
                 <div className="groups-join-screen">
