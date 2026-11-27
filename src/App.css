@@ -2176,3 +2176,6 @@ button:active:not(:disabled) {
 .profile-presence{color:#22c55e;font-size:12px;font-weight:650;margin:4px 0}
 
 .ig-dm-read-receipt{display:block;color:var(--muted);font-size:10px;text-align:end;margin-top:3px}
+
+/* Lightweight caption and sticker editor for LOLZ stories. */
+.story-editor-tools{display:grid;gap:8px;width:100%;margin:10px 0}.story-editor-tools label{display:grid;gap:6px;color:var(--muted);font-size:13px}.story-editor-tools textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:64px;padding:10px 12px;border:1px solid var(--border);border-radius:11px;background:var(--panel-2);color:var(--text);font:inherit}.story-sticker-row{display:flex;gap:7px;flex-wrap:wrap}.story-sticker-row button{width:38px;height:36px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);font-size:18px;cursor:pointer}
