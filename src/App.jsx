@@ -4201,7 +4201,7 @@ export default function App() {
                           shouldAutoScrollRef.current = distanceFromBottom < 150;
                         }}
                       >
-                        {filteredConversationMessages.length === 0 && !messagesLoading && (
+                        {conversationMessages.length === 0 && !messagesLoading && (
                           <div className="ig-dm-profile-intro">
                             <div className="ig-dm-profile-avatar">
                               <Avatar
@@ -4238,8 +4238,8 @@ export default function App() {
                         ) : filteredConversationMessages.length === 0 ? (
                           <div className="ig-dm-first-message">
                             <MessageCircle size={24} />
-                            <strong>{isArabic ? "ابدأ المحادثة" : "Start a conversation"}</strong>
-                            <span>{isArabic ? "أرسل أول رسالة إلى هذا الحساب." : "Send a message to get the conversation started."}</span>
+                            <strong>{messageContentSearch ? (isArabic ? "لا توجد رسائل مطابقة" : "No matching messages") : (isArabic ? "ابدأ المحادثة" : "Start a conversation")}</strong>
+                            <span>{messageContentSearch ? (isArabic ? "جرّب كلمة بحث أخرى." : "Try another search term.") : (isArabic ? "أرسل أول رسالة إلى هذا الحساب." : "Send a message to get the conversation started.")}</span>
                           </div>
                         ) : (
                           <div className="ig-dm-message-list">
@@ -4286,7 +4286,7 @@ export default function App() {
                                         !["Photo", "Video", "Voice message"].includes(message.content))) && (
                                       <p>{message.content}</p>
                                     ))}
-                                    {message.reply_to_id && (
+                                    {!message.is_deleted && message.reply_to_id && (
                                       <div className="ig-dm-reply-quote">
                                         {isArabic ? "رد على: " : "Reply to: "}
                                         {conversationMessages.find((item) => String(item.id) === String(message.reply_to_id))?.content || (isArabic ? "رسالة" : "message")}
