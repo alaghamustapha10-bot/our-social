@@ -41,7 +41,7 @@ jobs:
       - name: Build web assets
         run: npm run build
 
-      - name: Verify the existing LOLZ Capgo app configuration
+      - name: Verify existing LOLZ Capgo app configuration
         run: |
           node --input-type=module -e '
             import fs from "node:fs";
@@ -53,6 +53,15 @@ jobs:
             }
             console.log("Using existing Capgo app:", appId);
           '
+
+      - name: Diagnose Capgo organization and app access
+        env:
+          CAPGO_TOKEN: ${{ secrets.CAPGO_TOKEN }}
+        run: |
+          echo "Accessible Capgo organizations for the configured CI key:"
+          npx @capgo/cli@latest organization list --apikey "$CAPGO_TOKEN"
+          echo "Capgo apps visible to the configured CI key:"
+          npx @capgo/cli@latest app list --show-org --show-org-id --apikey "$CAPGO_TOKEN"
 
       - name: Upload bundle to Capgo Production
         env:
