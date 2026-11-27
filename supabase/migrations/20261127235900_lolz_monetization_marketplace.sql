@@ -157,8 +157,59 @@ create policy "LOLZ users request active booking offers"
         and offer.status = 'active'
     )
   );
+create or replace function lolz_internal.lolz_guard_booking_update()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $
+begin
+  if auth.uid() is null
+    or new.id <> old.id
+    or new.offer_id <> old.offer_id
+    or new.customer_id <> old.customer_id
+    or new.seller_id <> old.seller_id
+    or new.created_at <> old.created_at then
+    raise exception 'Booking identity fields cannot be changed'
+      using errcode = '42501';
+  end if;
+
+  if auth.uid() = old.seller_id then
+    if new.status not in ('accepted', 'declined') then
+      raise exception 'Providers can only accept or decline booking requests'
+        using errcode = '42501';
+    end if;
+    new.requested_at := old.requested_at;
+    new.customer_note := old.customer_note;
+  elsif auth.uid() = old.customer_id then
+    if new.status <> 'cancelled' then
+      raise exception 'Customers can only cancel their booking requests'
+        using errcode = '42501';
+    end if;
+    new.requested_at := old.requested_at;
+    new.customer_note := old.customer_note;
+  else
+    raise exception 'Not allowed to update this booking request'
+      using errcode = '42501';
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists lolz_guard_booking_update_trigger on public.lolz_booking_requests;
+create trigger lolz_guard_booking_update_trigger
+before update on public.lolz_booking_requests
+for each row execute function lolz_internal.lolz_guard_booking_update();
+revoke all on function lolz_internal.lolz_guard_booking_update() from public, anon, authenticated;
+
+drop policy if exists "LOLZ customers and providers update booking decisions" on public.lolz_booking_requests;
+create policy "LOLZ customers and providers update booking decisions"
+  on public.lolz_booking_requests for update to authenticated
+  using (customer_id = auth.uid() or seller_id = auth.uid())
+  with check (customer_id = auth.uid() or seller_id = auth.uid());
+
 revoke all on public.lolz_booking_requests from anon, authenticated;
-grant select, insert on public.lolz_booking_requests to authenticated;
+grant select, insert, update on public.lolz_booking_requests to authenticated;
 
 create table if not exists public.lolz_sponsorship_briefs (
   id uuid primary key default gen_random_uuid(),
