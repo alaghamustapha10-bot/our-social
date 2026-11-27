@@ -51,7 +51,7 @@ begin
     raise exception 'Offer ownership cannot be changed' using errcode = '42501';
   end if;
 
-  if auth.uid() = old.seller_id and actor_role not in ('admin', 'owner') then
+  if auth.uid() = old.seller_id and coalesce(actor_role, '') not in ('admin', 'owner') then
     if new.status is distinct from old.status
       and not (
         (old.status = 'active' and new.status = 'paused')
@@ -91,7 +91,7 @@ begin
     raise exception 'Collaboration owner cannot be changed' using errcode = '42501';
   end if;
 
-  if auth.uid() = old.advertiser_id and actor_role not in ('admin', 'owner') then
+  if auth.uid() = old.advertiser_id and coalesce(actor_role, '') not in ('admin', 'owner') then
     if new.status is distinct from old.status
       and not (
         (old.status = 'open' and new.status = 'paused')
