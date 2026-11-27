@@ -1,0 +1,182 @@
+-- LOLZ community expansion: close friends, privacy controls, richer chat and group activities
+begin;
+
+create table if not exists public.lolz_account_settings (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  profile_visibility text not null default 'public' check (profile_visibility in ('public','private')),
+  allow_messages_from text not null default 'everyone' check (allow_messages_from in ('everyone','following','nobody')),
+  allow_comments_from text not null default 'everyone' check (allow_comments_from in ('everyone','following','nobody')),
+  show_activity boolean not null default true,
+  show_last_seen boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+alter table public.lolz_account_settings enable row level security;
+drop policy if exists "Users manage their own LOLZ account settings" on public.lolz_account_settings;
+create policy "Users manage their own LOLZ account settings"
+  on public.lolz_account_settings for all to authenticated
+  using (user_id = auth.uid()) with check (user_id = auth.uid());
+grant select, insert, update, delete on public.lolz_account_settings to authenticated;
+
+create table if not exists public.lolz_close_friends (
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  friend_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (owner_id, friend_id),
+  constraint lolz_close_friends_no_self check (owner_id <> friend_id)
+);
+create index if not exists lolz_close_friends_friend_idx on public.lolz_close_friends(friend_id);
+alter table public.lolz_close_friends enable row level security;
+drop policy if exists "Users manage their own close friends" on public.lolz_close_friends;
+create policy "Users manage their own close friends"
+  on public.lolz_close_friends for all to authenticated
+  using (owner_id = auth.uid()) with check (owner_id = auth.uid() and friend_id <> auth.uid());
+grant select, insert, delete on public.lolz_close_friends to authenticated;
+
+alter table public.stories add column if not exists audience text not null default 'everyone';
+alter table public.stories drop constraint if exists stories_audience_check;
+alter table public.stories add constraint stories_audience_check check (audience in ('everyone','close_friends'));
+drop policy if exists "LOLZ restrict close-friends stories" on public.stories;
+create policy "LOLZ restrict close-friends stories"
+  on public.stories as restrictive for select to authenticated
+  using (
+    coalesce(audience, 'everyone') <> 'close_friends'
+    or user_id = auth.uid()
+    or exists (
+      select 1 from public.lolz_close_friends cf
+      where cf.owner_id = stories.user_id and cf.friend_id = auth.uid()
+    )
+  );
+
+alter table public.messages add column if not exists edited_at timestamptz;
+alter table public.messages add column if not exists expires_at timestamptz;
+alter table public.messages add column if not exists reply_to_id text;
+create index if not exists messages_expiry_idx on public.messages(expires_at) where expires_at is not null;
+drop policy if exists "LOLZ users edit their own messages" on public.messages;
+create policy "LOLZ users edit their own messages"
+  on public.messages for update to authenticated
+  using (sender_id = auth.uid() and public.lolz_conversation_is_allowed(conversation_id::text))
+  with check (sender_id = auth.uid() and public.lolz_conversation_is_allowed(conversation_id::text));
+
+create table if not exists public.lolz_message_reactions (
+  message_id text not null,
+  conversation_id text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  reaction text not null check (reaction in ('❤️','😂','😮','😢','👍','🔥')),
+  created_at timestamptz not null default now(),
+  primary key (message_id, user_id)
+);
+alter table public.lolz_message_reactions enable row level security;
+drop policy if exists "Conversation members read message reactions" on public.lolz_message_reactions;
+create policy "Conversation members read message reactions"
+  on public.lolz_message_reactions for select to authenticated
+  using (public.lolz_conversation_is_allowed(conversation_id));
+drop policy if exists "Users manage their own message reactions" on public.lolz_message_reactions;
+create policy "Users manage their own message reactions"
+  on public.lolz_message_reactions for all to authenticated
+  using (user_id = auth.uid() and public.lolz_conversation_is_allowed(conversation_id))
+  with check (user_id = auth.uid() and public.lolz_conversation_is_allowed(conversation_id));
+grant select, insert, update, delete on public.lolz_message_reactions to authenticated;
+
+create table if not exists public.lolz_message_pins (
+  conversation_id text not null,
+  message_id text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (conversation_id, message_id, user_id)
+);
+alter table public.lolz_message_pins enable row level security;
+drop policy if exists "Users manage their own pinned messages" on public.lolz_message_pins;
+create policy "Users manage their own pinned messages"
+  on public.lolz_message_pins for all to authenticated
+  using (user_id = auth.uid() and public.lolz_conversation_is_allowed(conversation_id))
+  with check (user_id = auth.uid() and public.lolz_conversation_is_allowed(conversation_id));
+grant select, insert, delete on public.lolz_message_pins to authenticated;
+
+create table if not exists public.lolz_conversation_reads (
+  conversation_id text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  last_read_at timestamptz not null default now(),
+  primary key (conversation_id, user_id)
+);
+alter table public.lolz_conversation_reads enable row level security;
+drop policy if exists "Conversation participants read read receipts" on public.lolz_conversation_reads;
+create policy "Conversation participants read read receipts"
+  on public.lolz_conversation_reads for select to authenticated
+  using (public.lolz_conversation_is_allowed(conversation_id));
+drop policy if exists "Users update their own read receipt" on public.lolz_conversation_reads;
+create policy "Users update their own read receipt"
+  on public.lolz_conversation_reads for all to authenticated
+  using (user_id = auth.uid() and public.lolz_conversation_is_allowed(conversation_id))
+  with check (user_id = auth.uid() and public.lolz_conversation_is_allowed(conversation_id));
+grant select, insert, update on public.lolz_conversation_reads to authenticated;
+
+create table if not exists public.lolz_typing_status (
+  conversation_id text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  expires_at timestamptz not null default (now() + interval '8 seconds'),
+  primary key (conversation_id, user_id)
+);
+alter table public.lolz_typing_status enable row level security;
+drop policy if exists "Conversation members read typing status" on public.lolz_typing_status;
+create policy "Conversation members read typing status"
+  on public.lolz_typing_status for select to authenticated
+  using (public.lolz_conversation_is_allowed(conversation_id));
+drop policy if exists "Users publish their own typing status" on public.lolz_typing_status;
+create policy "Users publish their own typing status"
+  on public.lolz_typing_status for all to authenticated
+  using (user_id = auth.uid() and public.lolz_conversation_is_allowed(conversation_id))
+  with check (user_id = auth.uid() and public.lolz_conversation_is_allowed(conversation_id));
+grant select, insert, update, delete on public.lolz_typing_status to authenticated;
+
+create table if not exists public.lolz_group_polls (
+  id uuid primary key default gen_random_uuid(),
+  group_id text not null,
+  created_by uuid not null references auth.users(id) on delete cascade,
+  question text not null check (length(trim(question)) between 2 and 300),
+  options jsonb not null check (jsonb_typeof(options) = 'array' and jsonb_array_length(options) between 2 and 8),
+  ends_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.lolz_group_poll_votes (
+  poll_id uuid not null references public.lolz_group_polls(id) on delete cascade,
+  voter_id uuid not null references auth.users(id) on delete cascade,
+  option_index integer not null check (option_index between 0 and 7),
+  created_at timestamptz not null default now(),
+  primary key (poll_id, voter_id)
+);
+create table if not exists public.lolz_group_events (
+  id uuid primary key default gen_random_uuid(),
+  group_id text not null,
+  created_by uuid not null references auth.users(id) on delete cascade,
+  title text not null check (length(trim(title)) between 2 and 160),
+  description text check (description is null or length(description) <= 2000),
+  starts_at timestamptz not null,
+  location text,
+  created_at timestamptz not null default now()
+);
+alter table public.lolz_group_polls enable row level security;
+alter table public.lolz_group_poll_votes enable row level security;
+alter table public.lolz_group_events enable row level security;
+drop policy if exists "Group members read polls" on public.lolz_group_polls;
+create policy "Group members read polls" on public.lolz_group_polls for select to authenticated
+  using (exists (select 1 from public.group_members gm where gm.group_id::text = group_id and gm.user_id = auth.uid()));
+drop policy if exists "Group members create polls" on public.lolz_group_polls;
+create policy "Group members create polls" on public.lolz_group_polls for insert to authenticated
+  with check (created_by = auth.uid() and exists (select 1 from public.group_members gm where gm.group_id::text = group_id and gm.user_id = auth.uid()));
+drop policy if exists "Group members read poll votes" on public.lolz_group_poll_votes;
+create policy "Group members read poll votes" on public.lolz_group_poll_votes for select to authenticated
+  using (exists (select 1 from public.lolz_group_polls p join public.group_members gm on gm.group_id::text = p.group_id where p.id = poll_id and gm.user_id = auth.uid()));
+drop policy if exists "Users vote in group polls" on public.lolz_group_poll_votes;
+create policy "Users vote in group polls" on public.lolz_group_poll_votes for insert to authenticated
+  with check (voter_id = auth.uid() and exists (select 1 from public.lolz_group_polls p join public.group_members gm on gm.group_id::text = p.group_id where p.id = poll_id and gm.user_id = auth.uid() and (p.ends_at is null or p.ends_at > now())));
+drop policy if exists "Group members read events" on public.lolz_group_events;
+create policy "Group members read events" on public.lolz_group_events for select to authenticated
+  using (exists (select 1 from public.group_members gm where gm.group_id::text = group_id and gm.user_id = auth.uid()));
+drop policy if exists "Group members create events" on public.lolz_group_events;
+create policy "Group members create events" on public.lolz_group_events for insert to authenticated
+  with check (created_by = auth.uid() and exists (select 1 from public.group_members gm where gm.group_id::text = group_id and gm.user_id = auth.uid()));
+grant select, insert on public.lolz_group_polls to authenticated;
+grant select, insert on public.lolz_group_poll_votes to authenticated;
+grant select, insert on public.lolz_group_events to authenticated;
+
+commit;
