@@ -46,6 +46,8 @@ export default function Calls({
   onCallStateChange = null,
   onCallActionsReady = null,
   showIdleControls = true,
+  incomingCallAction = null,
+  onIncomingCallActionHandled = null,
 }) {
   const [incomingCall, setIncomingCall] = useState(null);
   const [incomingProfile, setIncomingProfile] = useState(null);
@@ -98,6 +100,7 @@ export default function Calls({
   const endingRef = useRef(false);
   const remoteTracksRef = useRef(new Map());
   const startCallRef = useRef(null);
+  const handledNativeCallActionRef = useRef("");
 
   const isPrivate = callType === "private";
   const isGroupOrChannel =
@@ -1251,6 +1254,36 @@ export default function Calls({
       setError(err.message || "تعذر رفض المكالمة");
     }
   };
+
+  useEffect(() => {
+    if (
+      !incomingCall?.id ||
+      !incomingCallAction?.call_id ||
+      String(incomingCallAction.call_id) !== String(incomingCall.id)
+    ) {
+      return;
+    }
+
+    const actionKey = `${incomingCallAction.call_id}:${incomingCallAction.action}`;
+    if (handledNativeCallActionRef.current === actionKey) return;
+    if (incomingCallAction.action !== "answer" && incomingCallAction.action !== "reject") return;
+
+    handledNativeCallActionRef.current = actionKey;
+
+    const complete = () => onIncomingCallActionHandled?.();
+    const actionPromise = incomingCallAction.action === "answer"
+      ? acceptCall()
+      : rejectCall();
+
+    Promise.resolve(actionPromise).finally(complete);
+  }, [
+    incomingCall?.id,
+    incomingCallAction?.call_id,
+    incomingCallAction?.action,
+    acceptCall,
+    rejectCall,
+    onIncomingCallActionHandled,
+  ]);
 
   const endCall = async () => {
     const room = roomRef.current;
