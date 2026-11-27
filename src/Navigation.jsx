@@ -22,6 +22,7 @@ import {
   Compass,
   BarChart3,
   FileText,
+  Store,
 } from "lucide-react";
 import { useState } from "react";
 import "./Navigation.css";
@@ -49,6 +50,7 @@ const COPY = {
     communityGuidelines: "قواعد المجتمع",
     searchAll: "البحث الشامل",
     creatorStudio: "استوديو المنشئ",
+    earn: "الربح من LOLZ",
     drafts: "المسودات",
     logout: "تسجيل الخروج",
     close: "إغلاق",
@@ -75,6 +77,7 @@ const COPY = {
     communityGuidelines: "Community guidelines",
     searchAll: "Search everything",
     creatorStudio: "Creator studio",
+    earn: "Earn on LOLZ",
     drafts: "Drafts",
     logout: "Log out",
     close: "Close",
@@ -108,6 +111,7 @@ export default function Navigation({ page, setPage, onCreate, onLogout, username
     { id: "groups", label: t.groups, icon: UsersRound },
     { id: "channels", label: t.channels, icon: Radio },
     { id: "premium", label: t.premium, icon: Crown },
+    { id: "earn", label: t.earn, icon: Store },
     { id: "settings", label: t.settings, icon: Settings },
     { id: "blocked", label: t.blocked, icon: Ban },
     { id: "community-guidelines", label: t.communityGuidelines, icon: BookOpenCheck },
