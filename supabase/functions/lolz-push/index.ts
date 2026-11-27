@@ -236,17 +236,27 @@ async function pushAllowedByPreferences(recipientId: string, event: PushEvent): 
   if (!preferences.quiet_hours_enabled || type === "incoming_call" || type === "missed_call") return true;
 
   const timezone = String(preferences.timezone || "Europe/Amsterdam");
-  const timeParts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: timezone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(new Date());
+  let timeParts: Intl.DateTimeFormatPart[];
+  try {
+    timeParts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: timezone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date());
+  } catch {
+    timeParts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Europe/Amsterdam",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date());
+  }
   const hour = Number(timeParts.find((part) => part.type === "hour")?.value || "0");
   const minute = Number(timeParts.find((part) => part.type === "minute")?.value || "0");
   const currentMinutes = hour * 60 + minute;
   const parseMinutes = (value: string) => {
-    const match = /^(\\d{2}):(\\d{2})/.exec(String(value || ""));
+    const match = /^(\d{2}):(\d{2})/.exec(String(value || ""));
     if (!match) return null;
     const h = Number(match[1]);
     const m = Number(match[2]);
