@@ -4077,84 +4077,89 @@ export default function App() {
                         </div>
                       )}
                       <form className="ig-dm-composer" onSubmit={sendMessage}>
-                        <select className="ig-dm-expiry-select" value={messageExpiryHours} onChange={(event) => setMessageExpiryHours(event.target.value)} aria-label={isArabic ? "مدة بقاء الرسالة" : "Message expiry"} title={isArabic ? "مدة بقاء الرسالة" : "Message expiry"}>
-                          <option value="never">{isArabic ? "دائمة" : "Keep"}</option>
-                          <option value="1">{isArabic ? "ساعة" : "1 hour"}</option>
-                          <option value="24">{isArabic ? "يوم" : "1 day"}</option>
-                          <option value="168">{isArabic ? "أسبوع" : "7 days"}</option>
-                        </select>
-                        <input
-                          ref={messageMediaInput}
-                          type="file"
-                          accept="image/*,video/*"
-                          hidden
-                          onChange={handleMessageFileChange}
-                        />
-                        <button
-                          type="button"
-                          className="ig-dm-composer-icon"
-                          onClick={() => messageMediaInput.current?.click()}
-                          disabled={messageSending || isRecording || !!voiceFile}
-                          title={isArabic ? "إرفاق صورة أو فيديو" : "Attach a photo or video"}
-                          aria-label={isArabic ? "إرفاق صورة أو فيديو" : "Attach a photo or video"}
-                        >
-                          <ImagePlus size={22} />
-                        </button>
+                        <div className="ig-dm-composer-field">
+                          <input
+                            className="ig-dm-composer-input"
+                            value={messageText}
+                            onChange={(event) => handleMessageTyping(event.target.value)}
+                            placeholder={isArabic ? "اكتب رسالة..." : "Message..."}
+                            disabled={messageSending || isRecording}
+                            aria-label={isArabic ? "اكتب رسالة" : "Write a message"}
+                          />
+                        </div>
 
-                        {!voiceFile && (
+                        <div className="ig-dm-composer-toolbar">
+                          <select className="ig-dm-expiry-select" value={messageExpiryHours} onChange={(event) => setMessageExpiryHours(event.target.value)} aria-label={isArabic ? "مدة بقاء الرسالة" : "Message expiry"} title={isArabic ? "مدة بقاء الرسالة" : "Message expiry"}>
+                            <option value="never">{isArabic ? "دائمة" : "Keep"}</option>
+                            <option value="1">{isArabic ? "ساعة" : "1 hour"}</option>
+                            <option value="24">{isArabic ? "يوم" : "1 day"}</option>
+                            <option value="168">{isArabic ? "أسبوع" : "7 days"}</option>
+                          </select>
+                          <input
+                            ref={messageMediaInput}
+                            type="file"
+                            accept="image/*,video/*"
+                            hidden
+                            onChange={handleMessageFileChange}
+                          />
                           <button
                             type="button"
-                            className={`ig-dm-composer-icon ig-dm-mic ${isRecording ? "recording" : ""}`}
-                            onPointerDown={handleVoicePointerDown}
-                            onPointerUp={handleVoicePointerUp}
-                            onPointerCancel={handleVoicePointerCancel}
-                            onContextMenu={(event) => event.preventDefault()}
-                            disabled={messageSending || !!messageFile}
-                            title={isArabic ? "اضغط مطولاً لتسجيل رسالة صوتية" : "Hold to record a voice message"}
-                            aria-label={isArabic ? "تسجيل رسالة صوتية" : "Record a voice message"}
+                            className="ig-dm-composer-icon"
+                            onClick={() => messageMediaInput.current?.click()}
+                            disabled={messageSending || isRecording || !!voiceFile}
+                            title={isArabic ? "إرفاق صورة أو فيديو" : "Attach a photo or video"}
+                            aria-label={isArabic ? "إرفاق صورة أو فيديو" : "Attach a photo or video"}
                           >
-                            <Mic size={21} />
+                            <ImagePlus size={22} />
                           </button>
-                        )}
 
-                        {isRecording && (
-                          <div className="ig-dm-recording-state">
-                            <span />
-                            {isArabic ? "جارٍ التسجيل" : "Recording"} {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, "0")}
-                            <button type="button" onClick={stopVoiceRecording}>■</button>
-                            <button type="button" onClick={cancelVoiceRecording}><X size={14} /></button>
-                          </div>
-                        )}
-
-                        {voiceFile && (
-                          <div className="ig-dm-voice-preview">
-                            <audio src={voiceFilePreview} controls preload="metadata" />
-                            <button type="button" onClick={() => setVoiceFile(null)} aria-label={isArabic ? "حذف التسجيل" : "Remove recording"}>
-                              <X size={16} />
+                          {!voiceFile && (
+                            <button
+                              type="button"
+                              className={`ig-dm-composer-icon ig-dm-mic ${isRecording ? "recording" : ""}`}
+                              onPointerDown={handleVoicePointerDown}
+                              onPointerUp={handleVoicePointerUp}
+                              onPointerCancel={handleVoicePointerCancel}
+                              onContextMenu={(event) => event.preventDefault()}
+                              disabled={messageSending || !!messageFile}
+                              title={isArabic ? "اضغط مطولاً لتسجيل رسالة صوتية" : "Hold to record a voice message"}
+                              aria-label={isArabic ? "تسجيل رسالة صوتية" : "Record a voice message"}
+                            >
+                              <Mic size={21} />
                             </button>
-                          </div>
-                        )}
+                          )}
 
-                        <input
-                          className="ig-dm-composer-input"
-                          value={messageText}
-                          onChange={(event) => handleMessageTyping(event.target.value)}
-                          placeholder={isArabic ? "اكتب رسالة..." : "Message..."}
-                          disabled={messageSending || isRecording}
-                        />
+                          {isRecording && (
+                            <div className="ig-dm-recording-state">
+                              <span />
+                              {isArabic ? "جارٍ التسجيل" : "Recording"} {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, "0")}
+                              <button type="button" onClick={stopVoiceRecording}>■</button>
+                              <button type="button" onClick={cancelVoiceRecording}><X size={14} /></button>
+                            </div>
+                          )}
 
-                        <button
-                          className="ig-dm-send-button"
-                          type="submit"
-                          disabled={
-                            messageSending ||
-                            isRecording ||
-                            (!messageText.trim() && !messageFile && !voiceFile)
-                          }
-                          aria-label={isArabic ? "إرسال الرسالة" : "Send message"}
-                        >
-                          {messageSending ? <span className="ig-dm-send-spinner" /> : <Send size={19} />}
-                        </button>
+                          {voiceFile && (
+                            <div className="ig-dm-voice-preview">
+                              <audio src={voiceFilePreview} controls preload="metadata" />
+                              <button type="button" onClick={() => setVoiceFile(null)} aria-label={isArabic ? "حذف التسجيل" : "Remove recording"}>
+                                <X size={16} />
+                              </button>
+                            </div>
+                          )}
+
+                          <button
+                            className="ig-dm-send-button"
+                            type="submit"
+                            disabled={
+                              messageSending ||
+                              isRecording ||
+                              (!messageText.trim() && !messageFile && !voiceFile)
+                            }
+                            aria-label={isArabic ? "إرسال الرسالة" : "Send message"}
+                          >
+                            {messageSending ? <span className="ig-dm-send-spinner" /> : <Send size={19} />}
+                          </button>
+                        </div>
                       </form>
                       <small className="ig-dm-upload-hint">
                         {isArabic ? "الصور والفيديوهات حتى 100 ميغابايت" : "Photos and videos up to 100 MB"}
