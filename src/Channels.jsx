@@ -35,6 +35,7 @@ export default function Channels({
   user,
   onCallContextChange,
   onReport,
+  onModerate,
   initialChannelId = null,
   onInitialChannelOpened,
 }) {
@@ -627,6 +628,8 @@ export default function Channels({
     const stickToBottom = isNearBottom();
     let filePath = null;
 
+    if (onModerate && !(await onModerate(caption, fileToSend))) return;
+
     setUploadingMedia(true);
     setError("");
 
@@ -701,6 +704,8 @@ export default function Channels({
       await publishMediaPost();
       return;
     }
+
+    if (onModerate && !(await onModerate(content.trim(), null))) return;
 
     const stickToBottom = isNearBottom();
 
