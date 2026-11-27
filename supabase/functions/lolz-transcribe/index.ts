@@ -32,11 +32,13 @@ async function downloadAudio(
   sourceType: SourceType,
   mediaUrl: string,
 ): Promise<{ blob: Blob; filename: string }> {
-  if (sourceType === "message") {
-    if (/^https?:\/\//i.test(mediaUrl)) {
-      throw new Error("This private voice message has an invalid media reference.");
-    }
+  const isLegacyPublicMessageMedia =
+    sourceType === "message" && /^https?:\/\//i.test(mediaUrl);
+  if (sourceType === "message" && !isLegacyPublicMessageMedia) {
     const path = decodeStoragePath(mediaUrl.replace(/^\/+/, ""));
+    if (path.split("/")[0] !== senderId || path.split("/").includes("..")) {
+      throw new Error("The private audio path does not belong to this message sender.");
+    }
     const { data, error } = await admin.storage.from("private-messages").download(path);
     if (error || !data) throw new Error("Could not read the private voice message.");
     return { blob: data, filename: path.split("/").pop() || "voice-message.webm" };
@@ -141,7 +143,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const { blob, filename } = await downloadAudio(admin, supabaseUrl, sourceType, String(message.media_url));
+    const { blob, filename } = await downloadAudio(admin, supabaseUrl, sourceType, String(message.media_url), String(message.sender_id || ""));
     if (blob.size === 0) return json({ error: "The voice message is empty." }, 400);
     if (blob.size > 25 * 1024 * 1024) {
       return json({ error: "Audio files must be 25 MB or smaller for transcription." }, 413);
