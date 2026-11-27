@@ -146,12 +146,22 @@ async function moderateReport(db: any, user: any, role: string, body: any) {
   if (reportError || !report) throw new HttpError("Report not found.", 404);
 
   if (decision === "reviewing") {
+    const reviewTargetUserId = await getReportTargetUser(db, report);
+    const reviewedAt = new Date().toISOString();
     const { error } = await db.from("content_reports").update({
       status: "reviewing",
-      reviewed_at: new Date().toISOString(),
+      reviewed_at: reviewedAt,
       reviewed_by: user.id,
     }).eq("id", reportId);
     if (error) throw new HttpError("Could not update report: " + error.message, 500);
+    await writeModerationAction(db, {
+      target_user_id: reviewTargetUserId,
+      actor_user_id: user.id,
+      action_type: "report_reviewing",
+      target_type: report.target_type,
+      target_id: report.target_id,
+      reason: String(report.details || report.reason || "Report review started").slice(0, 1000),
+    });
     return { success: true, status: "reviewing" };
   }
 
