@@ -25,10 +25,10 @@ jobs:
     name: Build installable LOLZ debug APK
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout latest main
+      - name: Checkout selected source branch
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
