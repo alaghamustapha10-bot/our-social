@@ -3365,6 +3365,8 @@ export default function App() {
               isArabic={isArabic}
               onOpenProfile={openUserProfile}
               onOpenPage={goTo}
+              onOpenGroup={(groupId) => { setPushGroupTarget(groupId); goTo("groups"); }}
+              onOpenChannel={(channelId) => { setPushChannelTarget(channelId); goTo("channels"); }}
             />
           )}
 
