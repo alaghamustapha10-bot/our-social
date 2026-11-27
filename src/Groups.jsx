@@ -38,6 +38,7 @@ import { dispatchLolzPush } from "./pushNotifications";
 import "./Groups.css";
 import VerifiedBadge from "./VerifiedBadge";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
+import GroupActivities from "./GroupActivities";
 
 function getInitials(name = "G") {
   return name.trim().slice(0, 2).toUpperCase();
@@ -1901,6 +1902,8 @@ export default function Groups({
                   <Info size={19} />
                 </button>
               </header>
+
+              {selectedGroup.myRole && <GroupActivities groupId={selectedGroup.id} user={user} />}
 
               {!selectedGroup.myRole ? (
                 <div className="groups-join-screen">
