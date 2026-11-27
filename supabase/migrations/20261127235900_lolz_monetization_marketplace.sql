@@ -35,7 +35,7 @@ returns trigger
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $$
 declare
   actor_role text := auth.jwt() -> 'app_metadata' ->> 'role';
 begin
@@ -62,12 +62,9 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
-drop trigger if exists lolz_guard_offer_review_trigger on public.lolz_commerce_offers;
-create trigger lolz_guard_offer_review_trigger
-before insert or update on public.lolz_commerce_offers
-for each row execute function lolz_internal.lolz_guard_offer_review();
+-- Offer trigger is attached after its table is created.
 revoke all on function lolz_internal.lolz_guard_offer_review() from public, anon, authenticated;
 
 create or replace function lolz_internal.lolz_guard_brief_review()
@@ -75,7 +72,7 @@ returns trigger
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $$
 declare
   actor_role text := auth.jwt() -> 'app_metadata' ->> 'role';
 begin
@@ -102,12 +99,9 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
-drop trigger if exists lolz_guard_brief_review_trigger on public.lolz_sponsorship_briefs;
-create trigger lolz_guard_brief_review_trigger
-before insert or update on public.lolz_sponsorship_briefs
-for each row execute function lolz_internal.lolz_guard_brief_review();
+-- Brief trigger is attached after its table is created.
 revoke all on function lolz_internal.lolz_guard_brief_review() from public, anon, authenticated;
 
 
@@ -170,6 +164,11 @@ create policy "LOLZ admins review offers"
   using ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'owner'))
   with check ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'owner'));
 grant select, insert, update, delete on public.lolz_commerce_offers to authenticated;
+
+drop trigger if exists lolz_guard_offer_review_trigger on public.lolz_commerce_offers;
+create trigger lolz_guard_offer_review_trigger
+before insert or update on public.lolz_commerce_offers
+for each row execute function lolz_internal.lolz_guard_offer_review();
 
 create table if not exists public.lolz_commerce_orders (
   id uuid primary key default gen_random_uuid(),
@@ -259,7 +258,7 @@ returns trigger
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $$
 begin
   if auth.uid() is null
     or new.id <> old.id
@@ -291,7 +290,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists lolz_guard_booking_update_trigger on public.lolz_booking_requests;
 create trigger lolz_guard_booking_update_trigger
@@ -347,6 +346,11 @@ create policy "LOLZ admins review sponsorship briefs"
   using ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'owner'))
   with check ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'owner'));
 grant select, insert, update, delete on public.lolz_sponsorship_briefs to authenticated;
+
+drop trigger if exists lolz_guard_brief_review_trigger on public.lolz_sponsorship_briefs;
+create trigger lolz_guard_brief_review_trigger
+before insert or update on public.lolz_sponsorship_briefs
+for each row execute function lolz_internal.lolz_guard_brief_review();
 
 create table if not exists public.lolz_sponsorship_applications (
   id uuid primary key default gen_random_uuid(),
