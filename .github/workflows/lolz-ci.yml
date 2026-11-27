@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/lolz-stories-security-premium
+      - feature/lolz-community-suite
   pull_request:
     branches:
       - main
@@ -58,3 +59,7 @@ jobs:
       - name: Check LOLZ voice transcription Edge Function
         working-directory: supabase/functions
         run: deno check lolz-transcribe/index.ts
+
+      - name: Check LOLZ commerce Edge Function
+        working-directory: supabase/functions
+        run: deno check lolz-commerce/index.ts
