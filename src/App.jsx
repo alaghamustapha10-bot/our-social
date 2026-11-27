@@ -424,6 +424,7 @@ export default function App() {
   const [savedPosts, setSavedPosts] = useState([]);
 
   const [activePage, setActivePage] = useState("home");
+  const [discoverMode, setDiscoverMode] = useState("recent");
   const [search, setSearch] = useState("");
 
   const [newPost, setNewPost] = useState("");
@@ -2693,6 +2694,10 @@ export default function App() {
       ? filteredPosts.filter((post) => post.user_id === user?.id)
       : unblockedPosts;
 
+  const discoverPosts = discoverMode === "popular"
+    ? [...visiblePosts].sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0))
+    : visiblePosts;
+
   const unreadCount = notifications.filter((item) => !item.is_read).length;
 
   function goTo(page) {
@@ -3118,7 +3123,11 @@ export default function App() {
               <span className="eyebrow">{t("FIND YOUR COMMUNITY")}</span>
               <h1>{t("Discover")}</h1>
               <p>{t("Explore posts from the LOLZ community.")}</p>
-              <PostList posts={visiblePosts} {...postListProps} />
+              <div className="lolz-discover-filters" role="group" aria-label={isArabic ? "ترتيب المنشورات" : "Sort posts"}>
+                <button type="button" className={discoverMode === "recent" ? "active" : ""} onClick={() => setDiscoverMode("recent")}>{isArabic ? "الأحدث" : "Recent"}</button>
+                <button type="button" className={discoverMode === "popular" ? "active" : ""} onClick={() => setDiscoverMode("popular")}>{isArabic ? "الأكثر شعبية" : "Popular"}</button>
+              </div>
+              <PostList posts={discoverPosts} {...postListProps} />
             </section>
           )}
 
