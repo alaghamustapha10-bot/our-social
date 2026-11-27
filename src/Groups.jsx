@@ -97,6 +97,7 @@ function MemberAvatar({ profile }) {
 
 export default function Groups({
   user,
+  backgroundCallsEnabled = false,
   onCallContextChange,
   onReport,
   onModerate,
@@ -1960,6 +1961,7 @@ export default function Groups({
                       groupId={selectedGroup.id}
                       canStart={canManage}
                       canEnd={canManage}
+                      backgroundCallsEnabled={backgroundCallsEnabled}
                     />
                   </div>
 
