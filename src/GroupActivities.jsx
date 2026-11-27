@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { CalendarDays, ChartNoAxesColumn, Plus, Vote } from "lucide-react";
 
-export default function GroupActivities({ groupId, user }) {
+export default function GroupActivities({ groupId, user, onModerate }) {
   const ar = typeof document !== "undefined" && document.documentElement.lang === "ar";
   const [polls, setPolls] = useState([]);
   const [events, setEvents] = useState([]);
@@ -46,6 +46,7 @@ export default function GroupActivities({ groupId, user }) {
       setNotice(ar ? "أدخل سؤالاً وخيارين على الأقل." : "Enter a question and at least two options.");
       return;
     }
+    if (onModerate && !(await onModerate([question.trim(), ...cleanOptions].join("\n"), null))) return;
     setBusy(true); setNotice("");
     const { error } = await supabase.from("lolz_group_polls").insert({
       group_id: String(groupId), created_by: user.id, question: question.trim(), options: cleanOptions,
@@ -69,6 +70,7 @@ export default function GroupActivities({ groupId, user }) {
   async function createEvent(event) {
     event.preventDefault();
     if (!eventTitle.trim() || !eventDate) return;
+    if (onModerate && !(await onModerate([eventTitle.trim(), eventDescription.trim()].join("\n"), null))) return;
     setBusy(true); setNotice("");
     const { error } = await supabase.from("lolz_group_events").insert({
       group_id: String(groupId), created_by: user.id, title: eventTitle.trim(),
