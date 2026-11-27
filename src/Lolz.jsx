@@ -26,7 +26,7 @@ function formatDate(date) {
   );
 }
 
-export default function Lolz({ user, blockedUserIds = [], onReport }) {
+export default function Lolz({ user, blockedUserIds = [], onReport, onModerate }) {
   const fileRef = useRef(null);
   const videoRefs = useRef({});
   const viewedVideosRef = useRef(new Set());
@@ -276,6 +276,8 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
       return;
     }
 
+    if (onModerate && !(await onModerate(caption.trim(), file))) return;
+
     setBusy(true);
     setNotice("");
 
@@ -385,6 +387,7 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
     }
 
     if (!content) return;
+    if (onModerate && !(await onModerate(content, null))) return;
 
     const { error } = await supabase.from("lolz_comments").insert({
       video_id: videoId,
@@ -826,7 +829,7 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
                                 className="lolz-comment-report"
                                 onClick={() =>
                                   onReport?.({
-                                    type: "comment",
+                                    type: "lolz_comment",
                                     id: comment.id,
                                     targetUserId: comment.user_id,
                                   })
