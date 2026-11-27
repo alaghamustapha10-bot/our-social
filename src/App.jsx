@@ -163,6 +163,8 @@ const translations = {
   "you missed a call from them.": "لديك مكالمة فائتة منه.",
   "joined your group.": "انضم إلى مجموعتك.",
   "subscribed to your channel.": "اشترك في قناتك.",
+  "A moderator has issued a community-guidelines warning for your account.": "أرسل فريق الإشراف تنبيهاً بشأن قواعد مجتمع LOLZ.",
+  "Your LOLZ account has been temporarily suspended after a review.": "تم تعليق حساب LOLZ الخاص بك مؤقتاً بعد مراجعة البلاغ.",
   "Read": "قراءة",
   "PERSONALIZE YOUR EXPERIENCE": "خصص تجربتك",
   "Nothing here yet": "لا يوجد شيء هنا بعد",
@@ -4337,6 +4339,8 @@ export default function App() {
                       missed_call: t("you missed a call from them."),
                       group_join: t("joined your group."),
                       channel_join: t("subscribed to your channel."),
+                      moderation_warning: t("A moderator has issued a community-guidelines warning for your account."),
+                      moderation_suspension: t("Your LOLZ account has been temporarily suspended after a review."),
                     };
 
                     const message =
