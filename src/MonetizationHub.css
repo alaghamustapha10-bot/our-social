@@ -1,0 +1,87 @@
+.lolz-money-page{width:min(1180px,100%);margin:0 auto;padding:24px 22px 56px;color:var(--text);--money-accent:var(--accent,#786cff)}
+.lolz-money-hero{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:30px;border:1px solid var(--border);border-radius:24px;background:linear-gradient(125deg,rgba(119,112,255,.16),var(--panel) 64%);overflow:hidden}
+.lolz-money-eyebrow{display:inline-flex;align-items:center;gap:7px;color:var(--money-accent);font-size:11px;font-weight:850;letter-spacing:.11em}
+.lolz-money-hero h1{font-size:clamp(30px,5vw,46px);line-height:1.05;margin:12px 0 10px;letter-spacing:-.04em}
+.lolz-money-hero p{max-width:660px;color:var(--muted);line-height:1.65;margin:0}
+.lolz-money-hero-note{display:flex;align-items:center;gap:8px;margin-top:18px;font-size:12px;font-weight:700;color:var(--text)}
+.lolz-money-hero-note svg{color:var(--money-accent)}
+.lolz-money-hero-mark{width:180px;height:150px;flex:0 0 180px;border-radius:22px;border:1px solid rgba(119,112,255,.3);background:rgba(119,112,255,.1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--money-accent)}
+.lolz-money-hero-mark strong{font-size:25px;letter-spacing:.13em}
+.lolz-money-hero-mark span{font-size:9px;letter-spacing:.18em;font-weight:800}
+.lolz-money-notice{display:flex;justify-content:space-between;align-items:center;gap:15px;margin:16px 0;padding:13px 15px;border:1px solid var(--border);border-radius:12px;background:var(--panel);font-size:13px;line-height:1.5}
+.lolz-money-notice button{border:0;background:transparent;color:var(--muted);cursor:pointer}
+.lolz-money-tabs{display:flex;align-items:center;gap:7px;overflow-x:auto;padding:17px 0 10px;margin-bottom:12px}
+.lolz-money-tabs button{border:1px solid var(--border);background:var(--panel);color:var(--muted);padding:10px 14px;border-radius:11px;white-space:nowrap;font-weight:750;cursor:pointer}
+.lolz-money-tabs button.active{background:var(--money-accent);border-color:var(--money-accent);color:#fff}
+.lolz-money-tabs .lolz-money-refresh{margin-inline-start:auto;padding:9px;display:grid;place-items:center}
+.lolz-money-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:12px 0 26px}
+.lolz-money-stats article{padding:16px;border:1px solid var(--border);border-radius:16px;background:var(--panel);min-width:0}
+.lolz-money-stats article span{display:block;color:var(--muted);font-size:12px;margin-bottom:8px}
+.lolz-money-stats article strong{font-size:clamp(19px,2.4vw,25px);overflow-wrap:anywhere}
+.lolz-money-section{margin:26px 0}
+.lolz-money-heading{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:17px}
+.lolz-money-heading h2{font-size:23px;margin:5px 0 6px}
+.lolz-money-heading p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}
+.lolz-money-stream-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.lolz-money-stream{padding:17px;border-radius:16px;border:1px solid var(--border);background:var(--panel);min-height:145px}
+.lolz-money-stream-icon{width:38px;height:38px;border-radius:12px;background:rgba(119,112,255,.12);display:grid;place-items:center;color:var(--money-accent);margin-bottom:13px}
+.lolz-money-stream h3{margin:0 0 6px;font-size:15px}
+.lolz-money-stream p{margin:0;color:var(--muted);font-size:12px;line-height:1.55}
+.lolz-money-primary{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:11px;padding:11px 16px;background:var(--money-accent);color:#fff;font-weight:800;cursor:pointer}
+.lolz-money-primary:disabled{opacity:.55;cursor:wait}
+.lolz-money-support{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:28px;padding:19px;border:1px solid var(--border);border-radius:17px;background:var(--panel)}
+.lolz-money-support>div{display:flex;align-items:flex-start;gap:12px}
+.lolz-money-support>div>svg{color:var(--money-accent);flex:0 0 auto;margin-top:3px}
+.lolz-money-support h3{margin:0 0 6px;font-size:17px}
+.lolz-money-support p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+.lolz-money-support form{display:flex;align-items:end;gap:10px;flex:0 0 auto}
+.lolz-money-support label,.lolz-money-form label,.lolz-money-full-label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:750}
+.lolz-money-support input,.lolz-money-form input,.lolz-money-form select,.lolz-money-form textarea,.lolz-money-full-label textarea{border:1px solid var(--border);border-radius:10px;background:var(--background,var(--panel));color:var(--text);padding:10px 11px;min-width:0;width:100%;font:inherit}
+.lolz-money-support input{width:110px}
+.lolz-money-offer-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.lolz-money-offer{display:flex;flex-direction:column;align-items:flex-start;padding:18px;border:1px solid var(--border);border-radius:17px;background:var(--panel);min-width:0}
+.lolz-money-offer-kind{font-size:11px;font-weight:850;color:var(--money-accent);padding:5px 8px;border-radius:7px;background:rgba(119,112,255,.12)}
+.lolz-money-offer h3{font-size:18px;margin:13px 0 7px;overflow-wrap:anywhere}
+.lolz-money-offer p{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.lolz-money-offer-meta{display:flex;flex-wrap:wrap;gap:10px;color:var(--muted);font-size:11px;margin-top:auto;padding-top:5px}
+.lolz-money-offer small{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:11px;margin-top:7px;overflow-wrap:anywhere}
+.lolz-money-offer-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin-top:16px;padding-top:13px;border-top:1px solid var(--border)}
+.lolz-money-offer-bottom strong{font-size:20px}
+.lolz-money-offer-bottom button,.lolz-money-row button,.lolz-money-brief button{border:1px solid var(--border);background:var(--panel-2,var(--background));color:var(--text);border-radius:9px;padding:8px 11px;font-weight:750;cursor:pointer}
+.lolz-money-offer-bottom button:disabled,.lolz-money-row button:disabled{opacity:.55}
+.lolz-money-booking-fields{display:grid;gap:7px;width:100%;margin-top:12px}
+.lolz-money-booking-fields input{width:100%;min-width:0;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--background,var(--panel));color:var(--text)}
+.lolz-money-subsection{margin-top:28px;padding:17px;border:1px solid var(--border);border-radius:16px;background:var(--panel)}
+.lolz-money-subsection h3{margin:0 0 10px}
+.lolz-money-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:12px 2px;border-bottom:1px solid var(--border)}
+.lolz-money-row:last-child{border-bottom:0}
+.lolz-money-row>div:first-child{min-width:0}
+.lolz-money-row strong{display:block;overflow-wrap:anywhere}
+.lolz-money-row small,.lolz-money-row span{color:var(--muted);font-size:11px}
+.lolz-money-row button{font-size:11px}
+.lolz-money-order-end{text-align:end}
+.lolz-money-order-end span{display:block}
+.lolz-money-create-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}
+.lolz-money-panel{padding:22px;border:1px solid var(--border);border-radius:18px;background:var(--panel);min-width:0}
+.lolz-money-panel h2{font-size:22px;margin:6px 0 8px}
+.lolz-money-panel>p{color:var(--muted);font-size:12px;line-height:1.6;margin:0 0 18px}
+.lolz-money-form{display:grid;gap:13px}
+.lolz-money-form-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.lolz-money-form textarea,.lolz-money-full-label textarea{resize:vertical}
+.lolz-money-check{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted)}
+.lolz-money-check input{width:17px;height:17px;accent-color:var(--money-accent)}
+.lolz-money-brief{padding:14px 0;border-top:1px solid var(--border)}
+.lolz-money-brief h3{margin:0 0 5px}
+.lolz-money-brief p{font-size:12px;line-height:1.55;color:var(--muted);white-space:pre-wrap}
+.lolz-money-brief strong{display:block;margin-bottom:9px}
+.lolz-money-full-label{margin-bottom:15px}
+.lolz-money-warning{border-inline-start:3px solid var(--money-accent);padding:10px 12px;background:rgba(119,112,255,.08);font-size:12px!important;margin-top:18px!important}
+.lolz-money-status{font-size:12px;color:var(--muted)}
+.lolz-money-empty{display:flex;align-items:center;justify-content:center;gap:10px;padding:22px;border:1px dashed var(--border);border-radius:14px;color:var(--muted);font-size:13px;text-align:center}
+.lolz-money-footer{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:17px;padding:20px 0;color:var(--muted);font-size:11px}
+.lolz-money-footer span{display:inline-flex;align-items:center;gap:6px}
+.lolz-money-footer svg{color:var(--money-accent)}
+.lolz-money-empty .spin{animation:lolz-money-spin 1.2s linear infinite}
+@keyframes lolz-money-spin{to{transform:rotate(360deg)}}
+@media(max-width:900px){.lolz-money-stream-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.lolz-money-offer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.lolz-money-page{padding:14px 10px 42px}.lolz-money-hero{padding:20px}.lolz-money-hero-mark{display:none}.lolz-money-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.lolz-money-stream-grid,.lolz-money-offer-grid,.lolz-money-create-grid{grid-template-columns:1fr}.lolz-money-support{align-items:stretch;flex-direction:column}.lolz-money-support form{width:100%;align-items:end}.lolz-money-support label{flex:1}.lolz-money-support input{width:100%}.lolz-money-heading{align-items:flex-start;flex-direction:column}.lolz-money-form-two{grid-template-columns:1fr}.lolz-money-tabs .lolz-money-refresh{margin-inline-start:0}.lolz-money-row{align-items:flex-start}.lolz-money-hero h1{font-size:31px}}
