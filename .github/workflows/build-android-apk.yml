@@ -6,6 +6,11 @@ on:
       - main
     paths:
       - ".github/workflows/build-android-apk.yml"
+      - "vite.config.js"
+      - "index.html"
+      - "src/**"
+      - "android/**"
+      - "capacitor.config.json"
   workflow_dispatch:
 
 permissions:
