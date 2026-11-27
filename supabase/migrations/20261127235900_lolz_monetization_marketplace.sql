@@ -400,6 +400,46 @@ create policy "LOLZ advertisers review sponsorship applications"
   );
 grant select, insert, update on public.lolz_sponsorship_applications to authenticated;
 
+create or replace function lolz_internal.lolz_guard_sponsorship_application_update()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $
+begin
+  if auth.uid() is null
+    or new.id <> old.id
+    or new.brief_id <> old.brief_id
+    or new.creator_id <> old.creator_id
+    or new.created_at <> old.created_at then
+    raise exception 'Sponsorship application identity cannot be changed'
+      using errcode = '42501';
+  end if;
+
+  if not exists (
+    select 1 from public.lolz_sponsorship_briefs brief
+    where brief.id = old.brief_id and brief.advertiser_id = auth.uid()
+  ) then
+    raise exception 'Only the brief owner can review this application'
+      using errcode = '42501';
+  end if;
+
+  if old.status <> 'pending' or new.status not in ('accepted', 'rejected') then
+    raise exception 'Only pending applications can be accepted or rejected'
+      using errcode = '42501';
+  end if;
+  new.pitch := old.pitch;
+  new.proposed_rate_cents := old.proposed_rate_cents;
+  return new;
+end;
+$;
+
+drop trigger if exists lolz_guard_sponsorship_application_update_trigger on public.lolz_sponsorship_applications;
+create trigger lolz_guard_sponsorship_application_update_trigger
+before update on public.lolz_sponsorship_applications
+for each row execute function lolz_internal.lolz_guard_sponsorship_application_update();
+revoke all on function lolz_internal.lolz_guard_sponsorship_application_update() from public, anon, authenticated;
+
 create table if not exists public.lolz_ad_campaigns (
   id uuid primary key default gen_random_uuid(),
   advertiser_id uuid not null references auth.users(id) on delete cascade,
