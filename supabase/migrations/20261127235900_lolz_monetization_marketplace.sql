@@ -292,7 +292,13 @@ create policy "LOLZ sellers create own payout requests"
   on public.lolz_payout_requests for insert to authenticated
   with check (seller_id = auth.uid() and status = 'pending_review' and processed_by is null and processed_at is null);
 revoke all on public.lolz_payout_requests from anon, authenticated;
-grant select, insert on public.lolz_payout_requests to authenticated;
+drop policy if exists "LOLZ admins process payout requests" on public.lolz_payout_requests;
+create policy "LOLZ admins process payout requests"
+  on public.lolz_payout_requests for update to authenticated
+  using ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'owner'))
+  with check ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'owner'));
+
+grant select, insert, update on public.lolz_payout_requests to authenticated;
 
 create or replace function lolz_internal.lolz_validate_payout_request()
 returns trigger
