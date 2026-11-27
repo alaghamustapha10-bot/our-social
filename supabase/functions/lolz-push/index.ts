@@ -287,6 +287,13 @@ async function sendToUser(recipientId: string, event: PushEvent, notificationId?
     failed += 1;
   }
 
+  console.info("LOLZ FCM delivery summary:", {
+    event_type: event.type,
+    attempted: devices.length,
+    sent,
+    failed,
+  });
+
   return { sent, failed };
 }
 
