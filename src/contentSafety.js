@@ -17,6 +17,12 @@ const POLICY_RULES = [
     ar: "الإعلانات والدعوات للمقامرة أو المراهنات غير مسموحة.",
     en: "Gambling and betting advertisements or invitations are not allowed.",
   },
+  {
+    code: "direct_threat",
+    pattern: /\b(?:i will kill you|ill kill you|i am going to kill you|im going to kill you|i will hurt you|i will rape you|i am going to rape you|im going to rape you|i will shoot you|i will beat you up)\b|(?:ساقتلك|سوف اقتلك|راح اقتلك|بدي اقتلك|ساؤذيك|سوف اؤذيك|راح اؤذيك|سوف اعتدي عليك|ساغتصبك)/i,
+    ar: "التهديد المباشر أو التحريض على العنف غير مسموح في LOLZ.",
+    en: "Direct threats and incitement to violence are not allowed on LOLZ.",
+  },
 ];
 
 function normalizePolicyText(value) {
@@ -175,14 +181,16 @@ export async function moderateLolzSubmission({
   if (!text.trim() && !file) return { allowed: true, reason: null, source: "empty" };
 
   let images = [];
-  if (file && (file.type.startsWith("image/") || file.type.startsWith("video/"))) {
-    if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
-      return {
-        allowed: false,
-        reason: isArabic ? "هذا النوع من الملفات غير مدعوم." : "This file type is not supported.",
-        code: "unsupported_media",
-      };
-    }
+  if (file && !file.type.startsWith("image/") && !file.type.startsWith("video/")) {
+    return {
+      allowed: false,
+      reason: isArabic
+        ? "لا يمكن فحص هذا النوع من الملفات تلقائياً، لذلك لم نسمح برفعه."
+        : "This file type cannot be screened automatically, so it was not accepted.",
+      code: "unsupported_media",
+    };
+  }
+  if (file) {
     try {
       images = await prepareMediaForReview(file);
     } catch (error) {
