@@ -19,7 +19,7 @@ This feature branch adds an optional earning hub at **Earn on LOLZ**. It keeps c
 
 The migration is:
 
-`supabase/migrations/20261127235900_lolz_monetization_marketplace.sql`
+`supabase/migrations/20261127124700_lolz_monetization_marketplace.sql`
 
 Apply it to the correct LOLZ Supabase project before opening the monetization hub. Then deploy the Edge Function:
 
