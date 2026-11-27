@@ -63,3 +63,17 @@ jobs:
       - name: Check LOLZ commerce Edge Function
         working-directory: supabase/functions
         run: deno check lolz-commerce/index.ts
+
+      - name: Validate LOLZ monetization migration structure
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          sql = Path("supabase/migrations/20261127235900_lolz_monetization_marketplace.sql").read_text()
+          assert sql.count("as $$") == 4, "Expected four dollar-quoted function bodies"
+          assert sql.count("\n$$;") == 4, "Expected four matching function terminators"
+          assert sql.index("create table if not exists public.lolz_commerce_offers") < sql.index("create trigger lolz_guard_offer_review_trigger")
+          assert sql.index("create table if not exists public.lolz_sponsorship_briefs") < sql.index("create trigger lolz_guard_brief_review_trigger")
+          assert "LOLZ admins read payout requests" in sql
+          assert "pg_advisory_xact_lock" in sql
+          print("LOLZ monetization migration structure OK")
+          PY
