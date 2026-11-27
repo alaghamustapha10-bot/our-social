@@ -13,6 +13,7 @@ on:
       - "vite.config.*"
       - "capacitor.config.json"
       - ".github/workflows/capgo-live-update.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
