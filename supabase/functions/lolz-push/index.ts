@@ -155,7 +155,7 @@ async function getFcmAccessToken(): Promise<string> {
 }
 
 function messagePreviewFor(event: PushEvent, language: string): string {
-  const preview = (event.message_preview || "").replace(/\\s+/g, " ").trim();
+  const preview = (event.message_preview || "").replace(/\s+/g, " ").trim();
   const type = String(event.data.message_type || "text");
   const isPlaceholder = /^(photo|image|picture|video|voice message|صورة|فيديو|رسالة صوتية)$/i.test(preview);
 
