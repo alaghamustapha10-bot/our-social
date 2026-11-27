@@ -183,10 +183,13 @@ export default function MonetizationHub({ user, isArabic = false }) {
   }, [user?.id, load, isArabic]);
 
   const myOffers = offers.filter((offer) => offer.seller_id === user?.id);
+  const managedOffers = offers.filter((offer) => offer.seller_id === user?.id || (isAdmin && offer.status === "pending_review"));
   const publicOffers = offers.filter((offer) => offer.status === "active" && offer.seller_id !== user?.id);
   const paidOrders = orders.filter((order) => order.status === "paid");
   const sellerPaid = paidOrders.filter((order) => order.seller_id === user?.id);
   const grossEarned = sellerPaid.reduce((total, order) => total + Number(order.seller_net_cents || 0), 0);
+  const reservedPayouts = payouts.filter((row) => ["pending_review", "approved", "paid"].includes(row.status)).reduce((total, row) => total + Number(row.amount_cents || 0), 0);
+  const availablePayout = Math.max(0, grossEarned - reservedPayouts);
   const statusLabel = (status) => ({
     pending: t("Pending", "قيد الانتظار"),
     paid: t("Paid", "مدفوع"),
@@ -546,7 +549,7 @@ export default function MonetizationHub({ user, isArabic = false }) {
                   })}
                 </div>
               )}
-              <div className="lolz-money-subsection"><h3>{t("Your listings", "عروضك")}</h3>{myOffers.length === 0 ? <Empty text={t("You have not published an offer yet.", "لم تنشر أي عرض بعد.")} /> : offers.filter((offer) => offer.seller_id === user.id || (isAdmin && offer.status === "pending_review")).map((offer) => <div className="lolz-money-row" key={offer.id}><div><strong>{offer.title}</strong><small>{money(offer.price_cents, isArabic ? "ar" : "en")} · {statusLabel(offer.status)}{offer.seller_id !== user.id ? t(" · Seller listing", " · عرض بائع") : ""}</small></div><div className="lolz-money-order-end"><div className="lolz-money-admin-actions">{isAdmin && offer.status === "pending_review" ? <><button type="button" disabled={busy === offer.id} onClick={() => void reviewOffer(offer, "active")}>{t("Approve", "موافقة")}</button><button type="button" disabled={busy === offer.id} onClick={() => void reviewOffer(offer, "rejected")}>{t("Reject", "رفض")}</button></> : offer.seller_id === user.id && ["active", "paused"].includes(offer.status) ? <button type="button" onClick={() => void setOfferStatus(offer, offer.status === "active" ? "paused" : "active")} disabled={busy === offer.id}>{offer.status === "active" ? t("Pause", "إيقاف") : t("Activate", "تفعيل")}</button> : null}</div></div></div>)}</div>
+              <div className="lolz-money-subsection"><h3>{t("Your listings", "عروضك")}</h3>{managedOffers.length === 0 ? <Empty text={t("You have not published an offer yet.", "لم تنشر أي عرض بعد.")} /> : managedOffers.map((offer) => <div className="lolz-money-row" key={offer.id}><div><strong>{offer.title}</strong><small>{money(offer.price_cents, isArabic ? "ar" : "en")} · {statusLabel(offer.status)}{offer.seller_id !== user.id ? t(" · Seller listing", " · عرض بائع") : ""}</small></div><div className="lolz-money-order-end"><div className="lolz-money-admin-actions">{isAdmin && offer.status === "pending_review" ? <><button type="button" disabled={busy === offer.id} onClick={() => void reviewOffer(offer, "active")}>{t("Approve", "موافقة")}</button><button type="button" disabled={busy === offer.id} onClick={() => void reviewOffer(offer, "rejected")}>{t("Reject", "رفض")}</button></> : offer.seller_id === user.id && ["active", "paused"].includes(offer.status) ? <button type="button" onClick={() => void setOfferStatus(offer, offer.status === "active" ? "paused" : "active")} disabled={busy === offer.id}>{offer.status === "active" ? t("Pause", "إيقاف") : t("Activate", "تفعيل")}</button> : null}</div></div></div>)}</div>
             </section>
           )}
 
@@ -629,13 +632,13 @@ export default function MonetizationHub({ user, isArabic = false }) {
                 <article><span>{t("Gross paid sales", "المبيعات المدفوعة")}</span><strong>{money(sellerPaid.reduce((sum, row) => sum + Number(row.amount_cents || 0), 0), isArabic ? "ar" : "en")}</strong></article>
                 <article><span>{t("Platform fee", "عمولة المنصة")}</span><strong>{money(sellerPaid.reduce((sum, row) => sum + Number(row.platform_fee_cents || 0), 0), isArabic ? "ar" : "en")}</strong></article>
                 <article><span>{t("Seller net", "صافي مستحقاتك")}</span><strong>{money(grossEarned, isArabic ? "ar" : "en")}</strong></article>
-                <article><span>{t("Payouts requested", "طلبات السحب")}</span><strong>{payouts.length}</strong></article>
+                <article><span>{t("Available balance", "الرصيد المتاح")}</span><strong>{money(availablePayout, isArabic ? "ar" : "en")}</strong></article>
               </div>
               <section className="lolz-money-panel">
                 <span className="lolz-money-eyebrow">{t("SELLER PAYOUT", "سحب الأرباح")}</span><h2>{t("Request a payout", "طلب سحب الأرباح")}</h2>
                 <p>{t("The platform fee is currently 10% of paid orders. Payout requests are manually reviewed; no automatic bank or PayPal transfer is enabled yet.", "عمولة المنصة حالياً 10% من الطلبات المدفوعة. تخضع طلبات السحب للمراجعة اليدوية؛ ولا يوجد تحويل تلقائي إلى البنك أو PayPal حالياً.")}</p>
                 <form className="lolz-money-form" onSubmit={requestPayout}>
-                  <label>{t("Amount (€)", "المبلغ (€)")}<input type="number" min="1" max={(grossEarned / 100).toFixed(2)} step="0.01" required value={payoutAmount} onChange={(event) => setPayoutAmount(event.target.value)} /></label>
+                  <label>{t("Amount (€)", "المبلغ (€)")}<input type="number" min="1" max={(availablePayout / 100).toFixed(2)} step="0.01" required value={payoutAmount} onChange={(event) => setPayoutAmount(event.target.value)} /></label>
                   <label>{t("Optional note", "ملاحظة اختيارية")}<textarea rows={2} maxLength={800} value={payoutNote} onChange={(event) => setPayoutNote(event.target.value)} /></label>
                   <button className="lolz-money-primary" disabled={busy === "payout"}>{busy === "payout" ? t("Submitting…", "جارٍ الإرسال…") : t("Request manual review", "طلب مراجعة يدوية")}</button>
                 </form>
@@ -643,7 +646,7 @@ export default function MonetizationHub({ user, isArabic = false }) {
               <section className="lolz-money-section">
                 <div className="lolz-money-heading"><h2>{t("Orders and payments", "الطلبات والمدفوعات")}</h2></div>
                 {orders.length === 0 ? <Empty text={t("No orders yet.", "لا توجد طلبات بعد.")} /> : orders.map((order) => <div className="lolz-money-row" key={order.id}><div><strong>{order.title}</strong><small>{friendlyDate(order.created_at, isArabic ? "ar" : "en")} · {order.seller_id === user.id ? t("Sale", "مبيعة") : t("Purchase", "شراء")}</small></div><div className="lolz-money-order-end"><strong>{money(order.amount_cents, isArabic ? "ar" : "en")}</strong><span>{statusLabel(order.status)}</span></div></div>)}
-                {payouts.length > 0 && <><h3>{t("Payout request history", "سجل طلبات السحب")}</h3>{payouts.map((row) => <div className="lolz-money-row" key={row.id}><div><strong>{money(row.amount_cents, isArabic ? "ar" : "en")}</strong><small>{row.seller_id === user.id ? t("Your request", "طلبك") : t("Seller request", "طلب بائع")} · {row.seller_note || ""}</small></div><div className="lolz-money-order-end"><span>{statusLabel(row.status)}</span>{isAdmin && row.status !== "paid" && row.status !== "rejected" && <div className="lolz-money-admin-actions">{row.status === "pending_review" && <button type="button" disabled={busy === row.id} onClick={() => void processPayout(row, "approved")}>{t("Approve", "موافقة")}</button>}<button type="button" disabled={busy === row.id} onClick={() => void processPayout(row, "paid")}>{t("Mark paid", "تحديد كمدفوع")}</button><button type="button" disabled={busy === row.id} onClick={() => void processPayout(row, "rejected")}>{t("Reject", "رفض")}</button></div>}</div></div>)}</>}
+                {payouts.length > 0 && <><h3>{t("Payout request history", "سجل طلبات السحب")}</h3>{payouts.map((row) => <div className="lolz-money-row" key={row.id}><div><strong>{money(row.amount_cents, isArabic ? "ar" : "en")}</strong><small>{row.seller_id === user.id ? t("Your request", "طلبك") : t("Seller request", "طلب بائع")} · {row.seller_note || ""}</small></div><div className="lolz-money-order-end"><span>{statusLabel(row.status)}</span>{isAdmin && row.status !== "paid" && row.status !== "rejected" && <div className="lolz-money-admin-actions">{row.status === "pending_review" && <button type="button" disabled={busy === row.id} onClick={() => void processPayout(row, "approved")}>{t("Approve", "موافقة")}</button>}{row.status === "approved" && <button type="button" disabled={busy === row.id} onClick={() => void processPayout(row, "paid")}>{t("Mark paid", "تحديد كمدفوع")}</button>}<button type="button" disabled={busy === row.id} onClick={() => void processPayout(row, "rejected")}>{t("Reject", "رفض")}</button></div>}</div></div>)}</>}
               </section>
               <section className="lolz-money-section">
                 <div className="lolz-money-heading"><h2>{t("Bookings", "الحجوزات")}</h2></div>
