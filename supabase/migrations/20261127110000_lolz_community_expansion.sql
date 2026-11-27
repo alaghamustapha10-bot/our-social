@@ -35,7 +35,7 @@ returns table(user_id uuid, is_online boolean, last_seen_at timestamptz)
 language sql stable security definer set search_path = public, pg_temp as $lolz$
   select
     p.user_id,
-    case when coalesce(s.show_activity, true) then p.is_online else false end,
+    case when coalesce(s.show_activity, true) then (p.is_online and p.updated_at > now() - interval '90 seconds') else false end,
     case when coalesce(s.show_last_seen, true) then p.last_seen_at else null end
   from public.lolz_presence p
   left join public.lolz_account_settings s on s.user_id = p.user_id
