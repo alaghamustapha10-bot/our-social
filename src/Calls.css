@@ -927,3 +927,89 @@
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 125px), 1fr));
   }
 }
+
+
+/* =========================================================
+   GROUP / CHANNEL CALLS — SAME FULLSCREEN + MINI EXPERIENCE
+   AS PRIVATE CALLS
+========================================================= */
+.lolz-calls .ig-group-call-voice-stage {
+  flex: 0 0 auto;
+  min-height: clamp(150px, 22vh, 230px);
+  gap: 12px;
+  padding: 8px 0 12px;
+}
+.lolz-calls .ig-group-call-avatar-stack {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  min-height: 88px;
+  padding: 6px 12px;
+}
+.lolz-calls .ig-group-call-avatar {
+  display: grid;
+  place-items: center;
+  width: clamp(64px, 9vw, 88px);
+  height: clamp(64px, 9vw, 88px);
+  flex: 0 0 auto;
+  overflow: hidden;
+  margin-inline: -7px;
+  border: 4px solid rgba(255,255,255,.16);
+  border-radius: 50%;
+  background: linear-gradient(135deg,#7770ff,#b8a6ff);
+  color: #fff;
+  box-shadow: 0 10px 32px rgba(0,0,0,.24);
+}
+.lolz-calls .ig-group-call-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.lolz-calls .ig-group-call-avatar-more {
+  display: grid;
+  place-items: center;
+  width: clamp(64px, 9vw, 88px);
+  height: clamp(64px, 9vw, 88px);
+  flex: 0 0 auto;
+  margin-inline-start: 2px;
+  border: 4px solid rgba(255,255,255,.16);
+  border-radius: 50%;
+  background: #29263d;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+}
+.lolz-calls .ig-group-call-avatar-empty {
+  width: 76px;
+  height: 76px;
+  margin: 0;
+}
+.lolz-calls .lolz-call-active-panel.is-group-or-channel .lolz-call-participant-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+  width: 100%;
+}
+.lolz-calls .lolz-call-active-panel.is-group-or-channel .lolz-call-participant {
+  min-height: 118px;
+}
+.app-shell:has(.lolz-call-dock .lolz-call-active-panel.is-group-or-channel) .ig-call-remote-media:not(:has(video)) {
+  display: none !important;
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+}
+@media (max-width: 768px) {
+  .lolz-calls .ig-group-call-voice-stage {
+    min-height: 150px;
+    padding: 4px 0 8px;
+  }
+  .lolz-calls .ig-group-call-avatar,
+  .lolz-calls .ig-group-call-avatar-more {
+    width: 62px;
+    height: 62px;
+  }
+  .lolz-calls .lolz-call-active-panel.is-group-or-channel .lolz-call-participant-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 125px), 1fr));
+    max-height: 27dvh;
+    overflow-y: auto;
+  }
+}
