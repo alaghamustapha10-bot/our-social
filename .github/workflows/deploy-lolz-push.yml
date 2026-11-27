@@ -33,4 +33,4 @@ jobs:
         run: |
           test -n "$SUPABASE_ACCESS_TOKEN" || { echo "Missing SUPABASE_ACCESS_TOKEN secret"; exit 1; }
           test "$SUPABASE_PROJECT_ID" = "edxwpivsuximriwdvzeq" || { echo "SUPABASE_PROJECT_ID does not match the LOLZ project"; exit 1; }
-          supabase functions deploy lolz-push --project-ref "$SUPABASE_PROJECT_ID"
+          supabase functions deploy lolz-push --remote="$SUPABASE_PROJECT_ID" --yes
