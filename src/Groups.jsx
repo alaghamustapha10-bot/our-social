@@ -37,6 +37,7 @@ import Calls from "./Calls";
 import { dispatchLolzPush } from "./pushNotifications";
 import "./Groups.css";
 import VerifiedBadge from "./VerifiedBadge";
+import VoiceMessagePlayer from "./VoiceMessagePlayer";
 
 function getInitials(name = "G") {
   return name.trim().slice(0, 2).toUpperCase();
@@ -2032,13 +2033,7 @@ export default function Groups({
                                       <span>Voice message</span>
                                     </div>
 
-                                    <audio
-                                      controls
-                                      preload="metadata"
-                                      src={message.media_url}
-                                    >
-                                      Your browser does not support audio playback.
-                                    </audio>
+                                    <VoiceMessagePlayer src={message.media_url} />
                                   </div>
                                 ) : isImage ? (
                                   <div className="groups-media-message">
