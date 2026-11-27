@@ -99,6 +99,7 @@ export default function Groups({
   user,
   onCallContextChange,
   onReport,
+  onModerate,
   initialGroupId = null,
   onInitialGroupOpened,
 }) {
@@ -1174,6 +1175,8 @@ export default function Groups({
     const messageType = fileToSend.type.startsWith("image/") ? "image" : "video";
     let storagePath = null;
 
+    if (onModerate && !(await onModerate(caption, fileToSend))) return;
+
     setUploadingMedia(true);
     setError("");
 
@@ -1270,6 +1273,8 @@ export default function Groups({
     ) {
       return;
     }
+
+    if (onModerate && !(await onModerate(content, null))) return;
 
     setSending(true);
     setError("");
