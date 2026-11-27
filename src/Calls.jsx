@@ -1256,32 +1256,37 @@ export default function Calls({
   };
 
   useEffect(() => {
-    if (
-      !incomingCall?.id ||
-      !incomingCallAction?.call_id ||
-      String(incomingCallAction.call_id) !== String(incomingCall.id)
-    ) {
+    if (!incomingCallAction?.call_id) return;
+    if (incomingCallAction.action !== "answer" && incomingCallAction.action !== "reject") return;
+
+    const targetCall = isPrivate
+      ? incomingCall
+      : activeCalls.find((call) => String(call.id) === String(incomingCallAction.call_id));
+
+    if (!targetCall?.id || String(targetCall.id) !== String(incomingCallAction.call_id)) {
       return;
     }
 
     const actionKey = `${incomingCallAction.call_id}:${incomingCallAction.action}`;
     if (handledNativeCallActionRef.current === actionKey) return;
-    if (incomingCallAction.action !== "answer" && incomingCallAction.action !== "reject") return;
 
     handledNativeCallActionRef.current = actionKey;
 
     const complete = () => onIncomingCallActionHandled?.();
     const actionPromise = incomingCallAction.action === "answer"
-      ? acceptCall()
-      : rejectCall();
+      ? (isPrivate ? acceptCall() : joinCall(targetCall))
+      : (isPrivate ? rejectCall() : Promise.resolve());
 
     Promise.resolve(actionPromise).finally(complete);
   }, [
+    isPrivate,
     incomingCall?.id,
+    activeCalls,
     incomingCallAction?.call_id,
     incomingCallAction?.action,
     acceptCall,
     rejectCall,
+    joinCall,
     onIncomingCallActionHandled,
   ]);
 
