@@ -37,6 +37,9 @@ import Calls from "./Calls";
 import { dispatchLolzPush } from "./pushNotifications";
 import "./Groups.css";
 import VerifiedBadge from "./VerifiedBadge";
+import VoiceMessagePlayer from "./VoiceMessagePlayer";
+import VoiceTranscription from "./VoiceTranscription";
+import GroupActivities from "./GroupActivities";
 
 function getInitials(name = "G") {
   return name.trim().slice(0, 2).toUpperCase();
@@ -95,8 +98,10 @@ function MemberAvatar({ profile }) {
 
 export default function Groups({
   user,
+  backgroundCallsEnabled = false,
   onCallContextChange,
   onReport,
+  onModerate,
   initialGroupId = null,
   onInitialGroupOpened,
 }) {
@@ -957,6 +962,8 @@ export default function Groups({
       return;
     }
 
+    if (onModerate && !(await onModerate([cleanName, cleanDescription].join("\n"), null))) return;
+
     creatingRef.current = true;
     setCreating(true);
     setError("");
@@ -1172,6 +1179,8 @@ export default function Groups({
     const messageType = fileToSend.type.startsWith("image/") ? "image" : "video";
     let storagePath = null;
 
+    if (onModerate && !(await onModerate(caption, fileToSend))) return;
+
     setUploadingMedia(true);
     setError("");
 
@@ -1268,6 +1277,8 @@ export default function Groups({
     ) {
       return;
     }
+
+    if (onModerate && !(await onModerate(content, null))) return;
 
     setSending(true);
     setError("");
@@ -1901,6 +1912,8 @@ export default function Groups({
                 </button>
               </header>
 
+              {selectedGroup.myRole && <GroupActivities groupId={selectedGroup.id} user={user} onModerate={onModerate} />}
+
               {!selectedGroup.myRole ? (
                 <div className="groups-join-screen">
                   <GroupAvatar
@@ -1949,6 +1962,7 @@ export default function Groups({
                       groupId={selectedGroup.id}
                       canStart={canManage}
                       canEnd={canManage}
+                      backgroundCallsEnabled={backgroundCallsEnabled}
                     />
                   </div>
 
@@ -2032,13 +2046,8 @@ export default function Groups({
                                       <span>Voice message</span>
                                     </div>
 
-                                    <audio
-                                      controls
-                                      preload="metadata"
-                                      src={message.media_url}
-                                    >
-                                      Your browser does not support audio playback.
-                                    </audio>
+                                    <VoiceMessagePlayer src={message.media_url} />
+                                    <VoiceTranscription messageId={message.id} sourceType="group_message" transcript={message.transcript} isArabic={document.documentElement.lang?.startsWith("ar")} />
                                   </div>
                                 ) : isImage ? (
                                   <div className="groups-media-message">

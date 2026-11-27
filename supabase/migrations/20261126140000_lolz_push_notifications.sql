@@ -51,7 +51,7 @@ returns void
 language plpgsql
 security definer
 set search_path = public, pg_temp
-as $
+as $$
 begin
   if auth.uid() is null then
     raise exception 'Authentication required'
@@ -79,7 +79,7 @@ begin
     language = excluded.language,
     updated_at = now();
 end;
-$;
+$$;
 
 revoke all on function public.register_lolz_push_token(text, text, text) from public;
 grant execute on function public.register_lolz_push_token(text, text, text) to authenticated;

@@ -18,6 +18,11 @@ import {
   Flag,
   ShieldCheck,
   Ban,
+  BookOpenCheck,
+  Compass,
+  BarChart3,
+  FileText,
+  Store,
 } from "lucide-react";
 import { useState } from "react";
 import "./Navigation.css";
@@ -34,6 +39,7 @@ const COPY = {
     more: "المزيد",
     people: "الأشخاص",
     saved: "المحفوظات",
+    memories: "ذكرياتي",
     groups: "المجموعات",
     channels: "القنوات",
     premium: "LOLZ Premium",
@@ -41,6 +47,11 @@ const COPY = {
     admin: "لوحة الإدارة",
     moderation: "مراجعة البلاغات",
     blocked: "الحسابات المحظورة",
+    communityGuidelines: "قواعد المجتمع",
+    searchAll: "البحث الشامل",
+    creatorStudio: "استوديو المنشئ",
+    earn: "الربح من LOLZ",
+    drafts: "المسودات",
     logout: "تسجيل الخروج",
     close: "إغلاق",
   },
@@ -55,6 +66,7 @@ const COPY = {
     more: "More",
     people: "People",
     saved: "Saved",
+    memories: "Memories",
     groups: "Groups",
     channels: "Channels",
     premium: "LOLZ Premium",
@@ -62,6 +74,11 @@ const COPY = {
     admin: "Admin dashboard",
     moderation: "Reports review",
     blocked: "Blocked accounts",
+    communityGuidelines: "Community guidelines",
+    searchAll: "Search everything",
+    creatorStudio: "Creator studio",
+    earn: "Earn on LOLZ",
+    drafts: "Drafts",
     logout: "Log out",
     close: "Close",
   },
@@ -80,7 +97,7 @@ export default function Navigation({ page, setPage, onCreate, onLogout, username
 
   const primaryItems = [
     { id: "home", label: t.home, icon: Home },
-    { id: "discover", label: t.explore, icon: Search },
+    { id: "discover", label: t.explore, icon: Compass },
     { id: "lolz", label: t.reels, icon: Clapperboard },
     { id: "messages", label: t.messages, icon: MessageCircle },
     { id: "activity", label: t.notifications, icon: Heart },
@@ -90,11 +107,17 @@ export default function Navigation({ page, setPage, onCreate, onLogout, username
   const secondaryItems = [
     { id: "people", label: t.people, icon: Users },
     { id: "saved", label: t.saved, icon: Bookmark },
+    { id: "memories", label: t.memories, icon: Bookmark },
     { id: "groups", label: t.groups, icon: UsersRound },
     { id: "channels", label: t.channels, icon: Radio },
     { id: "premium", label: t.premium, icon: Crown },
+    { id: "earn", label: t.earn, icon: Store },
     { id: "settings", label: t.settings, icon: Settings },
     { id: "blocked", label: t.blocked, icon: Ban },
+    { id: "community-guidelines", label: t.communityGuidelines, icon: BookOpenCheck },
+    { id: "search", label: t.searchAll, icon: Search },
+    { id: "creator", label: t.creatorStudio, icon: BarChart3 },
+    { id: "drafts", label: t.drafts, icon: FileText },
     ...(isAdmin ? [{ id: "admin", label: t.admin, icon: ShieldCheck }, { id: "moderation", label: t.moderation, icon: Flag }] : []),
   ];
 

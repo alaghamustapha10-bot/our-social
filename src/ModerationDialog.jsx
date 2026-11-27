@@ -7,7 +7,9 @@ const REASONS = [
   ["harassment", "Harassment or bullying"],
   ["hate", "Hate speech"],
   ["violence", "Violence or dangerous content"],
-  ["nudity", "Nudity or sexual content"],
+  ["nudity", "Nudity or explicit sexual content"],
+  ["drug_promotion", "Drug sales or promotion"],
+  ["gambling_promotion", "Gambling or betting promotion"],
   ["scam", "Scam or fraud"],
   ["other", "Other"],
 ];
@@ -118,7 +120,9 @@ export default function ModerationDialog({
                           harassment: "تحرش أو تنمر",
                           hate: "خطاب كراهية",
                           violence: "عنف أو محتوى خطير",
-                          nudity: "عري أو محتوى جنسي",
+                          nudity: "عري أو محتوى جنسي صريح",
+                          drug_promotion: "بيع المخدرات أو الترويج لها",
+                          gambling_promotion: "القمار أو الترويج للمراهنات",
                           scam: "احتيال أو نصب",
                           other: "سبب آخر",
                         }[value])

@@ -29,11 +29,15 @@ import Calls from "./Calls";
 import { dispatchLolzPush } from "./pushNotifications";
 
 import "./Channels.css";
+import VoiceMessagePlayer from "./VoiceMessagePlayer";
+import VoiceTranscription from "./VoiceTranscription";
 
 export default function Channels({
   user,
+  backgroundCallsEnabled = false,
   onCallContextChange,
   onReport,
+  onModerate,
   initialChannelId = null,
   onInitialChannelOpened,
 }) {
@@ -504,6 +508,7 @@ export default function Channels({
     event.preventDefault();
 
     if (!name.trim() || !user?.id || loading) return;
+    if (onModerate && !(await onModerate([name.trim(), description.trim()].join("\n"), null))) return;
 
     setLoading(true);
     setError("");
@@ -626,6 +631,8 @@ export default function Channels({
     const stickToBottom = isNearBottom();
     let filePath = null;
 
+    if (onModerate && !(await onModerate(caption, fileToSend))) return;
+
     setUploadingMedia(true);
     setError("");
 
@@ -700,6 +707,8 @@ export default function Channels({
       await publishMediaPost();
       return;
     }
+
+    if (onModerate && !(await onModerate(content.trim(), null))) return;
 
     const stickToBottom = isNearBottom();
 
@@ -1082,6 +1091,7 @@ export default function Channels({
                   channelId={selected.id}
                   canStart={isAdmin}
                   canEnd={isAdmin}
+                  backgroundCallsEnabled={backgroundCallsEnabled}
                 />
               </div>
             )}
@@ -1143,13 +1153,8 @@ export default function Channels({
                           <span>رسالة صوتية</span>
                         </div>
 
-                        <audio
-                          controls
-                          preload="metadata"
-                          src={post.media_url}
-                        >
-                          متصفحك لا يدعم تشغيل الصوت.
-                        </audio>
+                        <VoiceMessagePlayer src={post.media_url} />
+                        <VoiceTranscription messageId={post.id} sourceType="channel_post" transcript={post.transcript} isArabic={document.documentElement.lang?.startsWith("ar")} />
                       </div>
                     ) : post.message_type === "image" && post.media_url ? (
                       <div className="channel-media-message">

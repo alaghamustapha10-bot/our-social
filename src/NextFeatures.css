@@ -1,0 +1,61 @@
+/* LOLZ next-feature surfaces */
+.lolz-notification-preferences{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;margin:18px 0 24px;color:var(--text)}
+.lolz-notification-preferences-heading{display:flex;align-items:flex-start;gap:12px}
+.lolz-notification-preferences-icon{display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;border-radius:13px;background:rgba(119,112,255,.13);color:var(--accent)}
+.lolz-notification-preferences h2{margin:0 0 5px;font-size:17px}
+.lolz-notification-preferences p{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.55}
+.lolz-notification-preferences-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:7px 18px;margin:12px 0}
+.lolz-notification-toggle{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 0;border-top:1px solid var(--border);font-size:14px}
+.lolz-notification-toggle span{display:flex;align-items:center;gap:8px}
+.lolz-notification-toggle input{width:18px;height:18px;accent-color:var(--accent)}
+.lolz-quiet-hours{border-top:1px solid var(--border);margin-top:8px;padding-top:10px}
+.lolz-quiet-hours-times{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
+.lolz-quiet-hours-times label{display:flex;gap:8px;align-items:center;font-size:13px}
+.lolz-quiet-hours-times input{padding:7px 9px;border:1px solid var(--border);border-radius:9px;background:var(--panel-2);color:var(--text)}
+.lolz-quiet-hours small{color:var(--muted);font-size:11px}
+.lolz-notification-preferences-footer{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-top:12px}
+.lolz-notification-preferences-footer button,.lolz-voice-transcription>button,.lolz-story-highlights-heading>button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;border-radius:10px;padding:9px 13px;background:var(--accent);color:white;font-weight:650;cursor:pointer}
+.lolz-notification-preferences-footer button:disabled,.lolz-voice-transcription button:disabled{opacity:.6;cursor:wait}
+.lolz-notification-preferences-notice,.lolz-story-highlights-notice{margin:10px 0 0!important;color:var(--accent)!important}
+.lolz-voice-transcription{margin-top:8px;max-width:100%}
+.lolz-voice-transcription>button{padding:6px 9px;border-radius:8px;font-size:12px;background:rgba(119,112,255,.13);color:var(--accent)}
+.lolz-voice-transcription>small{display:block;color:#c65d5d;font-size:11px;margin-top:5px}
+.lolz-voice-transcript{margin-top:7px;padding:9px 11px;border:1px solid var(--border);border-radius:11px;background:var(--panel-2);font-size:13px;line-height:1.6}
+.lolz-voice-transcript>span{display:flex;align-items:center;gap:6px;color:var(--accent);font-size:11px;font-weight:700}
+.lolz-voice-transcript p{white-space:pre-wrap;margin:5px 0 0}
+.lolz-spin{animation:lolz-spin 1s linear infinite}
+@keyframes lolz-spin{to{transform:rotate(360deg)}}
+.lolz-story-highlights{margin:18px 0 26px;padding:0 0 16px;border-bottom:1px solid var(--border)}
+.lolz-story-highlights-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.lolz-story-highlights-heading h2{margin:0;font-size:17px}
+.lolz-story-highlight-list{display:flex;gap:18px;overflow-x:auto;padding:3px 2px 9px}
+.lolz-story-highlight-card{position:relative;flex:0 0 88px;display:grid;justify-items:center;gap:5px}
+.lolz-story-highlight-open{display:grid;justify-items:center;gap:5px;width:100%;border:0;background:transparent;color:var(--text);cursor:pointer}
+.lolz-story-highlight-cover{position:relative;display:grid;place-items:center;width:74px;height:74px;border-radius:50%;padding:3px;border:2px solid var(--accent);background:var(--panel-2)}
+.lolz-story-highlight-cover img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.lolz-story-highlight-cover i{position:absolute;inset:auto 0 0 auto;display:grid;place-items:center;width:23px;height:23px;border:2px solid var(--panel);border-radius:50%;background:var(--accent);color:#fff;font-style:normal}
+.lolz-story-highlight-open strong{max-width:86px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.lolz-story-highlight-open small,.lolz-story-highlights-muted{color:var(--muted);font-size:11px}
+.lolz-story-highlight-delete{position:absolute;top:-3px;inset-inline-start:0;display:grid;place-items:center;width:22px;height:22px;border:1px solid var(--border);border-radius:50%;background:var(--panel);color:var(--muted);cursor:pointer}
+.lolz-highlight-modal-backdrop{position:fixed;inset:0;z-index:10020;display:grid;place-items:center;padding:18px;background:rgba(0,0,0,.68)}
+.lolz-highlight-modal{width:min(100%,520px);max-height:min(85dvh,760px);overflow:auto;padding:18px;border:1px solid var(--border);border-radius:18px;background:var(--panel);color:var(--text);box-shadow:0 20px 70px rgba(0,0,0,.3)}
+.lolz-highlight-modal header,.lolz-highlight-modal footer{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.lolz-highlight-modal header h3{margin:0}
+.lolz-highlight-modal header button{border:0;background:transparent;color:var(--text);cursor:pointer}
+.lolz-highlight-modal>label{display:grid;gap:7px;margin:16px 0;font-size:13px}
+.lolz-highlight-modal>label input{padding:11px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);color:var(--text)}
+.lolz-highlight-story-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(95px,1fr));gap:9px;margin:12px 0 18px}
+.lolz-highlight-story-picker label{position:relative;display:grid;gap:5px;padding:6px;border:2px solid var(--border);border-radius:11px;cursor:pointer;font-size:11px}
+.lolz-highlight-story-picker label.selected{border-color:var(--accent);background:rgba(119,112,255,.09)}
+.lolz-highlight-story-picker input{position:absolute;top:7px;inset-inline-start:7px;z-index:1;accent-color:var(--accent)}
+.lolz-highlight-story-picker img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px}
+.lolz-highlight-story-picker small{color:var(--muted)}
+.lolz-highlight-modal footer{justify-content:flex-end}
+.lolz-conversation-search{display:flex;align-items:center;gap:9px;margin:10px 0;padding:9px 12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);color:var(--muted)}
+.lolz-conversation-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);font:inherit}
+.lolz-conversation-search button{border:0;background:transparent;color:var(--muted);cursor:pointer}
+.lolz-conversation-search small{font-size:11px}
+.ig-dm-deleted{margin:0!important;color:var(--muted);font-style:italic}
+.lolz-message-delete{color:#d85b68!important}
+.lolz-message-action-error{font-size:11px;color:#d85b68}
+@media(max-width:600px){.lolz-notification-preferences{padding:14px}.lolz-notification-preferences-footer{align-items:flex-start;flex-direction:column}.lolz-highlight-modal{padding:14px}}

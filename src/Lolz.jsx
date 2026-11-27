@@ -26,7 +26,7 @@ function formatDate(date) {
   );
 }
 
-export default function Lolz({ user, blockedUserIds = [], onReport }) {
+export default function Lolz({ user, blockedUserIds = [], onReport, onModerate, initialVideoId = null, onInitialVideoOpened }) {
   const fileRef = useRef(null);
   const videoRefs = useRef({});
   const viewedVideosRef = useRef(new Set());
@@ -253,6 +253,16 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
     void loadVideos();
   }, [loadVideos]);
 
+  useEffect(() => {
+    if (!initialVideoId || !videos.length) return;
+    const target = videoRefs.current[String(initialVideoId)];
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.play().catch(() => {});
+    }
+    onInitialVideoOpened?.();
+  }, [initialVideoId, videos, onInitialVideoOpened]);
+
   async function publishVideo(e) {
     e.preventDefault();
 
@@ -275,6 +285,8 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
       setNotice("حجم الفيديو يجب ألا يتجاوز 100 ميغابايت.");
       return;
     }
+
+    if (onModerate && !(await onModerate(caption.trim(), file))) return;
 
     setBusy(true);
     setNotice("");
@@ -385,6 +397,7 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
     }
 
     if (!content) return;
+    if (onModerate && !(await onModerate(content, null))) return;
 
     const { error } = await supabase.from("lolz_comments").insert({
       video_id: videoId,
@@ -826,7 +839,7 @@ export default function Lolz({ user, blockedUserIds = [], onReport }) {
                                 className="lolz-comment-report"
                                 onClick={() =>
                                   onReport?.({
-                                    type: "comment",
+                                    type: "lolz_comment",
                                     id: comment.id,
                                     targetUserId: comment.user_id,
                                   })

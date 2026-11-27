@@ -742,3 +742,290 @@
   font-size:12px;
 }
 .ig-call-remote-media:not(:has(video)) { display:none !important; }
+
+/* Message composer refinement — keep the writing field spacious and anchored */
+.ig-dm-chat {
+  height: 100%;
+  min-height: 0;
+}
+.ig-dm-composer {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  min-width: 0;
+  min-height: 64px;
+  margin: 12px 16px 4px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--panel);
+  box-shadow: 0 3px 14px rgba(0,0,0,.06);
+}
+.ig-dm-composer:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft), 0 3px 14px rgba(0,0,0,.06);
+}
+.ig-dm-composer .ig-dm-expiry-select {
+  flex: 0 0 76px;
+  width: 76px;
+  max-width: 76px;
+  min-width: 0;
+  height: 38px;
+  padding: 0 7px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 11px;
+}
+.ig-dm-composer .ig-dm-composer-icon {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 12px;
+}
+.ig-dm-composer .ig-dm-composer-input {
+  flex: 1 1 0%;
+  width: 0;
+  min-width: 90px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid transparent !important;
+  border-radius: 13px;
+  outline: 0;
+  background: var(--panel-2) !important;
+  color: var(--text);
+  box-shadow: none !important;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.ig-dm-composer .ig-dm-composer-input:focus {
+  border-color: var(--border-strong) !important;
+  background: var(--panel-2) !important;
+  box-shadow: none !important;
+}
+.ig-dm-composer .ig-dm-composer-input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+.ig-dm-composer .ig-dm-send-button {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+}
+.ig-dm-upload-hint {
+  margin: 0 20px 10px;
+  text-align: start;
+  line-height: 1.5;
+}
+.ig-dm-replying-to,
+.ig-dm-typing-indicator,
+.ig-dm-attachment-preview {
+  flex: 0 0 auto;
+  margin-inline: 16px;
+}
+@media (max-width: 700px) {
+  .ig-dm-composer {
+    gap: 5px;
+    min-height: 58px;
+    margin: 8px 9px 3px;
+    padding: 5px 6px;
+    border-radius: 17px;
+  }
+  .ig-dm-composer .ig-dm-expiry-select {
+    flex-basis: 62px;
+    width: 62px;
+    max-width: 62px;
+    height: 35px;
+    padding-inline: 5px;
+    font-size: 10px;
+  }
+  .ig-dm-composer .ig-dm-composer-icon {
+    flex-basis: 34px;
+    width: 34px;
+    height: 35px;
+    border-radius: 11px;
+  }
+  .ig-dm-composer .ig-dm-composer-input {
+    min-width: 56px;
+    height: 40px;
+    padding-inline: 9px;
+    font-size: 13px;
+  }
+  .ig-dm-composer .ig-dm-send-button {
+    flex-basis: 36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
+  .ig-dm-upload-hint {
+    margin: 0 12px 8px;
+    text-align: center;
+  }
+  .ig-dm-replying-to,
+  .ig-dm-typing-indicator,
+  .ig-dm-attachment-preview {
+    margin-inline: 9px;
+  }
+}
+@media (max-width: 380px) {
+  .ig-dm-composer { gap: 3px; padding-inline: 4px; }
+  .ig-dm-composer .ig-dm-expiry-select {
+    flex-basis: 54px;
+    width: 54px;
+    max-width: 54px;
+    padding-inline: 3px;
+  }
+  .ig-dm-composer .ig-dm-composer-icon {
+    flex-basis: 30px;
+    width: 30px;
+  }
+  .ig-dm-composer .ig-dm-composer-input {
+    min-width: 42px;
+    padding-inline: 6px;
+    font-size: 12px;
+  }
+  .ig-dm-composer .ig-dm-send-button {
+    flex-basis: 34px;
+    width: 34px;
+    height: 34px;
+  }
+}
+
+/* Two-row direct-message composer: a full-width message field above its tools */
+.ig-dm-chat .ig-dm-composer {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-height: 0;
+  margin: 12px 16px 4px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+}
+.ig-dm-composer-field {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+.ig-dm-chat .ig-dm-composer .ig-dm-composer-input {
+  display: block;
+  flex: none;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 48px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border: 1px solid var(--border) !important;
+  border-radius: 13px;
+  outline: 0;
+  background: var(--panel-2) !important;
+  color: var(--text);
+  box-shadow: none !important;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.ig-dm-chat .ig-dm-composer .ig-dm-composer-input:focus {
+  border-color: var(--accent) !important;
+  background: var(--panel-2) !important;
+  box-shadow: 0 0 0 2px var(--accent-soft) !important;
+}
+.ig-dm-chat .ig-dm-composer .ig-dm-composer-input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+.ig-dm-composer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.ig-dm-composer-toolbar .ig-dm-expiry-select {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 86px;
+  max-width: 110px;
+  height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 11px;
+}
+.ig-dm-composer-toolbar .ig-dm-composer-icon {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+}
+.ig-dm-composer-toolbar .ig-dm-send-button {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  margin-inline-start: auto;
+  border-radius: 12px;
+}
+.ig-dm-composer-toolbar .ig-dm-recording-state,
+.ig-dm-composer-toolbar .ig-dm-voice-preview {
+  flex: 1 1 125px;
+  min-width: 0;
+}
+.ig-dm-composer-toolbar .ig-dm-voice-preview audio {
+  width: min(190px, 100%);
+}
+.ig-dm-chat .ig-dm-upload-hint {
+  margin: 0 20px 10px;
+  text-align: start;
+}
+@media (max-width: 700px) {
+  .ig-dm-chat .ig-dm-composer {
+    gap: 7px;
+    margin: 8px 9px 3px;
+    padding: 8px;
+    border-radius: 16px;
+  }
+  .ig-dm-chat .ig-dm-composer .ig-dm-composer-input {
+    height: 46px;
+    font-size: 14px;
+  }
+  .ig-dm-composer-toolbar {
+    gap: 6px;
+  }
+  .ig-dm-composer-toolbar .ig-dm-expiry-select {
+    min-width: 78px;
+    max-width: 95px;
+  }
+  .ig-dm-chat .ig-dm-upload-hint {
+    margin: 0 12px 8px;
+    text-align: center;
+  }
+}
+@media (max-width: 380px) {
+  .ig-dm-composer-toolbar { gap: 4px; }
+  .ig-dm-composer-toolbar .ig-dm-expiry-select {
+    min-width: 68px;
+    max-width: 78px;
+    padding-inline: 5px;
+  }
+  .ig-dm-composer-toolbar .ig-dm-composer-icon {
+    flex-basis: 32px;
+    width: 32px;
+  }
+  .ig-dm-composer-toolbar .ig-dm-send-button {
+    flex-basis: 35px;
+    width: 35px;
+    height: 35px;
+  }
+}

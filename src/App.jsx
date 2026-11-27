@@ -1,6 +1,23 @@
 import Groups from "./Groups";
 import Channels from "./Channels";
 import PreferencesSettings from "./PreferencesSettings";
+import AccountCenter from "./AccountCenter";
+import GlobalSearch from "./GlobalSearch";
+import CreatorStudio from "./CreatorStudio";
+import MonetizationHub from "./MonetizationHub";
+import DraftsCenter from "./DraftsCenter";
+import NotificationPreferences from "./NotificationPreferences";
+import StoryHighlights from "./StoryHighlights";
+import VoiceTranscription from "./VoiceTranscription";
+import "./NextFeatures.css";
+import VoiceMessagePlayer from "./VoiceMessagePlayer";
+import MessageActions from "./MessageActions";
+import Memories from "./Memories";
+import CommunityGuidelines from "./CommunityGuidelines";
+import { moderateLolzSubmission } from "./contentSafety";
+import "./Memories.css";
+import "./MessageActions.css";
+import "./VoiceMessagePlayer.css";
 import {
   useCallback,
   useEffect,
@@ -154,6 +171,8 @@ const translations = {
   "you missed a call from them.": "لديك مكالمة فائتة منه.",
   "joined your group.": "انضم إلى مجموعتك.",
   "subscribed to your channel.": "اشترك في قناتك.",
+  "A moderator has issued a community-guidelines warning for your account.": "أرسل فريق الإشراف تنبيهاً بشأن قواعد مجتمع LOLZ.",
+  "Your LOLZ account has been temporarily suspended after a review.": "تم تعليق حساب LOLZ الخاص بك مؤقتاً بعد مراجعة البلاغ.",
   "Read": "قراءة",
   "PERSONALIZE YOUR EXPERIENCE": "خصص تجربتك",
   "Nothing here yet": "لا يوجد شيء هنا بعد",
@@ -243,14 +262,53 @@ export default function App() {
   const [subscriptionInfo, setSubscriptionInfo] = useState(null);
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [backgroundCallsEnabled, setBackgroundCallsEnabled] = useState(false);
   const userRef = useRef(user);
   userRef.current = user;
+
+  useEffect(() => {
+    if (!user?.id) {
+      setBackgroundCallsEnabled(false);
+      return undefined;
+    }
+
+    let active = true;
+    const loadBackgroundCallPreference = async () => {
+      const { data, error } = await supabase
+        .from("lolz_account_settings")
+        .select("background_calls_enabled")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!active) return;
+      if (error) {
+        console.warn("Could not load background-call preference:", error.message);
+        setBackgroundCallsEnabled(false);
+      } else {
+        setBackgroundCallsEnabled(data?.background_calls_enabled === true);
+      }
+    };
+
+    const handleSettingsChanged = (event) => {
+      if (event.detail?.userId === user.id) {
+        setBackgroundCallsEnabled(event.detail?.settings?.background_calls_enabled === true);
+      }
+    };
+
+    void loadBackgroundCallPreference();
+    window.addEventListener("lolz:account-settings-changed", handleSettingsChanged);
+    return () => {
+      active = false;
+      window.removeEventListener("lolz:account-settings-changed", handleSettingsChanged);
+    };
+  }, [user?.id]);
+
   const pushTokenRef = useRef(null);
   const pushActionHandlerRef = useRef(null);
   const pendingPushActionRef = useRef(null);
   const notificationReloadRef = useRef(null);
   const [pushGroupTarget, setPushGroupTarget] = useState(null);
   const [pushChannelTarget, setPushChannelTarget] = useState(null);
+  const [pushVideoTarget, setPushVideoTarget] = useState(null);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -272,6 +330,29 @@ export default function App() {
       setPushGroupTarget(null);
       goTo("channels");
     }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let active = true;
+    const updatePresence = async () => {
+      if (!active) return;
+      const now = new Date().toISOString();
+      const isOnline = document.visibilityState === "visible";
+      const { error } = await supabase.from("lolz_presence").upsert({
+        user_id: user.id, is_online: isOnline, last_seen_at: now, updated_at: now,
+      }, { onConflict: "user_id" });
+      if (error) console.warn("Could not update LOLZ presence:", error.message);
+    };
+    void updatePresence();
+    const onVisibilityChange = () => { void updatePresence(); };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    const heartbeat = window.setInterval(() => { void updatePresence(); }, 30000);
+    return () => {
+      active = false;
+      window.clearInterval(heartbeat);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [user?.id]);
 
   useEffect(() => {
@@ -417,11 +498,21 @@ export default function App() {
   const [savedPosts, setSavedPosts] = useState([]);
 
   const [activePage, setActivePage] = useState("home");
+  const [discoverMode, setDiscoverMode] = useState("recent");
   const [search, setSearch] = useState("");
 
   const [newPost, setNewPost] = useState("");
   const [postFile, setPostFile] = useState(null);
   const [storyFile, setStoryFile] = useState(null);
+  const [storyPreviewUrl, setStoryPreviewUrl] = useState("");
+  const [storyCaption, setStoryCaption] = useState("");
+  const [storyFilter, setStoryFilter] = useState("none");
+  const [storyCaptionPosition, setStoryCaptionPosition] = useState("bottom");
+  const [storyAudience, setStoryAudience] = useState("everyone");
+
+  useEffect(() => () => {
+    if (storyPreviewUrl) URL.revokeObjectURL(storyPreviewUrl);
+  }, [storyPreviewUrl]);
 
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
@@ -433,6 +524,7 @@ export default function App() {
   const [followBusy, setFollowBusy] = useState([]);
 
   const [selectedProfile, setSelectedProfile] = useState(null);
+  const [selectedProfilePresence, setSelectedProfilePresence] = useState(null);
   const [selectedProfilePosts, setSelectedProfilePosts] = useState([]);
   const [profileReels, setProfileReels] = useState([]);
   const [selectedProfileReels, setSelectedProfileReels] = useState([]);
@@ -442,6 +534,8 @@ export default function App() {
   const [moderationTarget, setModerationTarget] = useState(null);
   const [moderationReports, setModerationReports] = useState([]);
   const [moderationLoading, setModerationLoading] = useState(false);
+  const [moderationActions, setModerationActions] = useState([]);
+  const [moderationActionsLoading, setModerationActionsLoading] = useState(false);
   const [selectedProfileStats, setSelectedProfileStats] = useState({
     followers: 0,
     following: 0,
@@ -452,9 +546,15 @@ export default function App() {
   const [activeConversation, setActiveConversation] = useState(null);
   const [conversationMessages, setConversationMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
+  const [otherIsTyping, setOtherIsTyping] = useState(false);
+  const [otherReadAt, setOtherReadAt] = useState(null);
+  const typingTimerRef = useRef(null);
+  const [replyingToMessage, setReplyingToMessage] = useState(null);
+  const [messageExpiryHours, setMessageExpiryHours] = useState("never");
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messageSending, setMessageSending] = useState(false);
   const [messageSearch, setMessageSearch] = useState("");
+  const [messageContentSearch, setMessageContentSearch] = useState("");
 
   // CENTRAL CALL CONTEXT
   const [selectedCallContext, setSelectedCallContext] = useState(null);
@@ -528,6 +628,10 @@ export default function App() {
   const messageMediaInput = useRef(null);
   const messagesEndRef = useRef(null);
   const shouldAutoScrollRef = useRef(true);
+
+  useEffect(() => {
+    setMessageContentSearch("");
+  }, [activeConversation?.id]);
 
   useEffect(() => {
     if (activePage === "messages" && activeConversation?.id) {
@@ -932,34 +1036,82 @@ export default function App() {
     }
   }, [user?.app_metadata?.role, isArabic]);
 
-  async function updateReportStatus(reportId, status) {
+  const loadModerationActions = useCallback(async () => {
     if (!["admin", "owner"].includes(user?.app_metadata?.role)) return;
-
-    const { error } = await supabase
-      .from("content_reports")
-      .update({
-        status,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: user.id,
-      })
-      .eq("id", reportId);
-
-    if (error) {
+    setModerationActionsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("lolz_moderation_actions")
+        .select("id,target_user_id,actor_user_id,action_type,target_type,target_id,reason,suspension_until,created_at")
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      setModerationActions(data || []);
+    } catch (error) {
       setNotice(
         isArabic
-          ? "تعذر تحديث البلاغ: " + error.message
-          : "Could not update report: " + error.message
+          ? "تعذر تحميل سجل الإشراف: " + error.message
+          : "Could not load moderation history: " + error.message
+      );
+    } finally {
+      setModerationActionsLoading(false);
+    }
+  }, [user?.app_metadata?.role, isArabic]);
+
+  async function updateReportStatus(reportId, status) {
+    if (!["admin", "owner"].includes(user?.app_metadata?.role)) return;
+    if (status !== "reviewing") return runModerationAction(
+      moderationReports.find((item) => item.id === reportId),
+      status === "rejected" ? "reject" : "resolve"
+    );
+    return runModerationAction(
+      moderationReports.find((item) => item.id === reportId),
+      "reviewing"
+    );
+  }
+
+  async function runModerationAction(report, decision, durationHours = 24) {
+    if (!report?.id || !["admin", "owner"].includes(user?.app_metadata?.role)) return;
+    if (["remove_content", "suspend"].includes(decision)) {
+      const confirmed = window.confirm(
+        isArabic
+          ? decision === "remove_content"
+            ? "هل تريد حذف المحتوى المبلّغ عنه نهائياً؟"
+            : `هل تريد تعليق الحساب لمدة ${durationHours} ساعة؟`
+          : decision === "remove_content"
+            ? "Permanently remove the reported content?"
+            : `Suspend this account for ${durationHours} hours?`
+      );
+      if (!confirmed) return;
+    }
+    const { data, error } = await supabase.functions.invoke("lolz-admin", {
+      body: {
+        action: "moderate_report",
+        report_id: report.id,
+        decision,
+        duration_hours: durationHours,
+        reason: report.details || report.reason,
+      },
+    });
+    let message = data?.error || "";
+    const response = error?.context;
+    if (!message && response && typeof response.clone === "function") {
+      const payload = await response.clone().json().catch(() => null);
+      message = payload?.error || payload?.message || "";
+    }
+    if (error || data?.error) {
+      setNotice(
+        (isArabic ? "تعذّر تنفيذ إجراء الإشراف: " : "Moderation action failed: ") +
+        (message || error?.message || "Unknown error")
       );
       return;
     }
-
-    setModerationReports((current) =>
-      current.map((item) =>
-        item.id === reportId
-          ? { ...item, status, reviewed_at: new Date().toISOString(), reviewed_by: user.id }
-          : item
-      )
+    setNotice(
+      isArabic
+        ? "تم تنفيذ الإجراء وتسجيله في سجل الإشراف."
+        : "The moderation action was completed and audited."
     );
+    await Promise.all([loadReports(), loadModerationActions()]);
   }
 
   const loadNotifications = useCallback(async (userId) => {
@@ -1184,6 +1336,12 @@ export default function App() {
     };
   }, [user?.id, isArabic, loadPremiumStatus]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("lolz_commerce")) setActivePage("earn");
+  }, [user?.id]);
+
   function findPost(postId) {
     return (
       posts.find((item) => item.id === postId) ||
@@ -1204,6 +1362,8 @@ export default function App() {
       setNotice(t("Please sign in first."));
       return;
     }
+
+    if (!(await enforceCommunityRules(newPost, postFile))) return;
 
     setBusy(true);
     setNotice("");
@@ -1379,6 +1539,7 @@ export default function App() {
     if (!trimmed) return;
 
     const post = findPost(postId);
+    if (!(await enforceCommunityRules(trimmed, null))) return;
     setCommentText("");
 
     const { error } = await supabase.from("comments").insert({
@@ -1413,6 +1574,8 @@ export default function App() {
       return;
     }
 
+    if (!(await enforceCommunityRules(storyCaption.trim(), storyFile))) return;
+
     setBusy(true);
 
     try {
@@ -1421,12 +1584,19 @@ export default function App() {
       const { error } = await supabase.from("stories").insert({
         user_id: user.id,
         media_url: mediaUrl,
-        caption: "",
+        caption: storyCaption.trim(),
+        audience: storyAudience,
+        media_filter: storyFilter,
+        caption_position: storyCaptionPosition,
       });
 
       if (error) throw error;
 
       setStoryFile(null);
+      setStoryPreviewUrl("");
+      setStoryCaption("");
+      setStoryFilter("none");
+      setStoryCaptionPosition("bottom");
       if (storyInput.current) storyInput.current.value = "";
 
       await loadStories();
@@ -1652,6 +1822,9 @@ export default function App() {
         likes = likesData || [];
       }
 
+      const { data: presenceRows, error: presenceError } = await supabase.rpc("get_lolz_presence", { p_user_ids: [personId] });
+      if (presenceError) console.warn("Could not load profile presence:", presenceError.message);
+      setSelectedProfilePresence(presenceRows?.[0] || null);
       setSelectedProfile(person);
       setSelectedProfileReels(profileReels);
 
@@ -1693,6 +1866,8 @@ export default function App() {
       setNotice(isArabic ? "لا يمكنك الرد على قصة حساب محظور." : "You cannot reply to a blocked account's story.");
       return false;
     }
+
+    if (!(await enforceCommunityRules(text, null))) return false;
 
     const firstUser = [user.id, story.user_id].sort()[0];
     const secondUser = [user.id, story.user_id].sort()[1];
@@ -1757,6 +1932,22 @@ export default function App() {
       );
       return false;
     }
+  }
+
+  async function enforceCommunityRules(text = "", file = null) {
+    const result = await moderateLolzSubmission({
+      supabase,
+      text,
+      file,
+      isArabic,
+    });
+    if (!result.allowed) {
+      setNotice(result.reason || (isArabic
+        ? "هذا المحتوى لا يتوافق مع قواعد مجتمع LOLZ."
+        : "This content does not comply with LOLZ community guidelines."));
+      return false;
+    }
+    return true;
   }
 
   async function reportContent(report) {
@@ -1908,11 +2099,12 @@ export default function App() {
   useEffect(() => {
     if (activePage === "moderation" && ["admin", "owner"].includes(user?.app_metadata?.role)) {
       void loadReports();
+      void loadModerationActions();
     }
     if (activePage === "blocked") {
       void loadBlockedProfiles();
     }
-  }, [activePage, user?.app_metadata?.role, loadReports, loadBlockedProfiles]);
+  }, [activePage, user?.app_metadata?.role, loadReports, loadModerationActions, loadBlockedProfiles]);
 
   // MESSAGING
 
@@ -2006,9 +2198,17 @@ export default function App() {
         .from("messages")
         .select("*")
         .eq("conversation_id", conversationId)
+        .or("expires_at.is.null,expires_at.gt." + new Date().toISOString())
         .order("created_at", { ascending: true });
 
       if (error) throw error;
+
+      if (user?.id) {
+        const { error: readError } = await supabase.from("lolz_conversation_reads").upsert({
+          conversation_id: String(conversationId), user_id: user.id, last_read_at: new Date().toISOString(),
+        }, { onConflict: "conversation_id,user_id" });
+        if (readError) console.warn("Could not save message read receipt:", readError.message);
+      }
 
       const resolvedMessages = await Promise.all(
         (data || []).map(async (message) => {
@@ -2041,7 +2241,41 @@ export default function App() {
     } finally {
       setMessagesLoading(false);
     }
-  }, [t]);
+  }, [t, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || activePage !== "messages" || !activeConversation?.id) {
+      setOtherIsTyping(false);
+      return;
+    }
+    let active = true;
+    const conversationId = String(activeConversation.id);
+    const otherUserId = activeConversation.user_one === user.id
+      ? activeConversation.user_two
+      : activeConversation.user_one;
+    const refreshTyping = async () => {
+      const [typingResult, readResult] = await Promise.all([
+        supabase.from("lolz_typing_status").select("user_id")
+          .eq("conversation_id", conversationId).neq("user_id", user.id)
+          .gt("expires_at", new Date().toISOString()).limit(1),
+        supabase.from("lolz_conversation_reads").select("last_read_at")
+          .eq("conversation_id", conversationId).eq("user_id", otherUserId).maybeSingle(),
+      ]);
+      if (!active) return;
+      if (typingResult.error) console.warn("Could not load typing state:", typingResult.error.message);
+      else setOtherIsTyping(Boolean(typingResult.data?.length));
+      if (readResult.error) console.warn("Could not load read receipt:", readResult.error.message);
+      else setOtherReadAt(readResult.data?.last_read_at || null);
+    };
+    void refreshTyping();
+    const poll = window.setInterval(() => { void refreshTyping(); }, 2500);
+    return () => {
+      active = false;
+      window.clearInterval(poll);
+      void supabase.from("lolz_typing_status").delete()
+        .eq("conversation_id", conversationId).eq("user_id", user.id);
+    };
+  }, [user?.id, activePage, activeConversation?.id]);
 
   useEffect(() => {
     if (!user?.id || activePage !== "messages") return;
@@ -2051,7 +2285,7 @@ export default function App() {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "messages",
         },
@@ -2138,6 +2372,8 @@ export default function App() {
       setActiveConversation(selectedConversation);
       setConversationMessages([]);
       setMessageText("");
+      setReplyingToMessage(null);
+      setMessageExpiryHours("never");
       setMessageFile(null);
 
       if (messageMediaInput.current) {
@@ -2355,6 +2591,25 @@ export default function App() {
     cancelVoiceRecording();
   }
 
+  function handleMessageTyping(value) {
+    setMessageText(value);
+    if (!user?.id || !activeConversation?.id) return;
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    const conversationId = String(activeConversation.id);
+    if (!value.trim()) {
+      void supabase.from("lolz_typing_status").delete()
+        .eq("conversation_id", conversationId).eq("user_id", user.id);
+      return;
+    }
+    typingTimerRef.current = window.setTimeout(() => {
+      void supabase.from("lolz_typing_status").upsert({
+        conversation_id: conversationId,
+        user_id: user.id,
+        expires_at: new Date(Date.now() + 8000).toISOString(),
+      }, { onConflict: "conversation_id,user_id" });
+    }, 350);
+  }
+
   async function sendMessage(event) {
     event.preventDefault();
 
@@ -2379,6 +2634,9 @@ export default function App() {
       setNotice("أرسل الصورة أو الفيديو والرسالة الصوتية بشكل منفصل.");
       return;
     }
+
+    const mediaForReview = file && (file.type.startsWith("image/") || file.type.startsWith("video/")) ? file : null;
+    if (!(await enforceCommunityRules(content, mediaForReview))) return;
 
     setMessageSending(true);
     setNotice("");
@@ -2449,6 +2707,8 @@ export default function App() {
           media_url: mediaUrl,
           file_name: uploadedFile?.name || null,
           mime_type: uploadedFile?.type || null,
+          expires_at: messageExpiryHours === "never" ? null : new Date(Date.now() + Number(messageExpiryHours) * 60 * 60 * 1000).toISOString(),
+          reply_to_id: replyingToMessage?.id ? String(replyingToMessage.id) : null,
         })
         .select("id")
         .single();
@@ -2538,6 +2798,7 @@ export default function App() {
 
   async function changeAvatar(file) {
     if (!file || !user) return;
+    if (!(await enforceCommunityRules("", file))) return;
 
     setBusy(true);
 
@@ -2670,7 +2931,17 @@ export default function App() {
       ? filteredPosts.filter((post) => post.user_id === user?.id)
       : unblockedPosts;
 
+  const discoverPosts = discoverMode === "popular"
+    ? [...visiblePosts].sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0))
+    : visiblePosts;
+
   const unreadCount = notifications.filter((item) => !item.is_read).length;
+  const filteredConversationMessages = conversationMessages.filter((message) => {
+    const term = messageContentSearch.trim().toLocaleLowerCase();
+    if (!term) return true;
+    return [message.content, message.file_name, message.transcript]
+      .some((value) => String(value || "").toLocaleLowerCase().includes(term));
+  });
 
   function goTo(page) {
     setActivePage(page);
@@ -2887,6 +3158,8 @@ export default function App() {
             >
               <Channels
                 user={user}
+                backgroundCallsEnabled={backgroundCallsEnabled}
+                onModerate={enforceCommunityRules}
                 initialChannelId={pushChannelTarget}
                 onInitialChannelOpened={() => setPushChannelTarget(null)}
                 onCallContextChange={handleCallContextChange}
@@ -2899,6 +3172,8 @@ export default function App() {
             <section className="other-page groups-outer-page">
               <Groups
                 user={user}
+                backgroundCallsEnabled={backgroundCallsEnabled}
+                onModerate={enforceCommunityRules}
                 initialGroupId={pushGroupTarget}
                 onInitialGroupOpened={() => setPushGroupTarget(null)}
                 onCallContextChange={handleCallContextChange}
@@ -2969,15 +3244,76 @@ export default function App() {
                   </div>
 
                   <form className="story-upload" onSubmit={publishStory}>
+                    <label className="story-audience-control" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, color: "var(--muted)", fontSize: 13 }}>
+                      {isArabic ? "من يمكنه مشاهدة القصة؟" : "Story audience"}
+                      <select value={storyAudience} onChange={(event) => setStoryAudience(event.target.value)}>
+                        <option value="everyone">{isArabic ? "الجميع" : "Everyone"}</option>
+                        <option value="close_friends">{isArabic ? "الأصدقاء المقرّبون" : "Close friends"}</option>
+                      </select>
+                    </label>
                     <input
                       ref={storyInput}
                       type="file"
                       accept="image/*,video/*"
                       hidden
-                      onChange={(event) => setStoryFile(event.target.files?.[0] || null)}
+                      onChange={(event) => {
+                        const nextFile = event.target.files?.[0] || null;
+                        setStoryFile(nextFile);
+                        setStoryPreviewUrl(nextFile ? URL.createObjectURL(nextFile) : "");
+                        setStoryFilter("none");
+                        setStoryCaptionPosition("bottom");
+                      }}
                     />
                     {storyFile && (
                       <>
+                        {storyPreviewUrl && (
+                          <div className="story-preview" aria-label={isArabic ? "معاينة القصة" : "Story preview"}>
+                            {storyFile.type?.startsWith("video/") ? (
+                              <video src={storyPreviewUrl} autoPlay loop muted playsInline style={{ filter: ({ none: "none", warm: "sepia(.25) saturate(1.25)", mono: "grayscale(1)", vivid: "saturate(1.6) contrast(1.1)", cool: "hue-rotate(15deg) saturate(1.15)", soft: "contrast(.88) brightness(1.08)" })[storyFilter] || "none" }} />
+                            ) : (
+                              <img src={storyPreviewUrl} alt="" style={{ filter: ({ none: "none", warm: "sepia(.25) saturate(1.25)", mono: "grayscale(1)", vivid: "saturate(1.6) contrast(1.1)", cool: "hue-rotate(15deg) saturate(1.15)", soft: "contrast(.88) brightness(1.08)" })[storyFilter] || "none" }} />
+                            )}
+                            {storyCaption.trim() && <span className={`story-preview-caption story-preview-caption--${storyCaptionPosition}`}>{storyCaption}</span>}
+                          </div>
+                        )}
+                        <div className="story-editor-tools">
+                          <label>
+                            {isArabic ? "نص القصة" : "Story text"}
+                            <textarea
+                              value={storyCaption}
+                              onChange={(event) => setStoryCaption(event.target.value)}
+                              maxLength={180}
+                              rows={2}
+                              placeholder={isArabic ? "أضف تعليقاً إلى قصتك..." : "Add a caption to your story..."}
+                            />
+                          </label>
+                          <div className="story-editor-options">
+                            <label>
+                              {isArabic ? "تأثير الصورة" : "Media filter"}
+                              <select value={storyFilter} onChange={(event) => setStoryFilter(event.target.value)}>
+                                <option value="none">{isArabic ? "بدون تأثير" : "Original"}</option>
+                                <option value="warm">{isArabic ? "دافئ" : "Warm"}</option>
+                                <option value="mono">{isArabic ? "أبيض وأسود" : "Mono"}</option>
+                                <option value="vivid">{isArabic ? "ألوان زاهية" : "Vivid"}</option>
+                                <option value="cool">{isArabic ? "بارد" : "Cool"}</option>
+                                <option value="soft">{isArabic ? "ناعم" : "Soft"}</option>
+                              </select>
+                            </label>
+                            <label>
+                              {isArabic ? "موضع النص" : "Caption position"}
+                              <select value={storyCaptionPosition} onChange={(event) => setStoryCaptionPosition(event.target.value)}>
+                                <option value="top">{isArabic ? "أعلى" : "Top"}</option>
+                                <option value="middle">{isArabic ? "الوسط" : "Middle"}</option>
+                                <option value="bottom">{isArabic ? "أسفل" : "Bottom"}</option>
+                              </select>
+                            </label>
+                          </div>
+                          <div className="story-sticker-row" aria-label={isArabic ? "ملصقات سريعة" : "Quick stickers"}>
+                            {["✨", "❤️", "🔥", "😂", "😍"].map((sticker) => (
+                              <button type="button" key={sticker} onClick={() => setStoryCaption((current) => `${current}${sticker}`)}>{sticker}</button>
+                            ))}
+                          </div>
+                        </div>
                         <span className="file-name">{storyFile.name}</span>
                         <button type="submit" className="primary-button" disabled={busy}>
                           {busy ? t("Uploading...") : t("Share story")}
@@ -2987,6 +3323,10 @@ export default function App() {
                           className="secondary-button"
                           onClick={() => {
                             setStoryFile(null);
+                            setStoryPreviewUrl("");
+                            setStoryCaption("");
+                            setStoryFilter("none");
+                            setStoryCaptionPosition("bottom");
                             if (storyInput.current) storyInput.current.value = "";
                           }}
                         >
@@ -3088,8 +3428,38 @@ export default function App() {
               <span className="eyebrow">{t("FIND YOUR COMMUNITY")}</span>
               <h1>{t("Discover")}</h1>
               <p>{t("Explore posts from the LOLZ community.")}</p>
-              <PostList posts={visiblePosts} {...postListProps} />
+              <div className="lolz-discover-filters" role="group" aria-label={isArabic ? "ترتيب المنشورات" : "Sort posts"}>
+                <button type="button" className={discoverMode === "recent" ? "active" : ""} onClick={() => setDiscoverMode("recent")}>{isArabic ? "الأحدث" : "Recent"}</button>
+                <button type="button" className={discoverMode === "popular" ? "active" : ""} onClick={() => setDiscoverMode("popular")}>{isArabic ? "الأكثر شعبية" : "Popular"}</button>
+              </div>
+              <PostList posts={discoverPosts} {...postListProps} />
             </section>
+          )}
+
+          {activePage === "search" && (
+            <GlobalSearch
+              user={user}
+              isArabic={isArabic}
+              onOpenProfile={openUserProfile}
+              onOpenPage={goTo}
+              onOpenGroup={(groupId) => { setPushGroupTarget(groupId); goTo("groups"); }}
+              onOpenChannel={(channelId) => { setPushChannelTarget(channelId); goTo("channels"); }}
+              onOpenVideo={(videoId) => { setPushVideoTarget(videoId); goTo("lolz"); }}
+            />
+          )}
+
+          {activePage === "creator" && (
+            <CreatorStudio user={user} isArabic={isArabic} />
+          )}
+
+          {activePage === "earn" && (
+            <section className="other-page">
+              <MonetizationHub user={user} isArabic={isArabic} />
+            </section>
+          )}
+
+          {activePage === "drafts" && (
+            <DraftsCenter user={user} isArabic={isArabic} />
           )}
 
           {activePage === "people" && (
@@ -3280,6 +3650,11 @@ export default function App() {
                     <p className="profile-handle">
                       @{selectedProfile.username || "member"}
                     </p>
+                    {selectedProfilePresence?.is_online ? (
+                      <p className="profile-presence">{isArabic ? "متصل الآن" : "Active now"}</p>
+                    ) : selectedProfilePresence?.last_seen_at ? (
+                      <p className="profile-presence">{isArabic ? "آخر ظهور: " : "Last seen: "}{timeAgo(selectedProfilePresence.last_seen_at, isArabic)}</p>
+                    ) : null}
                     <p className="profile-bio">
                       {selectedProfile.bio || t("No bio yet.")}
                     </p>
@@ -3310,6 +3685,13 @@ export default function App() {
                     </div>
                   </div>
 
+                  <StoryHighlights
+                    ownerId={selectedProfile.id}
+                    currentUserId={user.id}
+                    ownerProfile={selectedProfile}
+                    isArabic={isArabic}
+                  />
+
                   <div className="section-heading profile-post-heading">
                     <h2>{t("Posts")}</h2>
                   </div>
@@ -3332,6 +3714,23 @@ export default function App() {
             </section>
           )}
 
+          {activePage === "memories" && (
+            <Memories user={user} isArabic={isArabic} />
+          )}
+
+          {activePage === "community-guidelines" && (
+            <section className="other-page">
+              <CommunityGuidelines
+                isArabic={isArabic}
+                onReport={() => setModerationTarget({
+                  type: "other",
+                  id: "community-guidelines",
+                  targetUserId: null,
+                })}
+              />
+            </section>
+          )}
+
           {activePage === "saved" && (
             <section className="other-page">
               <span className="eyebrow">{t("YOUR COLLECTION")}</span>
@@ -3351,8 +3750,11 @@ export default function App() {
           {activePage === "lolz" && (
             <Lolz
               user={user}
+              onModerate={enforceCommunityRules}
               blockedUserIds={blockedUserIds}
               onReport={(target) => setModerationTarget(target)}
+              initialVideoId={pushVideoTarget}
+              onInitialVideoOpened={() => setPushVideoTarget(null)}
             />
           )}
 
@@ -3534,6 +3936,14 @@ export default function App() {
                   </div>
                 </div>
               </div>
+
+              <StoryHighlights
+                ownerId={user.id}
+                currentUserId={user.id}
+                ownerProfile={profile}
+                availableStories={stories.filter((story) => story.user_id === user.id)}
+                isArabic={isArabic}
+              />
 
               <div className="section-heading profile-post-heading">
                 <h2>{t("Your posts")}</h2>
@@ -3779,6 +4189,20 @@ export default function App() {
                         </div>
                       </header>
 
+                      <div className="lolz-conversation-search">
+                        <Search size={17} />
+                        <input
+                          type="search"
+                          value={messageContentSearch}
+                          onChange={(event) => setMessageContentSearch(event.target.value)}
+                          placeholder={isArabic ? "ابحث داخل هذه المحادثة..." : "Search in this conversation..."}
+                          aria-label={isArabic ? "البحث داخل الرسائل" : "Search messages"}
+                        />
+                        {messageContentSearch && (
+                          <button type="button" onClick={() => setMessageContentSearch("")} aria-label={isArabic ? "مسح البحث" : "Clear search"}><X size={15} /></button>
+                        )}
+                        <small>{filteredConversationMessages.length}</small>
+                      </div>
                       <div
                         className="ig-dm-message-feed"
                         onScroll={(event) => {
@@ -3824,15 +4248,15 @@ export default function App() {
                             <span className="ig-dm-loader" />
                             <p>{isArabic ? "جارٍ تحميل الرسائل..." : "Loading messages..."}</p>
                           </div>
-                        ) : conversationMessages.length === 0 ? (
+                        ) : filteredConversationMessages.length === 0 ? (
                           <div className="ig-dm-first-message">
                             <MessageCircle size={24} />
-                            <strong>{isArabic ? "ابدأ المحادثة" : "Start a conversation"}</strong>
-                            <span>{isArabic ? "أرسل أول رسالة إلى هذا الحساب." : "Send a message to get the conversation started."}</span>
+                            <strong>{messageContentSearch ? (isArabic ? "لا توجد رسائل مطابقة" : "No matching messages") : (isArabic ? "ابدأ المحادثة" : "Start a conversation")}</strong>
+                            <span>{messageContentSearch ? (isArabic ? "جرّب كلمة بحث أخرى." : "Try another search term.") : (isArabic ? "أرسل أول رسالة إلى هذا الحساب." : "Send a message to get the conversation started.")}</span>
                           </div>
                         ) : (
                           <div className="ig-dm-message-list">
-                            {conversationMessages.map((message) => {
+                            {filteredConversationMessages.map((message) => {
                               const mine = message.sender_id === user.id;
                               const isImage =
                                 message.message_type === "image" && message.media_url;
@@ -3865,19 +4289,29 @@ export default function App() {
                                         preload="metadata"
                                       />
                                     )}
-                                    {isAudio && (
-                                      <audio
-                                        src={message.media_url}
-                                        controls
-                                        preload="metadata"
-                                      />
-                                    )}
-                                    {(!isMedia ||
+                                    {isAudio && <>
+                                      <VoiceMessagePlayer src={message.media_url} />
+                                      <VoiceTranscription messageId={message.id} sourceType="message" transcript={message.transcript} isArabic={isArabic} />
+                                    </>}
+                                    {message.is_deleted && <p className="ig-dm-deleted">{isArabic ? "تم حذف هذه الرسالة" : "This message was deleted"}</p>}
+                                    {!message.is_deleted && (!isMedia ||
                                       (message.content &&
                                         !["Photo", "Video", "Voice message"].includes(message.content))) && (
                                       <p>{message.content}</p>
                                     )}
+                                    {!message.is_deleted && message.reply_to_id && (
+                                      <div className="ig-dm-reply-quote">
+                                        {isArabic ? "رد على: " : "Reply to: "}
+                                        {conversationMessages.find((item) => String(item.id) === String(message.reply_to_id))?.content || (isArabic ? "رسالة" : "message")}
+                                      </div>
+                                    )}
                                     <time>{timeAgo(message.created_at, isArabic)}</time>
+                                    {mine &&
+                                      message.id === conversationMessages.filter((item) => item.sender_id === user.id).slice(-1)[0]?.id &&
+                                      otherReadAt &&
+                                      new Date(otherReadAt).getTime() >= new Date(message.created_at).getTime() && (
+                                        <small className="ig-dm-read-receipt">{isArabic ? "تمت القراءة" : "Seen"}</small>
+                                      )}
                                     {!mine && (
                                       <button
                                         type="button"
@@ -3893,6 +4327,14 @@ export default function App() {
                                         {isArabic ? "الإبلاغ عن الرسالة" : "Report message"}
                                       </button>
                                     )}
+                                    <MessageActions
+                                      message={message}
+                                      conversationId={activeConversation.id}
+                                      user={user}
+                                      isArabic={isArabic}
+                                      onReply={setReplyingToMessage}
+                                      onUpdated={(messageId, changes) => setConversationMessages((current) => current.map((item) => item.id === messageId ? { ...item, ...changes } : item))}
+                                    />
                                   </div>
                                 </div>
                               );
@@ -3919,79 +4361,102 @@ export default function App() {
                         </div>
                       )}
 
+                      {otherIsTyping && (
+                        <div className="ig-dm-typing-indicator" role="status">
+                          <span className="ig-dm-typing-dots"><i /><i /><i /></span>
+                          {isArabic ? "يكتب الآن..." : "Typing..."}
+                        </div>
+                      )}
+                      {replyingToMessage && (
+                        <div className="ig-dm-replying-to">
+                          <span>{isArabic ? "الرد على: " : "Replying to: "}{replyingToMessage.content || (isArabic ? "رسالة صوتية أو مرفق" : "voice message or attachment")}</span>
+                          <button type="button" onClick={() => setReplyingToMessage(null)} aria-label={isArabic ? "إلغاء الرد" : "Cancel reply"}><X size={15} /></button>
+                        </div>
+                      )}
                       <form className="ig-dm-composer" onSubmit={sendMessage}>
-                        <input
-                          ref={messageMediaInput}
-                          type="file"
-                          accept="image/*,video/*"
-                          hidden
-                          onChange={handleMessageFileChange}
-                        />
-                        <button
-                          type="button"
-                          className="ig-dm-composer-icon"
-                          onClick={() => messageMediaInput.current?.click()}
-                          disabled={messageSending || isRecording || !!voiceFile}
-                          title={isArabic ? "إرفاق صورة أو فيديو" : "Attach a photo or video"}
-                          aria-label={isArabic ? "إرفاق صورة أو فيديو" : "Attach a photo or video"}
-                        >
-                          <ImagePlus size={22} />
-                        </button>
+                        <div className="ig-dm-composer-field">
+                          <input
+                            className="ig-dm-composer-input"
+                            value={messageText}
+                            onChange={(event) => handleMessageTyping(event.target.value)}
+                            placeholder={isArabic ? "اكتب رسالة..." : "Message..."}
+                            disabled={messageSending || isRecording}
+                            aria-label={isArabic ? "اكتب رسالة" : "Write a message"}
+                          />
+                        </div>
 
-                        {!voiceFile && (
+                        <div className="ig-dm-composer-toolbar">
+                          <select className="ig-dm-expiry-select" value={messageExpiryHours} onChange={(event) => setMessageExpiryHours(event.target.value)} aria-label={isArabic ? "مدة بقاء الرسالة" : "Message expiry"} title={isArabic ? "مدة بقاء الرسالة" : "Message expiry"}>
+                            <option value="never">{isArabic ? "دائمة" : "Keep"}</option>
+                            <option value="1">{isArabic ? "ساعة" : "1 hour"}</option>
+                            <option value="24">{isArabic ? "يوم" : "1 day"}</option>
+                            <option value="168">{isArabic ? "أسبوع" : "7 days"}</option>
+                          </select>
+                          <input
+                            ref={messageMediaInput}
+                            type="file"
+                            accept="image/*,video/*"
+                            hidden
+                            onChange={handleMessageFileChange}
+                          />
                           <button
                             type="button"
-                            className={`ig-dm-composer-icon ig-dm-mic ${isRecording ? "recording" : ""}`}
-                            onPointerDown={handleVoicePointerDown}
-                            onPointerUp={handleVoicePointerUp}
-                            onPointerCancel={handleVoicePointerCancel}
-                            onContextMenu={(event) => event.preventDefault()}
-                            disabled={messageSending || !!messageFile}
-                            title={isArabic ? "اضغط مطولاً لتسجيل رسالة صوتية" : "Hold to record a voice message"}
-                            aria-label={isArabic ? "تسجيل رسالة صوتية" : "Record a voice message"}
+                            className="ig-dm-composer-icon"
+                            onClick={() => messageMediaInput.current?.click()}
+                            disabled={messageSending || isRecording || !!voiceFile}
+                            title={isArabic ? "إرفاق صورة أو فيديو" : "Attach a photo or video"}
+                            aria-label={isArabic ? "إرفاق صورة أو فيديو" : "Attach a photo or video"}
                           >
-                            <Mic size={21} />
+                            <ImagePlus size={22} />
                           </button>
-                        )}
 
-                        {isRecording && (
-                          <div className="ig-dm-recording-state">
-                            <span />
-                            {isArabic ? "جارٍ التسجيل" : "Recording"} {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, "0")}
-                            <button type="button" onClick={stopVoiceRecording}>■</button>
-                            <button type="button" onClick={cancelVoiceRecording}><X size={14} /></button>
-                          </div>
-                        )}
-
-                        {voiceFile && (
-                          <div className="ig-dm-voice-preview">
-                            <audio src={voiceFilePreview} controls preload="metadata" />
-                            <button type="button" onClick={() => setVoiceFile(null)} aria-label={isArabic ? "حذف التسجيل" : "Remove recording"}>
-                              <X size={16} />
+                          {!voiceFile && (
+                            <button
+                              type="button"
+                              className={`ig-dm-composer-icon ig-dm-mic ${isRecording ? "recording" : ""}`}
+                              onPointerDown={handleVoicePointerDown}
+                              onPointerUp={handleVoicePointerUp}
+                              onPointerCancel={handleVoicePointerCancel}
+                              onContextMenu={(event) => event.preventDefault()}
+                              disabled={messageSending || !!messageFile}
+                              title={isArabic ? "اضغط مطولاً لتسجيل رسالة صوتية" : "Hold to record a voice message"}
+                              aria-label={isArabic ? "تسجيل رسالة صوتية" : "Record a voice message"}
+                            >
+                              <Mic size={21} />
                             </button>
-                          </div>
-                        )}
+                          )}
 
-                        <input
-                          className="ig-dm-composer-input"
-                          value={messageText}
-                          onChange={(event) => setMessageText(event.target.value)}
-                          placeholder={isArabic ? "اكتب رسالة..." : "Message..."}
-                          disabled={messageSending || isRecording}
-                        />
+                          {isRecording && (
+                            <div className="ig-dm-recording-state">
+                              <span />
+                              {isArabic ? "جارٍ التسجيل" : "Recording"} {Math.floor(recordingSeconds / 60)}:{String(recordingSeconds % 60).padStart(2, "0")}
+                              <button type="button" onClick={stopVoiceRecording}>■</button>
+                              <button type="button" onClick={cancelVoiceRecording}><X size={14} /></button>
+                            </div>
+                          )}
 
-                        <button
-                          className="ig-dm-send-button"
-                          type="submit"
-                          disabled={
-                            messageSending ||
-                            isRecording ||
-                            (!messageText.trim() && !messageFile && !voiceFile)
-                          }
-                          aria-label={isArabic ? "إرسال الرسالة" : "Send message"}
-                        >
-                          {messageSending ? <span className="ig-dm-send-spinner" /> : <Send size={19} />}
-                        </button>
+                          {voiceFile && (
+                            <div className="ig-dm-voice-preview">
+                              <audio src={voiceFilePreview} controls preload="metadata" />
+                              <button type="button" onClick={() => setVoiceFile(null)} aria-label={isArabic ? "حذف التسجيل" : "Remove recording"}>
+                                <X size={16} />
+                              </button>
+                            </div>
+                          )}
+
+                          <button
+                            className="ig-dm-send-button"
+                            type="submit"
+                            disabled={
+                              messageSending ||
+                              isRecording ||
+                              (!messageText.trim() && !messageFile && !voiceFile)
+                            }
+                            aria-label={isArabic ? "إرسال الرسالة" : "Send message"}
+                          >
+                            {messageSending ? <span className="ig-dm-send-spinner" /> : <Send size={19} />}
+                          </button>
+                        </div>
                       </form>
                       <small className="ig-dm-upload-hint">
                         {isArabic ? "الصور والفيديوهات حتى 100 ميغابايت" : "Photos and videos up to 100 MB"}
@@ -4038,6 +4503,8 @@ export default function App() {
                 )}
               </div>
 
+              <NotificationPreferences user={user} isArabic={isArabic} />
+
               {notificationLoading ? (
                 <p>{t("Loading notifications...")}</p>
               ) : notifications.length === 0 ? (
@@ -4074,6 +4541,8 @@ export default function App() {
                       missed_call: t("you missed a call from them."),
                       group_join: t("joined your group."),
                       channel_join: t("subscribed to your channel."),
+                      moderation_warning: t("A moderator has issued a community-guidelines warning for your account."),
+                      moderation_suspension: t("Your LOLZ account has been temporarily suspended after a review."),
                     };
 
                     const message =
@@ -4211,6 +4680,21 @@ export default function App() {
                             {isArabic ? "قيد المراجعة" : "Reviewing"}
                           </button>
                         )}
+                        {!["resolved", "rejected"].includes(report.status) && report.target_type !== "other" && (
+                          <button type="button" className="secondary-button" onClick={() => void runModerationAction(report, "warning")}>
+                            {isArabic ? "إرسال تحذير" : "Send warning"}
+                          </button>
+                        )}
+                        {!["resolved", "rejected"].includes(report.status) && ["post", "video", "comment", "lolz_comment", "story", "message", "group_message", "channel_post"].includes(report.target_type) && (
+                          <button type="button" className="lolz-moderation-remove-button" onClick={() => void runModerationAction(report, "remove_content")}>
+                            {isArabic ? "حذف المحتوى" : "Remove content"}
+                          </button>
+                        )}
+                        {!["resolved", "rejected"].includes(report.status) && report.target_type !== "other" && (
+                          <button type="button" className="lolz-moderation-suspend-button" onClick={() => void runModerationAction(report, "suspend", 24)}>
+                            {isArabic ? "تعليق 24 ساعة" : "Suspend 24h"}
+                          </button>
+                        )}
                         {report.status !== "resolved" && (
                           <button type="button" className="primary-button" onClick={() => void updateReportStatus(report.id, "resolved")}>
                             {isArabic ? "تمت المعالجة" : "Resolve"}
@@ -4226,6 +4710,45 @@ export default function App() {
                   ))}
                 </div>
               )}
+
+              <section className="lolz-moderation-history">
+                <div className="lolz-report-toolbar">
+                  <strong>{isArabic ? "سجل إجراءات الإشراف" : "Moderation history"}</strong>
+                  <button type="button" className="secondary-button" onClick={() => void loadModerationActions()} disabled={moderationActionsLoading}>
+                    {moderationActionsLoading ? (isArabic ? "جارٍ التحميل..." : "Loading...") : (isArabic ? "تحديث السجل" : "Refresh history")}
+                  </button>
+                </div>
+                {moderationActionsLoading ? (
+                  <div className="empty-state">{isArabic ? "جارٍ تحميل السجل..." : "Loading moderation history..."}</div>
+                ) : moderationActions.length === 0 ? (
+                  <div className="empty-state">{isArabic ? "لا توجد إجراءات مسجلة بعد." : "No moderation actions recorded yet."}</div>
+                ) : (
+                  <div className="lolz-report-list">
+                    {moderationActions.map((action) => {
+                      const actionNames = {
+                        warning: isArabic ? "تحذير" : "Warning",
+                        content_removed: isArabic ? "إزالة محتوى" : "Content removed",
+                        temporary_suspension: isArabic ? "تعليق مؤقت" : "Temporary suspension",
+                        permanent_suspension: isArabic ? "تعليق دائم" : "Permanent suspension",
+                        report_resolved: isArabic ? "إغلاق البلاغ" : "Report resolved",
+                        report_rejected: isArabic ? "رفض البلاغ" : "Report rejected",
+                      };
+                      return (
+                        <article className="lolz-report-card" key={action.id}>
+                          <div className="lolz-report-card-top">
+                            <strong>{actionNames[action.action_type] || action.action_type}</strong>
+                            <small>{new Date(action.created_at).toLocaleString(isArabic ? "ar" : "en")}</small>
+                          </div>
+                          <p>{isArabic ? "نوع المحتوى: " : "Target type: "}{action.target_type || "—"} · <code>{action.target_id || "—"}</code></p>
+                          <p>{isArabic ? "الحساب المستهدف: " : "Target account: "}<code>{action.target_user_id || "—"}</code></p>
+                          <p>{action.reason}</p>
+                          {action.suspension_until && <small>{isArabic ? "ينتهي التعليق: " : "Suspension until: "}{new Date(action.suspension_until).toLocaleString(isArabic ? "ar" : "en")}</small>}
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
             </section>
           )}
 
@@ -4251,6 +4774,7 @@ export default function App() {
                 {t("PERSONALIZE YOUR EXPERIENCE")}
               </span>
               <PreferencesSettings />
+              <AccountCenter user={user} isArabic={isArabic} />
             </section>
           )}
         </div>
@@ -4270,6 +4794,7 @@ export default function App() {
             onCallStateChange={handleCallStateChange}
             onCallActionsReady={registerPrivateCallActions}
             showIdleControls={showIdleCallControls}
+            backgroundCallsEnabled={backgroundCallsEnabled}
           />
         </div>
       )}

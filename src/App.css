@@ -2155,3 +2155,38 @@ button:active:not(:disabled) {
   }
 }
 
+
+
+/* LOLZ community expansion */
+.lolz-discover-filters{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+.lolz-discover-filters button{border:1px solid var(--border);border-radius:999px;background:var(--panel);color:var(--text);padding:8px 15px;cursor:pointer;font-weight:650}
+.lolz-discover-filters button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.ig-dm-reply-quote{border-inline-start:3px solid var(--accent);background:var(--panel-2);border-radius:8px;padding:7px 9px;margin:2px 0 7px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.ig-dm-replying-to{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-inline-start:3px solid var(--accent);background:var(--panel-2);color:var(--text);font-size:12px}
+.ig-dm-replying-to span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ig-dm-replying-to button{border:0;background:transparent;color:var(--muted);cursor:pointer}
+.ig-dm-expiry-select{max-width:84px;min-width:0;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);color:var(--text);font-size:11px;padding:5px}
+
+
+.ig-dm-typing-indicator{display:flex;align-items:center;gap:8px;padding:5px 12px;color:var(--muted);font-size:12px}
+.ig-dm-typing-dots{display:inline-flex;align-items:center;gap:3px}
+.ig-dm-typing-dots i{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:lolz-typing-bounce 1s infinite ease-in-out}
+.ig-dm-typing-dots i:nth-child(2){animation-delay:.15s}.ig-dm-typing-dots i:nth-child(3){animation-delay:.3s}
+@keyframes lolz-typing-bounce{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-3px);opacity:1}}
+.profile-presence{color:#22c55e;font-size:12px;font-weight:650;margin:4px 0}
+
+.ig-dm-read-receipt{display:block;color:var(--muted);font-size:10px;text-align:end;margin-top:3px}
+
+/* Lightweight caption and sticker editor for LOLZ stories. */
+.story-editor-tools{display:grid;gap:8px;width:100%;margin:10px 0}.story-editor-tools label{display:grid;gap:6px;color:var(--muted);font-size:13px}.story-editor-tools textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:64px;padding:10px 12px;border:1px solid var(--border);border-radius:11px;background:var(--panel-2);color:var(--text);font:inherit}.story-sticker-row{display:flex;gap:7px;flex-wrap:wrap}.story-sticker-row button{width:38px;height:36px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);font-size:18px;cursor:pointer}
+
+
+/* Story editor preview and controls */
+.story-preview{position:relative;width:min(100%,280px);height:360px;overflow:hidden;border:1px solid var(--border);border-radius:16px;background:#111;isolation:isolate}
+.story-preview img,.story-preview video{width:100%;height:100%;object-fit:cover}
+.story-preview-caption{position:absolute;z-index:2;left:12px;right:12px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.24);color:#fff;text-align:center;line-height:1.55;text-shadow:0 1px 5px rgba(0,0,0,.75);overflow-wrap:anywhere;pointer-events:none}
+.story-preview-caption--top{top:18px}.story-preview-caption--middle{top:50%;transform:translateY(-50%)}.story-preview-caption--bottom{bottom:18px}
+.story-editor-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.story-editor-options label{display:grid;gap:6px;color:var(--muted);font-size:13px}
+.story-editor-options select{width:100%;min-width:0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);color:var(--text);font:inherit}
+@media(max-width:520px){.story-preview{width:100%;max-width:280px}.story-editor-options{grid-template-columns:1fr}}

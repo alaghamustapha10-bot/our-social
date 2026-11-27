@@ -273,11 +273,27 @@ create policy "LOLZ users delete their own private message media"
   );
 
 create table if not exists public.story_views (
+  id uuid primary key default gen_random_uuid(),
   story_id text not null,
   viewer_id uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now(),
   viewed_at timestamptz not null default now(),
-  primary key (story_id, viewer_id)
+  unique (story_id, viewer_id)
 );
+
+-- Preserve compatibility with installations that already have story_views
+-- using UUID story_id and created_at, while adding the timestamp expected by
+-- the current story-viewer RPC.
+alter table public.story_views add column if not exists created_at timestamptz;
+alter table public.story_views add column if not exists viewed_at timestamptz;
+update public.story_views
+set created_at = coalesce(created_at, now()),
+    viewed_at = coalesce(viewed_at, created_at, now());
+alter table public.story_views
+  alter column created_at set default now(),
+  alter column created_at set not null,
+  alter column viewed_at set default now(),
+  alter column viewed_at set not null;
 
 create index if not exists story_views_viewer_idx
   on public.story_views(viewer_id, viewed_at desc);
@@ -292,7 +308,7 @@ create policy "Viewers can record their own story views"
     and exists (
       select 1
       from public.stories s
-      where s.id::text = story_id
+      where s.id::text = story_views.story_id::text
         and s.user_id <> auth.uid()
         and s.expires_at > now()
     )
@@ -325,7 +341,7 @@ begin
   return query
     select sv.viewer_id, sv.viewed_at
     from public.story_views sv
-    where sv.story_id = p_story_id
+    where sv.story_id::text = p_story_id
     order by sv.viewed_at asc;
 end;
 $$;
@@ -373,7 +389,7 @@ language sql
 stable
 security definer
 set search_path = public, pg_temp
-as $
+as $$
   select
     v.id::text,
     count(vw.viewer_id)::bigint
@@ -383,7 +399,7 @@ as $
   where v.id::text = any(coalesce(p_video_ids, array[]::text[]))
     and public.lolz_users_not_blocked(auth.uid(), v.user_id)
   group by v.id;
-$;
+$$;
 
 revoke all on function public.get_lolz_video_view_counts(text[]) from public;
 grant execute on function public.get_lolz_video_view_counts(text[]) to authenticated;
