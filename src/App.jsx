@@ -499,8 +499,15 @@ export default function App() {
   const [newPost, setNewPost] = useState("");
   const [postFile, setPostFile] = useState(null);
   const [storyFile, setStoryFile] = useState(null);
+  const [storyPreviewUrl, setStoryPreviewUrl] = useState("");
   const [storyCaption, setStoryCaption] = useState("");
+  const [storyFilter, setStoryFilter] = useState("none");
+  const [storyCaptionPosition, setStoryCaptionPosition] = useState("bottom");
   const [storyAudience, setStoryAudience] = useState("everyone");
+
+  useEffect(() => () => {
+    if (storyPreviewUrl) URL.revokeObjectURL(storyPreviewUrl);
+  }, [storyPreviewUrl]);
 
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
@@ -1563,12 +1570,17 @@ export default function App() {
         media_url: mediaUrl,
         caption: storyCaption.trim(),
         audience: storyAudience,
+        media_filter: storyFilter,
+        caption_position: storyCaptionPosition,
       });
 
       if (error) throw error;
 
       setStoryFile(null);
+      setStoryPreviewUrl("");
       setStoryCaption("");
+      setStoryFilter("none");
+      setStoryCaptionPosition("bottom");
       if (storyInput.current) storyInput.current.value = "";
 
       await loadStories();
@@ -3220,10 +3232,26 @@ export default function App() {
                       type="file"
                       accept="image/*,video/*"
                       hidden
-                      onChange={(event) => setStoryFile(event.target.files?.[0] || null)}
+                      onChange={(event) => {
+                        const nextFile = event.target.files?.[0] || null;
+                        setStoryFile(nextFile);
+                        setStoryPreviewUrl(nextFile ? URL.createObjectURL(nextFile) : "");
+                        setStoryFilter("none");
+                        setStoryCaptionPosition("bottom");
+                      }}
                     />
                     {storyFile && (
                       <>
+                        {storyPreviewUrl && (
+                          <div className="story-preview" aria-label={isArabic ? "معاينة القصة" : "Story preview"}>
+                            {storyFile.type?.startsWith("video/") ? (
+                              <video src={storyPreviewUrl} autoPlay loop muted playsInline style={{ filter: ({ none: "none", warm: "sepia(.25) saturate(1.25)", mono: "grayscale(1)", vivid: "saturate(1.6) contrast(1.1)", cool: "hue-rotate(15deg) saturate(1.15)", soft: "contrast(.88) brightness(1.08)" })[storyFilter] || "none" }} />
+                            ) : (
+                              <img src={storyPreviewUrl} alt="" style={{ filter: ({ none: "none", warm: "sepia(.25) saturate(1.25)", mono: "grayscale(1)", vivid: "saturate(1.6) contrast(1.1)", cool: "hue-rotate(15deg) saturate(1.15)", soft: "contrast(.88) brightness(1.08)" })[storyFilter] || "none" }} />
+                            )}
+                            {storyCaption.trim() && <span className={`story-preview-caption story-preview-caption--${storyCaptionPosition}`}>{storyCaption}</span>}
+                          </div>
+                        )}
                         <div className="story-editor-tools">
                           <label>
                             {isArabic ? "نص القصة" : "Story text"}
@@ -3235,6 +3263,27 @@ export default function App() {
                               placeholder={isArabic ? "أضف تعليقاً إلى قصتك..." : "Add a caption to your story..."}
                             />
                           </label>
+                          <div className="story-editor-options">
+                            <label>
+                              {isArabic ? "تأثير الصورة" : "Media filter"}
+                              <select value={storyFilter} onChange={(event) => setStoryFilter(event.target.value)}>
+                                <option value="none">{isArabic ? "بدون تأثير" : "Original"}</option>
+                                <option value="warm">{isArabic ? "دافئ" : "Warm"}</option>
+                                <option value="mono">{isArabic ? "أبيض وأسود" : "Mono"}</option>
+                                <option value="vivid">{isArabic ? "ألوان زاهية" : "Vivid"}</option>
+                                <option value="cool">{isArabic ? "بارد" : "Cool"}</option>
+                                <option value="soft">{isArabic ? "ناعم" : "Soft"}</option>
+                              </select>
+                            </label>
+                            <label>
+                              {isArabic ? "موضع النص" : "Caption position"}
+                              <select value={storyCaptionPosition} onChange={(event) => setStoryCaptionPosition(event.target.value)}>
+                                <option value="top">{isArabic ? "أعلى" : "Top"}</option>
+                                <option value="middle">{isArabic ? "الوسط" : "Middle"}</option>
+                                <option value="bottom">{isArabic ? "أسفل" : "Bottom"}</option>
+                              </select>
+                            </label>
+                          </div>
                           <div className="story-sticker-row" aria-label={isArabic ? "ملصقات سريعة" : "Quick stickers"}>
                             {["✨", "❤️", "🔥", "😂", "😍"].map((sticker) => (
                               <button type="button" key={sticker} onClick={() => setStoryCaption((current) => `${current}${sticker}`)}>{sticker}</button>
@@ -3250,7 +3299,10 @@ export default function App() {
                           className="secondary-button"
                           onClick={() => {
                             setStoryFile(null);
+                            setStoryPreviewUrl("");
                             setStoryCaption("");
+                            setStoryFilter("none");
+                            setStoryCaptionPosition("bottom");
                             if (storyInput.current) storyInput.current.value = "";
                           }}
                         >
