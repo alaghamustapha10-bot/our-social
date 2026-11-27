@@ -506,6 +506,7 @@ export default function Channels({
     event.preventDefault();
 
     if (!name.trim() || !user?.id || loading) return;
+    if (onModerate && !(await onModerate([name.trim(), description.trim()].join("\n"), null))) return;
 
     setLoading(true);
     setError("");
