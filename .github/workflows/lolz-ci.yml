@@ -49,6 +49,9 @@ jobs:
       - name: Check LOLZ Admin Edge Function
         working-directory: supabase/functions
         run: deno check lolz-admin/index.ts
+      - name: Check LOLZ moderation Edge Function
+        working-directory: supabase/functions
+        run: deno check lolz-moderate/index.ts
       - name: Check LOLZ LiveKit Calls Edge Function
         working-directory: supabase/functions
         run: deno check livekit-token/index.ts
