@@ -450,6 +450,11 @@ drop policy if exists "LOLZ sellers read own payout requests" on public.lolz_pay
 create policy "LOLZ sellers read own payout requests"
   on public.lolz_payout_requests for select to authenticated
   using (seller_id = auth.uid());
+
+drop policy if exists "LOLZ admins read payout requests" on public.lolz_payout_requests;
+create policy "LOLZ admins read payout requests"
+  on public.lolz_payout_requests for select to authenticated
+  using ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'owner'));
 drop policy if exists "LOLZ sellers create own payout requests" on public.lolz_payout_requests;
 create policy "LOLZ sellers create own payout requests"
   on public.lolz_payout_requests for insert to authenticated
