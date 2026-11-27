@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 type SourceType = "message" | "group_message" | "channel_post";
 type Row = Record<string, unknown>;
@@ -27,7 +27,7 @@ function decodeStoragePath(value: string): string {
 }
 
 async function downloadAudio(
-  admin: SupabaseClient<any>,
+  admin: any,
   supabaseUrl: string,
   sourceType: SourceType,
   mediaUrl: string,
