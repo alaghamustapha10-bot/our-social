@@ -974,32 +974,58 @@ export default function App() {
 
   async function updateReportStatus(reportId, status) {
     if (!["admin", "owner"].includes(user?.app_metadata?.role)) return;
+    if (status !== "reviewing") return runModerationAction(
+      moderationReports.find((item) => item.id === reportId),
+      status === "rejected" ? "reject" : "resolve"
+    );
+    return runModerationAction(
+      moderationReports.find((item) => item.id === reportId),
+      "reviewing"
+    );
+  }
 
-    const { error } = await supabase
-      .from("content_reports")
-      .update({
-        status,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: user.id,
-      })
-      .eq("id", reportId);
-
-    if (error) {
-      setNotice(
+  async function runModerationAction(report, decision, durationHours = 24) {
+    if (!report?.id || !["admin", "owner"].includes(user?.app_metadata?.role)) return;
+    if (["remove_content", "suspend"].includes(decision)) {
+      const confirmed = window.confirm(
         isArabic
-          ? "تعذر تحديث البلاغ: " + error.message
-          : "Could not update report: " + error.message
+          ? decision === "remove_content"
+            ? "هل تريد حذف المحتوى المبلّغ عنه نهائياً؟"
+            : `هل تريد تعليق الحساب لمدة ${durationHours} ساعة؟`
+          : decision === "remove_content"
+            ? "Permanently remove the reported content?"
+            : `Suspend this account for ${durationHours} hours?`
+      );
+      if (!confirmed) return;
+    }
+    const { data, error } = await supabase.functions.invoke("lolz-admin", {
+      body: {
+        action: "moderate_report",
+        report_id: report.id,
+        decision,
+        duration_hours: durationHours,
+        reason: report.details || report.reason,
+      },
+    });
+    let message = data?.error || "";
+    const response = error?.context;
+    if (!message && response && typeof response.clone === "function") {
+      const payload = await response.clone().json().catch(() => null);
+      message = payload?.error || payload?.message || "";
+    }
+    if (error || data?.error) {
+      setNotice(
+        (isArabic ? "تعذّر تنفيذ إجراء الإشراف: " : "Moderation action failed: ") +
+        (message || error?.message || "Unknown error")
       );
       return;
     }
-
-    setModerationReports((current) =>
-      current.map((item) =>
-        item.id === reportId
-          ? { ...item, status, reviewed_at: new Date().toISOString(), reviewed_by: user.id }
-          : item
-      )
+    setNotice(
+      isArabic
+        ? "تم تنفيذ الإجراء وتسجيله في سجل الإشراف."
+        : "The moderation action was completed and audited."
     );
+    await loadReports();
   }
 
   const loadNotifications = useCallback(async (userId) => {
@@ -3491,6 +3517,19 @@ export default function App() {
 
           {activePage === "memories" && (
             <Memories user={user} isArabic={isArabic} />
+          )}
+
+          {activePage === "community-guidelines" && (
+            <section className="other-page">
+              <CommunityGuidelines
+                isArabic={isArabic}
+                onReport={() => setModerationTarget({
+                  type: "other",
+                  id: "community-guidelines",
+                  targetUserId: null,
+                })}
+              />
+            </section>
           )}
 
           {activePage === "saved" && (
