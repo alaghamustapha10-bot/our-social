@@ -282,6 +282,29 @@ export default function App() {
   }, [user?.id]);
 
   useEffect(() => {
+    if (!user?.id) return;
+    let active = true;
+    const updatePresence = async () => {
+      if (!active) return;
+      const now = new Date().toISOString();
+      const isOnline = document.visibilityState === "visible";
+      const { error } = await supabase.from("lolz_presence").upsert({
+        user_id: user.id, is_online: isOnline, last_seen_at: now, updated_at: now,
+      }, { onConflict: "user_id" });
+      if (error) console.warn("Could not update LOLZ presence:", error.message);
+    };
+    void updatePresence();
+    const onVisibilityChange = () => { void updatePresence(); };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    const heartbeat = window.setInterval(() => { void updatePresence(); }, 30000);
+    return () => {
+      active = false;
+      window.clearInterval(heartbeat);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [user?.id]);
+
+  useEffect(() => {
     document.documentElement.lang = isArabic ? "ar" : "en";
     document.documentElement.dir = isArabic ? "rtl" : "ltr";
   }, [isArabic]);
@@ -442,6 +465,7 @@ export default function App() {
   const [followBusy, setFollowBusy] = useState([]);
 
   const [selectedProfile, setSelectedProfile] = useState(null);
+  const [selectedProfilePresence, setSelectedProfilePresence] = useState(null);
   const [selectedProfilePosts, setSelectedProfilePosts] = useState([]);
   const [profileReels, setProfileReels] = useState([]);
   const [selectedProfileReels, setSelectedProfileReels] = useState([]);
@@ -1664,6 +1688,9 @@ export default function App() {
         likes = likesData || [];
       }
 
+      const { data: presenceRows, error: presenceError } = await supabase.rpc("get_lolz_presence", { p_user_ids: [personId] });
+      if (presenceError) console.warn("Could not load profile presence:", presenceError.message);
+      setSelectedProfilePresence(presenceRows?.[0] || null);
       setSelectedProfile(person);
       setSelectedProfileReels(profileReels);
 
@@ -3319,6 +3346,11 @@ export default function App() {
                     <p className="profile-handle">
                       @{selectedProfile.username || "member"}
                     </p>
+                    {selectedProfilePresence?.is_online ? (
+                      <p className="profile-presence">{isArabic ? "متصل الآن" : "Active now"}</p>
+                    ) : selectedProfilePresence?.last_seen_at ? (
+                      <p className="profile-presence">{isArabic ? "آخر ظهور: " : "Last seen: "}{timeAgo(selectedProfilePresence.last_seen_at, isArabic)}</p>
+                    ) : null}
                     <p className="profile-bio">
                       {selectedProfile.bio || t("No bio yet.")}
                     </p>
