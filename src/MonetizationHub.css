@@ -85,3 +85,7 @@
 @keyframes lolz-money-spin{to{transform:rotate(360deg)}}
 @media(max-width:900px){.lolz-money-stream-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.lolz-money-offer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.lolz-money-page{padding:14px 10px 42px}.lolz-money-hero{padding:20px}.lolz-money-hero-mark{display:none}.lolz-money-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.lolz-money-stream-grid,.lolz-money-offer-grid,.lolz-money-create-grid{grid-template-columns:1fr}.lolz-money-support{align-items:stretch;flex-direction:column}.lolz-money-support form{width:100%;align-items:end}.lolz-money-support label{flex:1}.lolz-money-support input{width:100%}.lolz-money-heading{align-items:flex-start;flex-direction:column}.lolz-money-form-two{grid-template-columns:1fr}.lolz-money-tabs .lolz-money-refresh{margin-inline-start:0}.lolz-money-row{align-items:flex-start}.lolz-money-hero h1{font-size:31px}}
+
+.lolz-money-admin-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;margin-top:7px}
+.lolz-money-admin-actions button{border:1px solid var(--border);border-radius:8px;padding:6px 9px;background:var(--panel);color:var(--text);font-size:11px;font-weight:750;cursor:pointer}
+.lolz-money-admin-actions button:disabled{opacity:.5;cursor:wait}
