@@ -4,7 +4,11 @@ import { supabase } from "./supabase";
 import "./DraftsCenter.css";
 
 function makeId() {
-  return globalThis.crypto?.randomUUID?.() || `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+    const random = Math.random() * 16 | 0;
+    return (char === "x" ? random : (random & 0x3 | 0x8)).toString(16);
+  });
 }
 
 export default function DraftsCenter({ user, isArabic = false }) {
@@ -20,7 +24,7 @@ export default function DraftsCenter({ user, isArabic = false }) {
   const [notice, setNotice] = useState("");
   const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
 
-  const t = (ar, en) => isArabic ? ar : en;
+  const t = useCallback((ar, en) => isArabic ? ar : en, [isArabic]);
 
   const readPending = useCallback(() => {
     try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; }
