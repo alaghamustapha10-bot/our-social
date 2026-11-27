@@ -116,7 +116,7 @@ export default function Groups({
   const [creating, setCreating] = useState(false);
 
   const [showCreate, setShowCreate] = useState(false);
-  const [showInfo, setShowInfo] = useState(true);
+  const [showInfo, setShowInfo] = useState(false);
 
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -916,7 +916,7 @@ export default function Groups({
     }
 
     setSelectedGroup(group);
-    setShowInfo(true);
+    setShowInfo(false);
     setError("");
   };
 
