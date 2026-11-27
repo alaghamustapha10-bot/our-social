@@ -171,6 +171,7 @@ async function moderateReport(db: any, user: any, role: string, body: any) {
   }
 
   if (decision === "warning") {
+    if (!targetUserId) throw new HttpError("The reported account could not be identified.");
     await writeModerationAction(db, {
       target_user_id: targetUserId,
       actor_user_id: user.id,
@@ -186,6 +187,7 @@ async function moderateReport(db: any, user: any, role: string, body: any) {
   }
 
   if (decision === "suspend") {
+    if (!targetUserId) throw new HttpError("The reported account could not be identified.");
     const hours = Number(body.duration_hours || 24);
     if (![24, 168].includes(hours)) throw new HttpError("Suspension must be 24 hours or 7 days.");
     const until = new Date(Date.now() + hours * 60 * 60 * 1000);
