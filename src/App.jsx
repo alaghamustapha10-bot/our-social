@@ -2,6 +2,9 @@ import Groups from "./Groups";
 import Channels from "./Channels";
 import PreferencesSettings from "./PreferencesSettings";
 import AccountCenter from "./AccountCenter";
+import GlobalSearch from "./GlobalSearch";
+import CreatorStudio from "./CreatorStudio";
+import DraftsCenter from "./DraftsCenter";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import MessageActions from "./MessageActions";
 import Memories from "./Memories";
@@ -254,8 +257,46 @@ export default function App() {
   const [subscriptionInfo, setSubscriptionInfo] = useState(null);
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [backgroundCallsEnabled, setBackgroundCallsEnabled] = useState(false);
   const userRef = useRef(user);
   userRef.current = user;
+
+  useEffect(() => {
+    if (!user?.id) {
+      setBackgroundCallsEnabled(false);
+      return undefined;
+    }
+
+    let active = true;
+    const loadBackgroundCallPreference = async () => {
+      const { data, error } = await supabase
+        .from("lolz_account_settings")
+        .select("background_calls_enabled")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!active) return;
+      if (error) {
+        console.warn("Could not load background-call preference:", error.message);
+        setBackgroundCallsEnabled(false);
+      } else {
+        setBackgroundCallsEnabled(data?.background_calls_enabled === true);
+      }
+    };
+
+    const handleSettingsChanged = (event) => {
+      if (event.detail?.userId === user.id) {
+        setBackgroundCallsEnabled(event.detail?.settings?.background_calls_enabled === true);
+      }
+    };
+
+    void loadBackgroundCallPreference();
+    window.addEventListener("lolz:account-settings-changed", handleSettingsChanged);
+    return () => {
+      active = false;
+      window.removeEventListener("lolz:account-settings-changed", handleSettingsChanged);
+    };
+  }, [user?.id]);
+
   const pushTokenRef = useRef(null);
   const pushActionHandlerRef = useRef(null);
   const pendingPushActionRef = useRef(null);
@@ -457,6 +498,7 @@ export default function App() {
   const [newPost, setNewPost] = useState("");
   const [postFile, setPostFile] = useState(null);
   const [storyFile, setStoryFile] = useState(null);
+  const [storyCaption, setStoryCaption] = useState("");
   const [storyAudience, setStoryAudience] = useState("everyone");
 
   const [comments, setComments] = useState([]);
@@ -1508,7 +1550,7 @@ export default function App() {
       return;
     }
 
-    if (!(await enforceCommunityRules("", storyFile))) return;
+    if (!(await enforceCommunityRules(storyCaption.trim(), storyFile))) return;
 
     setBusy(true);
 
@@ -1518,13 +1560,14 @@ export default function App() {
       const { error } = await supabase.from("stories").insert({
         user_id: user.id,
         media_url: mediaUrl,
-        caption: "",
+        caption: storyCaption.trim(),
         audience: storyAudience,
       });
 
       if (error) throw error;
 
       setStoryFile(null);
+      setStoryCaption("");
       if (storyInput.current) storyInput.current.value = "";
 
       await loadStories();
@@ -3180,6 +3223,23 @@ export default function App() {
                     />
                     {storyFile && (
                       <>
+                        <div className="story-editor-tools">
+                          <label>
+                            {isArabic ? "نص القصة" : "Story text"}
+                            <textarea
+                              value={storyCaption}
+                              onChange={(event) => setStoryCaption(event.target.value)}
+                              maxLength={180}
+                              rows={2}
+                              placeholder={isArabic ? "أضف تعليقاً إلى قصتك..." : "Add a caption to your story..."}
+                            />
+                          </label>
+                          <div className="story-sticker-row" aria-label={isArabic ? "ملصقات سريعة" : "Quick stickers"}>
+                            {["✨", "❤️", "🔥", "😂", "😍"].map((sticker) => (
+                              <button type="button" key={sticker} onClick={() => setStoryCaption((current) => `${current}${sticker}`)}>{sticker}</button>
+                            ))}
+                          </div>
+                        </div>
                         <span className="file-name">{storyFile.name}</span>
                         <button type="submit" className="primary-button" disabled={busy}>
                           {busy ? t("Uploading...") : t("Share story")}
@@ -3189,6 +3249,7 @@ export default function App() {
                           className="secondary-button"
                           onClick={() => {
                             setStoryFile(null);
+                            setStoryCaption("");
                             if (storyInput.current) storyInput.current.value = "";
                           }}
                         >
@@ -3296,6 +3357,23 @@ export default function App() {
               </div>
               <PostList posts={discoverPosts} {...postListProps} />
             </section>
+          )}
+
+          {activePage === "search" && (
+            <GlobalSearch
+              user={user}
+              isArabic={isArabic}
+              onOpenProfile={openUserProfile}
+              onOpenPage={goTo}
+            />
+          )}
+
+          {activePage === "creator" && (
+            <CreatorStudio user={user} isArabic={isArabic} />
+          )}
+
+          {activePage === "drafts" && (
+            <DraftsCenter user={user} isArabic={isArabic} />
           )}
 
           {activePage === "people" && (
@@ -4593,6 +4671,7 @@ export default function App() {
             onCallStateChange={handleCallStateChange}
             onCallActionsReady={registerPrivateCallActions}
             showIdleControls={showIdleCallControls}
+            backgroundCallsEnabled={backgroundCallsEnabled}
           />
         </div>
       )}
