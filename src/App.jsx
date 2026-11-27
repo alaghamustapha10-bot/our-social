@@ -2684,6 +2684,22 @@ export default function App() {
       return;
     }
 
+    // Opening an incoming-call push must mount the global private-call
+    // dock first. Calls.jsx then re-checks the live incoming call with the
+    // server, so expired calls never show a stale answer screen.
+    if (data.type === "incoming_call" && data.call_id) {
+      setSelectedCallContext({
+        callType: "private",
+        conversation: null,
+        canStart: false,
+        canEnd: false,
+      });
+      setPushGroupTarget(null);
+      setPushChannelTarget(null);
+      goTo("messages");
+      return;
+    }
+
     const notificationId = data.notification_id;
     if (notificationId && userRef.current?.id) {
       const { error } = await supabase
