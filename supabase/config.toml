@@ -7,3 +7,6 @@ verify_jwt = false
 
 [functions.lolz-admin]
 verify_jwt = false
+
+[functions.lolz-commerce]
+verify_jwt = true
