@@ -122,9 +122,7 @@ export default function MessageActions({ message, conversationId, user, isArabic
   }
 
   const ar = isArabic === true;
-  if (message.is_deleted) {
-    return <div className="lolz-message-actions"><small className="ig-dm-deleted">{ar ? "تم حذف الرسالة" : "Message deleted"}</small></div>;
-  }
+  if (message.is_deleted) return null;
 
   return <div className="lolz-message-actions">
     {editing ? <div className="lolz-message-edit">
