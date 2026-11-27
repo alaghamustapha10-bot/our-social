@@ -239,6 +239,12 @@ function toFcmData(event: PushEvent, notificationId?: string): Record<string, st
     data[key] = typeof value === "string" ? value : String(value);
   }
 
+  if (event.type === "incoming_call") {
+    data.caller_name = event.actor_name || "LOLZ";
+    if (event.context?.group_name) data.group_name = event.context.group_name;
+    if (event.context?.channel_name) data.channel_name = event.context.channel_name;
+  }
+
   return data;
 }
 
@@ -269,6 +275,28 @@ async function sendToUser(recipientId: string, event: PushEvent, notificationId?
     const language = device.language === "en" ? "en" : "ar";
     const copy = copyFor(event, language);
     const tag = `lolz-${event.type}-${notificationId || data.call_id || data.message_id || crypto.randomUUID()}`;
+    const deviceData = { ...data, language };
+
+    const fcmMessage: Record<string, unknown> = {
+      token: device.token,
+      data: deviceData,
+      android: {
+        priority: isUrgent ? "HIGH" : "NORMAL",
+        ttl: isCall ? "45s" : "604800s",
+        notification: isCall ? undefined : {
+          channel_id: channelId,
+          color: "#7770FF",
+          sound: "default",
+          visibility: "PRIVATE",
+          notification_priority: "PRIORITY_HIGH",
+          tag,
+        },
+      },
+    };
+
+    // Incoming calls are data-only so the native Android handler can show
+    // a CallStyle notification with Answer / Decline and a full-screen UI.
+    if (!isCall) fcmMessage.notification = copy;
 
     const response = await fetch(
       `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(account.project_id)}/messages:send`,
@@ -278,25 +306,7 @@ async function sendToUser(recipientId: string, event: PushEvent, notificationId?
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          message: {
-            token: device.token,
-            notification: copy,
-            data,
-            android: {
-              priority: isUrgent ? "HIGH" : "NORMAL",
-              ttl: isCall ? "45s" : "604800s",
-              notification: {
-                channel_id: channelId,
-                color: "#7770FF",
-                sound: "default",
-                visibility: "PRIVATE",
-                notification_priority: isCall ? "PRIORITY_MAX" : "PRIORITY_HIGH",
-                tag,
-              },
-            },
-          },
-        }),
+        body: JSON.stringify({ message: fcmMessage }),
       },
     );
 
