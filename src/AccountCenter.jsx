@@ -10,6 +10,7 @@ export default function AccountCenter({ user, isArabic = false }) {
     allow_comments_from: "everyone",
     show_activity: true,
     show_last_seen: true,
+    background_calls_enabled: false,
   });
   const [friends, setFriends] = useState([]);
   const [query, setQuery] = useState("");
@@ -36,6 +37,7 @@ export default function AccountCenter({ user, isArabic = false }) {
     nobody: "لا أحد",
     activity: "إظهار حالة النشاط",
     lastSeen: "إظهار آخر ظهور",
+    backgroundCalls: "استمرار المكالمة في الخلفية",
     friends: "الأصدقاء المقرّبون",
     friendsDesc: "هؤلاء فقط يستطيعون مشاهدة القصص التي تنشرها للأصدقاء المقرّبين.",
     search: "ابحث عن اسم أو اسم مستخدم",
@@ -70,6 +72,7 @@ export default function AccountCenter({ user, isArabic = false }) {
     nobody: "Nobody",
     activity: "Show activity status",
     lastSeen: "Show last seen",
+    backgroundCalls: "Keep calls active in the background",
     friends: "Close friends",
     friendsDesc: "Only these people can see stories you share with your close-friends audience.",
     search: "Search by name or username",
@@ -141,6 +144,11 @@ export default function AccountCenter({ user, isArabic = false }) {
     setSaving(true); setNotice("");
     const payload = { ...settings, user_id: user.id, updated_at: new Date().toISOString() };
     const { error } = await supabase.from("lolz_account_settings").upsert(payload, { onConflict: "user_id" });
+    if (!error) {
+      window.dispatchEvent(new CustomEvent("lolz:account-settings-changed", {
+        detail: { userId: user.id, settings: payload },
+      }));
+    }
     setSaving(false);
     setNotice(error ? copy.failed + error.message : copy.saved);
   }
@@ -228,8 +236,8 @@ export default function AccountCenter({ user, isArabic = false }) {
         {field(copy.messages, "allow_messages_from", [["everyone", copy.everyone], ["following", copy.following], ["nobody", copy.nobody]])}
         {field(copy.comments, "allow_comments_from", [["everyone", copy.everyone], ["following", copy.following], ["nobody", copy.nobody]])}
       </div>
-      {[["show_activity", copy.activity], ["show_last_seen", copy.lastSeen]].map(([key, label]) => <label key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 0", borderTop: "1px solid var(--border)", marginTop: 12, gap: 12 }}>
-        <span>{label}</span><input type="checkbox" checked={settings[key]} onChange={(event) => setSettings((current) => ({ ...current, [key]: event.target.checked }))} />
+      {[["show_activity", copy.activity], ["show_last_seen", copy.lastSeen], ["background_calls_enabled", copy.backgroundCalls]].map(([key, label]) => <label key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 0", borderTop: "1px solid var(--border)", marginTop: 12, gap: 12 }}>
+        <span>{label}</span><input type="checkbox" checked={Boolean(settings[key])} onChange={(event) => setSettings((current) => ({ ...current, [key]: event.target.checked }))} />
       </label>)}
       <button style={{ ...button, marginTop: 12, background: "var(--accent)", color: "#fff" }} onClick={saveSettings} disabled={saving}>{saving ? <LoaderCircle size={15} /> : null}{copy.save}</button>
     </section>
