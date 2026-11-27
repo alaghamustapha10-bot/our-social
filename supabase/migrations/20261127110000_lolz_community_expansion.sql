@@ -159,10 +159,10 @@ alter table public.lolz_group_poll_votes enable row level security;
 alter table public.lolz_group_events enable row level security;
 drop policy if exists "Group members read polls" on public.lolz_group_polls;
 create policy "Group members read polls" on public.lolz_group_polls for select to authenticated
-  using (exists (select 1 from public.group_members gm where gm.group_id::text = group_id and gm.user_id = auth.uid()));
+  using (exists (select 1 from public.group_members gm where gm.group_id::text = lolz_group_polls.group_id and gm.user_id = auth.uid()));
 drop policy if exists "Group members create polls" on public.lolz_group_polls;
 create policy "Group members create polls" on public.lolz_group_polls for insert to authenticated
-  with check (created_by = auth.uid() and exists (select 1 from public.group_members gm where gm.group_id::text = group_id and gm.user_id = auth.uid()));
+  with check (created_by = auth.uid() and exists (select 1 from public.group_members gm where gm.group_id::text = lolz_group_events.group_id and gm.user_id = auth.uid()));
 drop policy if exists "Group members read poll votes" on public.lolz_group_poll_votes;
 create policy "Group members read poll votes" on public.lolz_group_poll_votes for select to authenticated
   using (exists (select 1 from public.lolz_group_polls p join public.group_members gm on gm.group_id::text = p.group_id where p.id = poll_id and gm.user_id = auth.uid()));
@@ -178,5 +178,74 @@ create policy "Group members create events" on public.lolz_group_events for inse
 grant select, insert on public.lolz_group_polls to authenticated;
 grant select, insert on public.lolz_group_poll_votes to authenticated;
 grant select, insert on public.lolz_group_events to authenticated;
+
+
+-- Apply the privacy controls saved by the Account Center at the data boundary.
+create or replace function public.lolz_can_message(p_sender uuid, p_recipient uuid)
+returns boolean language sql stable security definer set search_path = public, pg_temp as $
+  select case coalesce((
+    select s.allow_messages_from from public.lolz_account_settings s
+    where s.user_id = p_recipient
+  ), 'everyone')
+    when 'everyone' then true
+    when 'following' then exists (
+      select 1 from public.follows f
+      where f.follower_id = p_sender and f.following_id = p_recipient
+    )
+    else false
+  end;
+$;
+
+create or replace function public.lolz_can_comment(p_actor uuid, p_owner uuid)
+returns boolean language sql stable security definer set search_path = public, pg_temp as $
+  select case coalesce((
+    select s.allow_comments_from from public.lolz_account_settings s
+    where s.user_id = p_owner
+  ), 'everyone')
+    when 'everyone' then true
+    when 'following' then exists (
+      select 1 from public.follows f
+      where f.follower_id = p_actor and f.following_id = p_owner
+    )
+    else false
+  end;
+$;
+
+revoke all on function public.lolz_can_message(uuid, uuid) from public;
+revoke all on function public.lolz_can_comment(uuid, uuid) from public;
+grant execute on function public.lolz_can_message(uuid, uuid) to authenticated;
+grant execute on function public.lolz_can_comment(uuid, uuid) to authenticated;
+
+drop policy if exists "LOLZ respect private profiles" on public.profiles;
+create policy "LOLZ respect private profiles"
+  on public.profiles as restrictive for select to authenticated
+  using (
+    id = auth.uid()
+    or coalesce((select s.profile_visibility from public.lolz_account_settings s where s.user_id = profiles.id), 'public') = 'public'
+    or exists (
+      select 1 from public.follows f
+      where f.follower_id = auth.uid() and f.following_id = profiles.id
+    )
+  );
+
+drop policy if exists "LOLZ enforce recipient message preferences" on public.conversations;
+create policy "LOLZ enforce recipient message preferences"
+  on public.conversations as restrictive for insert to authenticated
+  with check (
+    (user_one = auth.uid() and public.lolz_can_message(auth.uid(), user_two))
+    or (user_two = auth.uid() and public.lolz_can_message(auth.uid(), user_one))
+  );
+
+drop policy if exists "LOLZ enforce comment preferences" on public.comments;
+create policy "LOLZ enforce comment preferences"
+  on public.comments as restrictive for insert to authenticated
+  with check (
+    user_id = auth.uid()
+    and exists (
+      select 1 from public.posts p
+      where p.id::text = comments.post_id::text
+        and public.lolz_can_comment(auth.uid(), p.user_id)
+    )
+  );
 
 commit;
