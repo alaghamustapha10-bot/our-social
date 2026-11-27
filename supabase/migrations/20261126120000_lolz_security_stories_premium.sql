@@ -399,7 +399,7 @@ as $$
   where v.id::text = any(coalesce(p_video_ids, array[]::text[]))
     and public.lolz_users_not_blocked(auth.uid(), v.user_id)
   group by v.id;
-$;
+$$;
 
 revoke all on function public.get_lolz_video_view_counts(text[]) from public;
 grant execute on function public.get_lolz_video_view_counts(text[]) to authenticated;
