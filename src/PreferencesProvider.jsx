@@ -48,7 +48,11 @@ export function PreferencesProvider({ children, userId }) {
     root.style.setProperty("--accent", preferences.accentColor || "#8b5cf6");
     root.style.setProperty("--font-scale", preferences.fontScale === "large" ? "1.12" : "1");
     root.dataset.reduceMotion = preferences.reduceMotion ? "true" : "false";
-    try { localStorage.setItem("lolz_lang", preferences.language); } catch {}
+    try {
+      localStorage.setItem("lolz_lang", preferences.language);
+    } catch {
+      // Storage can be unavailable in private browsing; keep the in-memory preference.
+    }
     window.dispatchEvent(new CustomEvent("lolz:preferences-changed", { detail: preferences }));
   }, [preferences]);
 
