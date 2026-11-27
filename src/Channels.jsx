@@ -15,7 +15,7 @@ import {
   Sparkles,
   Info,
   Copy,
-  CheckCircle2,
+  Shield,
   Mic,
   Square,
   ImagePlus,
