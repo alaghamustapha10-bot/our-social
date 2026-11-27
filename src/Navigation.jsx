@@ -18,6 +18,7 @@ import {
   Flag,
   ShieldCheck,
   Ban,
+  BookOpenCheck,
 } from "lucide-react";
 import { useState } from "react";
 import "./Navigation.css";
@@ -42,6 +43,7 @@ const COPY = {
     admin: "لوحة الإدارة",
     moderation: "مراجعة البلاغات",
     blocked: "الحسابات المحظورة",
+    communityGuidelines: "قواعد المجتمع",
     logout: "تسجيل الخروج",
     close: "إغلاق",
   },
@@ -64,6 +66,7 @@ const COPY = {
     admin: "Admin dashboard",
     moderation: "Reports review",
     blocked: "Blocked accounts",
+    communityGuidelines: "Community guidelines",
     logout: "Log out",
     close: "Close",
   },
@@ -98,6 +101,7 @@ export default function Navigation({ page, setPage, onCreate, onLogout, username
     { id: "premium", label: t.premium, icon: Crown },
     { id: "settings", label: t.settings, icon: Settings },
     { id: "blocked", label: t.blocked, icon: Ban },
+    { id: "community-guidelines", label: t.communityGuidelines, icon: BookOpenCheck },
     ...(isAdmin ? [{ id: "admin", label: t.admin, icon: ShieldCheck }, { id: "moderation", label: t.moderation, icon: Flag }] : []),
   ];
 
