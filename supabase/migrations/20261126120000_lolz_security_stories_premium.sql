@@ -389,7 +389,7 @@ language sql
 stable
 security definer
 set search_path = public, pg_temp
-as $
+as $$
   select
     v.id::text,
     count(vw.viewer_id)::bigint
