@@ -2230,3 +2230,23 @@
     padding: 5px 8px;
   }
 }
+
+
+@media (max-width: 768px) {
+  .groups-page.group-chat-open .groups-workspace.show-info .groups-chat {
+    display: none !important;
+  }
+  .groups-page.group-chat-open .groups-workspace.show-info .groups-info {
+    display: flex !important;
+    position: absolute !important;
+    z-index: 45 !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  .groups-page.group-chat-open .groups-workspace.show-info .groups-info-header {
+    min-height: 62px;
+  }
+}
