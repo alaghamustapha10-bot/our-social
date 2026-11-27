@@ -303,6 +303,7 @@ export default function App() {
   const notificationReloadRef = useRef(null);
   const [pushGroupTarget, setPushGroupTarget] = useState(null);
   const [pushChannelTarget, setPushChannelTarget] = useState(null);
+  const [pushVideoTarget, setPushVideoTarget] = useState(null);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -3367,6 +3368,7 @@ export default function App() {
               onOpenPage={goTo}
               onOpenGroup={(groupId) => { setPushGroupTarget(groupId); goTo("groups"); }}
               onOpenChannel={(channelId) => { setPushChannelTarget(channelId); goTo("channels"); }}
+              onOpenVideo={(videoId) => { setPushVideoTarget(videoId); goTo("lolz"); }}
             />
           )}
 
@@ -3662,6 +3664,8 @@ export default function App() {
               onModerate={enforceCommunityRules}
               blockedUserIds={blockedUserIds}
               onReport={(target) => setModerationTarget(target)}
+              initialVideoId={pushVideoTarget}
+              onInitialVideoOpened={() => setPushVideoTarget(null)}
             />
           )}
 
