@@ -2179,3 +2179,14 @@ button:active:not(:disabled) {
 
 /* Lightweight caption and sticker editor for LOLZ stories. */
 .story-editor-tools{display:grid;gap:8px;width:100%;margin:10px 0}.story-editor-tools label{display:grid;gap:6px;color:var(--muted);font-size:13px}.story-editor-tools textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:64px;padding:10px 12px;border:1px solid var(--border);border-radius:11px;background:var(--panel-2);color:var(--text);font:inherit}.story-sticker-row{display:flex;gap:7px;flex-wrap:wrap}.story-sticker-row button{width:38px;height:36px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);font-size:18px;cursor:pointer}
+
+
+/* Story editor preview and controls */
+.story-preview{position:relative;width:min(100%,280px);height:360px;overflow:hidden;border:1px solid var(--border);border-radius:16px;background:#111;isolation:isolate}
+.story-preview img,.story-preview video{width:100%;height:100%;object-fit:cover}
+.story-preview-caption{position:absolute;z-index:2;left:12px;right:12px;padding:8px 10px;border-radius:10px;background:rgba(0,0,0,.24);color:#fff;text-align:center;line-height:1.55;text-shadow:0 1px 5px rgba(0,0,0,.75);overflow-wrap:anywhere;pointer-events:none}
+.story-preview-caption--top{top:18px}.story-preview-caption--middle{top:50%;transform:translateY(-50%)}.story-preview-caption--bottom{bottom:18px}
+.story-editor-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.story-editor-options label{display:grid;gap:6px;color:var(--muted);font-size:13px}
+.story-editor-options select{width:100%;min-width:0;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);color:var(--text);font:inherit}
+@media(max-width:520px){.story-preview{width:100%;max-width:280px}.story-editor-options{grid-template-columns:1fr}}
