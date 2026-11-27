@@ -2,6 +2,8 @@ import Groups from "./Groups";
 import Channels from "./Channels";
 import PreferencesSettings from "./PreferencesSettings";
 import AccountCenter from "./AccountCenter";
+import VoiceMessagePlayer from "./VoiceMessagePlayer";
+import "./VoiceMessagePlayer.css";
 import {
   useCallback,
   useEffect,
@@ -3875,13 +3877,7 @@ export default function App() {
                                         preload="metadata"
                                       />
                                     )}
-                                    {isAudio && (
-                                      <audio
-                                        src={message.media_url}
-                                        controls
-                                        preload="metadata"
-                                      />
-                                    )}
+                                    {isAudio && <VoiceMessagePlayer src={message.media_url} />}
                                     {(!isMedia ||
                                       (message.content &&
                                         !["Photo", "Video", "Voice message"].includes(message.content))) && (
