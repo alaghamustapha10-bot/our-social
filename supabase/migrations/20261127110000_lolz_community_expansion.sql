@@ -49,12 +49,6 @@ $lolz$;
 revoke all on function public.get_lolz_presence(uuid[]) from public;
 grant execute on function public.get_lolz_presence(uuid[]) to authenticated;
 
-drop policy if exists "Close-friends can confirm membership for story visibility" on public.lolz_close_friends;
-create policy "Close-friends can confirm membership for story visibility"
-  on public.lolz_close_friends for select to authenticated
-  using (friend_id = auth.uid());
-
-
 
 create table if not exists public.lolz_close_friends (
   owner_id uuid not null references auth.users(id) on delete cascade,
@@ -70,6 +64,11 @@ create policy "Users manage their own close friends"
   on public.lolz_close_friends for all to authenticated
   using (owner_id = auth.uid()) with check (owner_id = auth.uid() and friend_id <> auth.uid());
 grant select, insert, delete on public.lolz_close_friends to authenticated;
+
+drop policy if exists "Close-friends can confirm membership for story visibility" on public.lolz_close_friends;
+create policy "Close-friends can confirm membership for story visibility"
+  on public.lolz_close_friends for select to authenticated
+  using (friend_id = auth.uid());
 
 alter table public.stories add column if not exists audience text not null default 'everyone';
 alter table public.stories drop constraint if exists stories_audience_check;
