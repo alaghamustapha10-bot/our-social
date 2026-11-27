@@ -4,6 +4,8 @@ import PreferencesSettings from "./PreferencesSettings";
 import AccountCenter from "./AccountCenter";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import MessageActions from "./MessageActions";
+import Memories from "./Memories";
+import "./Memories.css";
 import "./MessageActions.css";
 import "./VoiceMessagePlayer.css";
 import {
@@ -3358,6 +3360,10 @@ export default function App() {
                 </>
               )}
             </section>
+          )}
+
+          {activePage === "memories" && (
+            <Memories user={user} isArabic={isArabic} />
           )}
 
           {activePage === "saved" && (
