@@ -73,6 +73,7 @@ export default function MonetizationHub({ user, isArabic = false }) {
   const [applicationPitch, setApplicationPitch] = useState("");
   const [payoutAmount, setPayoutAmount] = useState("");
   const [payoutNote, setPayoutNote] = useState("");
+  const isAdmin = ["admin", "owner"].includes(user?.app_metadata?.role);
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -88,8 +89,14 @@ export default function MonetizationHub({ user, isArabic = false }) {
         supabase.from("lolz_booking_requests").select("*").eq("seller_id", user.id).order("requested_at", { ascending: false }).limit(50),
         supabase.from("lolz_monetization_profiles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("lolz_sponsorship_briefs").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(50),
-        supabase.from("lolz_ad_campaigns").select("*").eq("advertiser_id", user.id).order("created_at", { ascending: false }).limit(50),
-        supabase.from("lolz_payout_requests").select("*").eq("seller_id", user.id).order("created_at", { ascending: false }).limit(50),
+        (isAdmin
+          ? supabase.from("lolz_ad_campaigns").select("*")
+          : supabase.from("lolz_ad_campaigns").select("*").eq("advertiser_id", user.id))
+          .order("created_at", { ascending: false }).limit(100),
+        (isAdmin
+          ? supabase.from("lolz_payout_requests").select("*")
+          : supabase.from("lolz_payout_requests").select("*").eq("seller_id", user.id))
+          .order("created_at", { ascending: false }).limit(100),
         supabase.from("lolz_sponsorship_applications").select("*").eq("creator_id", user.id).order("created_at", { ascending: false }).limit(50),
       ]);
       const required = [activeResult, ownResult, buyerResult, sellerResult, bookingBuyer, bookingSeller, profileResult, briefsResult, campaignsResult, payoutResult, applicationsResult];
@@ -129,7 +136,7 @@ export default function MonetizationHub({ user, isArabic = false }) {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, isArabic]);
+  }, [user?.id, user?.app_metadata?.role, isArabic]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -356,6 +363,38 @@ export default function MonetizationHub({ user, isArabic = false }) {
     if (!error) await load();
   }
 
+  async function reviewCampaign(campaign, status) {
+    setBusy(campaign.id);
+    const { error } = await supabase.from("lolz_ad_campaigns").update({
+      status,
+      reviewed_by: user.id,
+      reviewed_at: new Date().toISOString(),
+    }).eq("id", campaign.id);
+    setBusy("");
+    setNotice(error?.message || t("Campaign review decision saved. Approval does not start ad delivery or charge the advertiser.", "تم حفظ قرار مراجعة الحملة. الموافقة لا تبدأ عرض الإعلان ولا تحصّل مبلغاً."));
+    if (!error) await load();
+  }
+
+  async function processPayout(row, status) {
+    setBusy(row.id);
+    const { error } = await supabase.from("lolz_payout_requests").update({
+      status,
+      processed_by: user.id,
+      processed_at: new Date().toISOString(),
+    }).eq("id", row.id);
+    setBusy("");
+    setNotice(error?.message || t("Payout request status updated. Mark as paid only after the external transfer is completed.", "تم تحديث طلب السحب. لا تحدد مدفوعاً إلا بعد إتمام التحويل الخارجي."));
+    if (!error) await load();
+  }
+
+  async function updateBooking(row, status) {
+    setBusy(row.id);
+    const { error } = await supabase.from("lolz_booking_requests").update({ status }).eq("id", row.id);
+    setBusy("");
+    setNotice(error?.message || t("Booking request updated.", "تم تحديث طلب الحجز."));
+    if (!error) await load();
+  }
+
   async function requestPayout(event) {
     event.preventDefault();
     const amountCents = Math.round(Number(payoutAmount) * 100);
@@ -556,7 +595,7 @@ export default function MonetizationHub({ user, isArabic = false }) {
               </section>
               <section className="lolz-money-panel">
                 <span className="lolz-money-eyebrow">{t("CAMPAIGN STATUS", "حالة الحملات")}</span><h2>{t("Your campaigns", "حملاتك")}</h2>
-                {campaigns.length === 0 ? <Empty text={t("You have no campaigns.", "ليس لديك حملات بعد.")} /> : campaigns.map((campaign) => <div className="lolz-money-row" key={campaign.id}><div><strong>{campaign.title}</strong><small>{campaign.placement} · {money(campaign.budget_cents, isArabic ? "ar" : "en")}</small></div><span className="lolz-money-status">{statusLabel(campaign.status)}</span></div>)}
+                {campaigns.length === 0 ? <Empty text={t("You have no campaigns.", "ليس لديك حملات بعد.")} /> : campaigns.map((campaign) => <div className="lolz-money-row" key={campaign.id}><div><strong>{campaign.title}</strong><small>{campaign.placement} · {money(campaign.budget_cents, isArabic ? "ar" : "en")}</small></div><div className="lolz-money-order-end"><span className="lolz-money-status">{statusLabel(campaign.status)}</span>{isAdmin && campaign.status === "pending_review" && <div className="lolz-money-admin-actions"><button type="button" disabled={busy === campaign.id} onClick={() => void reviewCampaign(campaign, "approved")}>{t("Approve", "موافقة")}</button><button type="button" disabled={busy === campaign.id} onClick={() => void reviewCampaign(campaign, "rejected")}>{t("Reject", "رفض")}</button></div>}</div></div>)}
                 <p className="lolz-money-warning">{t("Prohibited products, misleading claims, gambling, interest-based finance and other harmful promotions are not accepted.", "لا تُقبل إعلانات المنتجات المحرمة أو الادعاءات المضللة أو القمار أو التمويل الربوي أو الترويج الضار.")}</p>
               </section>
             </div>
@@ -582,11 +621,11 @@ export default function MonetizationHub({ user, isArabic = false }) {
               <section className="lolz-money-section">
                 <div className="lolz-money-heading"><h2>{t("Orders and payments", "الطلبات والمدفوعات")}</h2></div>
                 {orders.length === 0 ? <Empty text={t("No orders yet.", "لا توجد طلبات بعد.")} /> : orders.map((order) => <div className="lolz-money-row" key={order.id}><div><strong>{order.title}</strong><small>{friendlyDate(order.created_at, isArabic ? "ar" : "en")} · {order.seller_id === user.id ? t("Sale", "مبيعة") : t("Purchase", "شراء")}</small></div><div className="lolz-money-order-end"><strong>{money(order.amount_cents, isArabic ? "ar" : "en")}</strong><span>{statusLabel(order.status)}</span></div></div>)}
-                {payouts.length > 0 && <><h3>{t("Payout request history", "سجل طلبات السحب")}</h3>{payouts.map((row) => <div className="lolz-money-row" key={row.id}><strong>{money(row.amount_cents, isArabic ? "ar" : "en")}</strong><span>{statusLabel(row.status)}</span></div>)}</>}
+                {payouts.length > 0 && <><h3>{t("Payout request history", "سجل طلبات السحب")}</h3>{payouts.map((row) => <div className="lolz-money-row" key={row.id}><div><strong>{money(row.amount_cents, isArabic ? "ar" : "en")}</strong><small>{row.seller_id === user.id ? t("Your request", "طلبك") : t("Seller request", "طلب بائع")} · {row.seller_note || ""}</small></div><div className="lolz-money-order-end"><span>{statusLabel(row.status)}</span>{isAdmin && row.status !== "paid" && row.status !== "rejected" && <div className="lolz-money-admin-actions">{row.status === "pending_review" && <button type="button" disabled={busy === row.id} onClick={() => void processPayout(row, "approved")}>{t("Approve", "موافقة")}</button>}<button type="button" disabled={busy === row.id} onClick={() => void processPayout(row, "paid")}>{t("Mark paid", "تحديد كمدفوع")}</button><button type="button" disabled={busy === row.id} onClick={() => void processPayout(row, "rejected")}>{t("Reject", "رفض")}</button></div>}</div></div>)}</>}
               </section>
               <section className="lolz-money-section">
                 <div className="lolz-money-heading"><h2>{t("Bookings", "الحجوزات")}</h2></div>
-                {bookings.length === 0 ? <Empty text={t("No booking requests yet.", "لا توجد طلبات حجز بعد.")} /> : bookings.map((row) => <div className="lolz-money-row" key={row.id}><div><strong>{row.customer_id === user.id ? t("Your request", "طلبك") : t("Customer request", "طلب عميل")}</strong><small>{friendlyDate(row.requested_at, isArabic ? "ar" : "en")}</small></div><span>{statusLabel(row.status)}</span></div>)}
+                {bookings.length === 0 ? <Empty text={t("No booking requests yet.", "لا توجد طلبات حجز بعد.")} /> : bookings.map((row) => <div className="lolz-money-row" key={row.id}><div><strong>{row.customer_id === user.id ? t("Your request", "طلبك") : t("Customer request", "طلب عميل")}</strong><small>{friendlyDate(row.requested_at, isArabic ? "ar" : "en")}</small></div><div className="lolz-money-order-end"><span>{statusLabel(row.status)}</span><div className="lolz-money-admin-actions">{row.seller_id === user.id && row.status === "pending" && <><button type="button" disabled={busy === row.id} onClick={() => void updateBooking(row, "accepted")}>{t("Accept", "قبول")}</button><button type="button" disabled={busy === row.id} onClick={() => void updateBooking(row, "declined")}>{t("Decline", "رفض")}</button></>}{row.customer_id === user.id && row.status === "pending" && <button type="button" disabled={busy === row.id} onClick={() => void updateBooking(row, "cancelled")}>{t("Cancel", "إلغاء")}</button>}</div></div></div>)}
               </section>
             </>
           )}
