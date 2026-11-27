@@ -55,12 +55,14 @@ jobs:
         run: npm ci
 
       - name: Build latest LOLZ web app
+        # These are public client settings. Supabase publishable keys are intended
+        # for browser/mobile clients and rely on database RLS; never use service_role here.
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: "https://edxwpivsuximriwdvzeq.supabase.co"
+          VITE_SUPABASE_ANON_KEY: "sb_publishable_UGYmA4RrsJ1yBlm6vYVv8g__HHv_FUY"
         run: |
-          test -n "$VITE_SUPABASE_URL" || (echo "Missing GitHub Actions secret: VITE_SUPABASE_URL" && exit 1)
-          test -n "$VITE_SUPABASE_ANON_KEY" || (echo "Missing GitHub Actions secret: VITE_SUPABASE_ANON_KEY" && exit 1)
+          test -n "$VITE_SUPABASE_URL"
+          test -n "$VITE_SUPABASE_ANON_KEY"
           npm run build
 
       - name: Sync Capacitor Android project
