@@ -1,0 +1,87 @@
+name: Deploy LOLZ Web to Vercel Production
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.*"
+      - ".github/workflows/deploy-vercel-production.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vercel-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy-production:
+    name: Build and deploy LOLZ production site
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_9y99JnzrcKzdeU25uMJaBMYz
+      VERCEL_PROJECT_ID: prj_IBVtZX00jDsaZRGJZCGWoTDrNbY1
+      VERCEL_CLI_VERSION: 67.0.0
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Verify Vercel token is configured
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          test -n "$VERCEL_TOKEN" || {
+            echo "::error::Missing GitHub Actions secret VERCEL_TOKEN. Add a Vercel token with deployment permission for the KGT team."
+            exit 1
+          }
+
+      - name: Link the exact Vercel production project
+        run: |
+          mkdir -p .vercel
+          printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > .vercel/project.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Pull production environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@"$VERCEL_CLI_VERSION" pull --yes --environment=production
+
+      - name: Build with production environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@"$VERCEL_CLI_VERSION" build --prod
+
+      - name: Deploy tested build to production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@"$VERCEL_CLI_VERSION" deploy --prebuilt --prod --yes
+
+      - name: Smoke test public LOLZ domain
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent --show-error https://our-social-public.vercel.app/ -o /tmp/lolz-production.html; then
+              grep -qi '<html' /tmp/lolz-production.html
+              echo "LOLZ production domain returned HTML successfully."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::LOLZ production domain did not return a successful HTML response."
+          exit 1
