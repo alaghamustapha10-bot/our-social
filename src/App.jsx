@@ -3136,6 +3136,7 @@ export default function App() {
             >
               <Channels
                 user={user}
+                backgroundCallsEnabled={backgroundCallsEnabled}
                 onModerate={enforceCommunityRules}
                 initialChannelId={pushChannelTarget}
                 onInitialChannelOpened={() => setPushChannelTarget(null)}
@@ -3149,6 +3150,7 @@ export default function App() {
             <section className="other-page groups-outer-page">
               <Groups
                 user={user}
+                backgroundCallsEnabled={backgroundCallsEnabled}
                 onModerate={enforceCommunityRules}
                 initialGroupId={pushGroupTarget}
                 onInitialGroupOpened={() => setPushGroupTarget(null)}
