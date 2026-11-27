@@ -156,7 +156,7 @@ async function getFcmAccessToken(): Promise<string> {
 
 function messagePreviewFor(event: PushEvent, language: string): string {
   const preview = (event.message_preview || "").replace(/\s+/g, " ").trim();
-  const type = String(event.data.message_type || "text");
+  const type = String(event.data.media_kind || "text");
   const isPlaceholder = /^(photo|image|picture|video|voice message|صورة|فيديو|رسالة صوتية)$/i.test(preview);
 
   if (type === "image") {
@@ -620,7 +620,7 @@ async function handleAction(userId: string, body: JsonObject) {
     const messageId = requireString(body.message_id, "message id");
     const { data: message, error } = await admin
       .from("messages")
-      .select("id, conversation_id, sender_id, message_type, content")
+      .select("id, conversation_id, sender_id, media_kind, content")
       .eq("id", messageId)
       .maybeSingle();
 
@@ -645,7 +645,7 @@ async function handleAction(userId: string, body: JsonObject) {
       {
         conversation_id: String(message.conversation_id),
         message_id: String(message.id),
-        message_type: String(message.message_type || "text"),
+        media_kind: String(message.media_kind || "text"),
       },
       {},
       String(message.content || ""),
@@ -657,7 +657,7 @@ async function handleAction(userId: string, body: JsonObject) {
     const messageId = requireString(body.message_id, "group message id");
     const { data: message, error } = await admin
       .from("group_messages")
-      .select("id, group_id, sender_id, content, message_type")
+      .select("id, group_id, sender_id, content, media_kind")
       .eq("id", messageId)
       .maybeSingle();
 
@@ -680,7 +680,7 @@ async function handleAction(userId: string, body: JsonObject) {
       {
         group_id: String(message.group_id),
         message_id: String(message.id),
-        message_type: String(message.message_type || "text"),
+        media_kind: String(message.media_kind || "text"),
       },
       { group_name: group?.name || undefined },
       String(message.content || ""),
