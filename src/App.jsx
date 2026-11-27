@@ -477,6 +477,8 @@ export default function App() {
   const [moderationTarget, setModerationTarget] = useState(null);
   const [moderationReports, setModerationReports] = useState([]);
   const [moderationLoading, setModerationLoading] = useState(false);
+  const [moderationActions, setModerationActions] = useState([]);
+  const [moderationActionsLoading, setModerationActionsLoading] = useState(false);
   const [selectedProfileStats, setSelectedProfileStats] = useState({
     followers: 0,
     following: 0,
@@ -972,6 +974,28 @@ export default function App() {
     }
   }, [user?.app_metadata?.role, isArabic]);
 
+  const loadModerationActions = useCallback(async () => {
+    if (!["admin", "owner"].includes(user?.app_metadata?.role)) return;
+    setModerationActionsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("lolz_moderation_actions")
+        .select("id,target_user_id,actor_user_id,action_type,target_type,target_id,reason,suspension_until,created_at")
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      setModerationActions(data || []);
+    } catch (error) {
+      setNotice(
+        isArabic
+          ? "تعذر تحميل سجل الإشراف: " + error.message
+          : "Could not load moderation history: " + error.message
+      );
+    } finally {
+      setModerationActionsLoading(false);
+    }
+  }, [user?.app_metadata?.role, isArabic]);
+
   async function updateReportStatus(reportId, status) {
     if (!["admin", "owner"].includes(user?.app_metadata?.role)) return;
     if (status !== "reviewing") return runModerationAction(
@@ -1025,7 +1049,7 @@ export default function App() {
         ? "تم تنفيذ الإجراء وتسجيله في سجل الإشراف."
         : "The moderation action was completed and audited."
     );
-    await loadReports();
+    await Promise.all([loadReports(), loadModerationActions()]);
   }
 
   const loadNotifications = useCallback(async (userId) => {
@@ -2001,11 +2025,12 @@ export default function App() {
   useEffect(() => {
     if (activePage === "moderation" && ["admin", "owner"].includes(user?.app_metadata?.role)) {
       void loadReports();
+      void loadModerationActions();
     }
     if (activePage === "blocked") {
       void loadBlockedProfiles();
     }
-  }, [activePage, user?.app_metadata?.role, loadReports, loadBlockedProfiles]);
+  }, [activePage, user?.app_metadata?.role, loadReports, loadModerationActions, loadBlockedProfiles]);
 
   // MESSAGING
 
@@ -4479,6 +4504,45 @@ export default function App() {
                   ))}
                 </div>
               )}
+
+              <section className="lolz-moderation-history">
+                <div className="lolz-report-toolbar">
+                  <strong>{isArabic ? "سجل إجراءات الإشراف" : "Moderation history"}</strong>
+                  <button type="button" className="secondary-button" onClick={() => void loadModerationActions()} disabled={moderationActionsLoading}>
+                    {moderationActionsLoading ? (isArabic ? "جارٍ التحميل..." : "Loading...") : (isArabic ? "تحديث السجل" : "Refresh history")}
+                  </button>
+                </div>
+                {moderationActionsLoading ? (
+                  <div className="empty-state">{isArabic ? "جارٍ تحميل السجل..." : "Loading moderation history..."}</div>
+                ) : moderationActions.length === 0 ? (
+                  <div className="empty-state">{isArabic ? "لا توجد إجراءات مسجلة بعد." : "No moderation actions recorded yet."}</div>
+                ) : (
+                  <div className="lolz-report-list">
+                    {moderationActions.map((action) => {
+                      const actionNames = {
+                        warning: isArabic ? "تحذير" : "Warning",
+                        content_removed: isArabic ? "إزالة محتوى" : "Content removed",
+                        temporary_suspension: isArabic ? "تعليق مؤقت" : "Temporary suspension",
+                        permanent_suspension: isArabic ? "تعليق دائم" : "Permanent suspension",
+                        report_resolved: isArabic ? "إغلاق البلاغ" : "Report resolved",
+                        report_rejected: isArabic ? "رفض البلاغ" : "Report rejected",
+                      };
+                      return (
+                        <article className="lolz-report-card" key={action.id}>
+                          <div className="lolz-report-card-top">
+                            <strong>{actionNames[action.action_type] || action.action_type}</strong>
+                            <small>{new Date(action.created_at).toLocaleString(isArabic ? "ar" : "en")}</small>
+                          </div>
+                          <p>{isArabic ? "نوع المحتوى: " : "Target type: "}{action.target_type || "—"} · <code>{action.target_id || "—"}</code></p>
+                          <p>{isArabic ? "الحساب المستهدف: " : "Target account: "}<code>{action.target_user_id || "—"}</code></p>
+                          <p>{action.reason}</p>
+                          {action.suspension_until && <small>{isArabic ? "ينتهي التعليق: " : "Suspension until: "}{new Date(action.suspension_until).toLocaleString(isArabic ? "ar" : "en")}</small>}
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
             </section>
           )}
 
