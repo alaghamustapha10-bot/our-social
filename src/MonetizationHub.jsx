@@ -60,6 +60,7 @@ export default function MonetizationHub({ user, isArabic = false }) {
   const [campaigns, setCampaigns] = useState([]);
   const [payouts, setPayouts] = useState([]);
   const [profiles, setProfiles] = useState({});
+  const [creatorProfiles, setCreatorProfiles] = useState([]);
   const [monetizationProfile, setMonetizationProfile] = useState({
     account_type: "creator", display_name: "", description: "", website_url: "", country_code: "NL", is_public: true,
   });
@@ -80,7 +81,7 @@ export default function MonetizationHub({ user, isArabic = false }) {
     setLoading(true);
     setNotice("");
     try {
-      const [activeResult, ownResult, buyerResult, sellerResult, bookingBuyer, bookingSeller, profileResult, briefsResult, campaignsResult, payoutResult, applicationsResult] = await Promise.all([
+      const [activeResult, ownResult, buyerResult, sellerResult, bookingBuyer, bookingSeller, profileResult, briefsResult, campaignsResult, payoutResult, applicationsResult, creatorsResult] = await Promise.all([
         (isAdmin
           ? supabase.from("lolz_commerce_offers").select("*")
           : supabase.from("lolz_commerce_offers").select("*").eq("status", "active"))
@@ -104,8 +105,9 @@ export default function MonetizationHub({ user, isArabic = false }) {
           : supabase.from("lolz_payout_requests").select("*").eq("seller_id", user.id))
           .order("created_at", { ascending: false }).limit(100),
         supabase.from("lolz_sponsorship_applications").select("*").eq("creator_id", user.id).order("created_at", { ascending: false }).limit(50),
+        supabase.from("lolz_monetization_profiles").select("user_id,display_name,account_type").eq("is_public", true).order("created_at", { ascending: false }).limit(100),
       ]);
-      const required = [activeResult, ownResult, buyerResult, sellerResult, bookingBuyer, bookingSeller, profileResult, briefsResult, campaignsResult, payoutResult, applicationsResult];
+      const required = [activeResult, ownResult, buyerResult, sellerResult, bookingBuyer, bookingSeller, profileResult, briefsResult, campaignsResult, payoutResult, applicationsResult, creatorsResult];
       const failed = required.find((item) => item.error);
       if (failed?.error) throw failed.error;
 
@@ -122,6 +124,7 @@ export default function MonetizationHub({ user, isArabic = false }) {
       setCampaigns(campaignsResult.data || []);
       setPayouts(payoutResult.data || []);
       setApplications(applicationsResult.data || []);
+      setCreatorProfiles(creatorsResult.data || []);
       if (profileResult.data) setMonetizationProfile((current) => ({ ...current, ...profileResult.data }));
 
       const peopleIds = [...new Set([
@@ -433,10 +436,9 @@ export default function MonetizationHub({ user, isArabic = false }) {
     if (!error) { setPayoutAmount(""); setPayoutNote(""); await load(); }
   }
 
-  const creatorIds = [...new Set(offers.filter((offer) => offer.seller_id !== user?.id).map((offer) => offer.seller_id))];
-  const creatorChoices = creatorIds.map((id) => ({
-    id, name: profiles[id]?.display_name || profiles[id]?.username || id.slice(0, 8),
-  }));
+  const creatorChoices = creatorProfiles
+    .filter((creator) => creator.user_id !== user?.id)
+    .map((creator) => ({ id: creator.user_id, name: creator.display_name }));
 
   const tabs = [
     ["explore", t("Overview", "نظرة عامة")],
