@@ -111,3 +111,21 @@
   cursor: pointer;
 }
 .comment-report-button:hover { color: #d84a5a; text-decoration: underline; }
+
+.lolz-report-actions .lolz-moderation-remove-button,
+.lolz-report-actions .lolz-moderation-suspend-button {
+  min-height: 36px;
+  padding: 8px 13px;
+  border: 1px solid rgba(220, 65, 80, .35);
+  border-radius: 999px;
+  background: rgba(220, 65, 80, .09);
+  color: #e16a78;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.lolz-report-actions .lolz-moderation-remove-button:hover,
+.lolz-report-actions .lolz-moderation-suspend-button:hover {
+  background: rgba(220, 65, 80, .16);
+}
