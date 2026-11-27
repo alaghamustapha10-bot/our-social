@@ -74,6 +74,27 @@ create schema if not exists lolz_internal;
 revoke all on schema lolz_internal from public, anon;
 grant usage on schema lolz_internal to authenticated;
 
+create or replace function lolz_internal.lolz_clear_story_highlight_cover()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $
+begin
+  -- The cover is derived from the first item the current viewer is allowed to see.
+  -- Never persist an arbitrary URL here: it could point at a close-friends story.
+  new.cover_url := null;
+  return new;
+end;
+$;
+
+drop trigger if exists lolz_clear_story_highlight_cover_trigger on public.lolz_story_highlights;
+create trigger lolz_clear_story_highlight_cover_trigger
+before insert or update of cover_url on public.lolz_story_highlights
+for each row execute function lolz_internal.lolz_clear_story_highlight_cover();
+
+revoke all on function lolz_internal.lolz_clear_story_highlight_cover() from public, anon, authenticated;
+
 create or replace function lolz_internal.lolz_snapshot_story_highlight_item()
 returns trigger
 language plpgsql
