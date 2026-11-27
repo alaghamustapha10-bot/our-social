@@ -3,6 +3,8 @@ import Channels from "./Channels";
 import PreferencesSettings from "./PreferencesSettings";
 import AccountCenter from "./AccountCenter";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
+import MessageActions from "./MessageActions";
+import "./MessageActions.css";
 import "./VoiceMessagePlayer.css";
 import {
   useCallback,
@@ -456,6 +458,8 @@ export default function App() {
   const [activeConversation, setActiveConversation] = useState(null);
   const [conversationMessages, setConversationMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
+  const [replyingToMessage, setReplyingToMessage] = useState(null);
+  const [messageExpiryHours, setMessageExpiryHours] = useState("never");
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messageSending, setMessageSending] = useState(false);
   const [messageSearch, setMessageSearch] = useState("");
@@ -2011,9 +2015,17 @@ export default function App() {
         .from("messages")
         .select("*")
         .eq("conversation_id", conversationId)
+        .or("expires_at.is.null,expires_at.gt." + new Date().toISOString())
         .order("created_at", { ascending: true });
 
       if (error) throw error;
+
+      if (user?.id) {
+        const { error: readError } = await supabase.from("lolz_conversation_reads").upsert({
+          conversation_id: String(conversationId), user_id: user.id, last_read_at: new Date().toISOString(),
+        }, { onConflict: "conversation_id,user_id" });
+        if (readError) console.warn("Could not save message read receipt:", readError.message);
+      }
 
       const resolvedMessages = await Promise.all(
         (data || []).map(async (message) => {
@@ -2046,7 +2058,7 @@ export default function App() {
     } finally {
       setMessagesLoading(false);
     }
-  }, [t]);
+  }, [t, user?.id]);
 
   useEffect(() => {
     if (!user?.id || activePage !== "messages") return;
@@ -2143,6 +2155,8 @@ export default function App() {
       setActiveConversation(selectedConversation);
       setConversationMessages([]);
       setMessageText("");
+      setReplyingToMessage(null);
+      setMessageExpiryHours("never");
       setMessageFile(null);
 
       if (messageMediaInput.current) {
@@ -2454,6 +2468,8 @@ export default function App() {
           media_url: mediaUrl,
           file_name: uploadedFile?.name || null,
           mime_type: uploadedFile?.type || null,
+          expires_at: messageExpiryHours === "never" ? null : new Date(Date.now() + Number(messageExpiryHours) * 60 * 60 * 1000).toISOString(),
+          reply_to_id: replyingToMessage?.id ? String(replyingToMessage.id) : null,
         })
         .select("id")
         .single();
@@ -3883,6 +3899,12 @@ export default function App() {
                                         !["Photo", "Video", "Voice message"].includes(message.content))) && (
                                       <p>{message.content}</p>
                                     )}
+                                    {message.reply_to_id && (
+                                      <div className="ig-dm-reply-quote">
+                                        {isArabic ? "رد على: " : "Reply to: "}
+                                        {conversationMessages.find((item) => String(item.id) === String(message.reply_to_id))?.content || (isArabic ? "رسالة" : "message")}
+                                      </div>
+                                    )}
                                     <time>{timeAgo(message.created_at, isArabic)}</time>
                                     {!mine && (
                                       <button
@@ -3899,6 +3921,14 @@ export default function App() {
                                         {isArabic ? "الإبلاغ عن الرسالة" : "Report message"}
                                       </button>
                                     )}
+                                    <MessageActions
+                                      message={message}
+                                      conversationId={activeConversation.id}
+                                      user={user}
+                                      isArabic={isArabic}
+                                      onReply={setReplyingToMessage}
+                                      onUpdated={(messageId, changes) => setConversationMessages((current) => current.map((item) => item.id === messageId ? { ...item, ...changes } : item))}
+                                    />
                                   </div>
                                 </div>
                               );
@@ -3925,7 +3955,19 @@ export default function App() {
                         </div>
                       )}
 
+                      {replyingToMessage && (
+                        <div className="ig-dm-replying-to">
+                          <span>{isArabic ? "الرد على: " : "Replying to: "}{replyingToMessage.content || (isArabic ? "رسالة صوتية أو مرفق" : "voice message or attachment")}</span>
+                          <button type="button" onClick={() => setReplyingToMessage(null)} aria-label={isArabic ? "إلغاء الرد" : "Cancel reply"}><X size={15} /></button>
+                        </div>
+                      )}
                       <form className="ig-dm-composer" onSubmit={sendMessage}>
+                        <select className="ig-dm-expiry-select" value={messageExpiryHours} onChange={(event) => setMessageExpiryHours(event.target.value)} aria-label={isArabic ? "مدة بقاء الرسالة" : "Message expiry"} title={isArabic ? "مدة بقاء الرسالة" : "Message expiry"}>
+                          <option value="never">{isArabic ? "دائمة" : "Keep"}</option>
+                          <option value="1">{isArabic ? "ساعة" : "1 hour"}</option>
+                          <option value="24">{isArabic ? "يوم" : "1 day"}</option>
+                          <option value="168">{isArabic ? "أسبوع" : "7 days"}</option>
+                        </select>
                         <input
                           ref={messageMediaInput}
                           type="file"
