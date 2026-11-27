@@ -620,7 +620,7 @@ async function handleAction(userId: string, body: JsonObject) {
     const messageId = requireString(body.message_id, "message id");
     const { data: message, error } = await admin
       .from("messages")
-      .select("id, conversation_id, sender_id, media_kind, content")
+      .select("id, conversation_id, sender_id, message_type, content")
       .eq("id", messageId)
       .maybeSingle();
 
@@ -645,7 +645,7 @@ async function handleAction(userId: string, body: JsonObject) {
       {
         conversation_id: String(message.conversation_id),
         message_id: String(message.id),
-        media_kind: String(message.media_kind || "text"),
+        media_kind: String(message.message_type || "text"),
       },
       {},
       String(message.content || ""),
@@ -657,7 +657,7 @@ async function handleAction(userId: string, body: JsonObject) {
     const messageId = requireString(body.message_id, "group message id");
     const { data: message, error } = await admin
       .from("group_messages")
-      .select("id, group_id, sender_id, content, media_kind")
+      .select("id, group_id, sender_id, content, message_type")
       .eq("id", messageId)
       .maybeSingle();
 
@@ -680,7 +680,7 @@ async function handleAction(userId: string, body: JsonObject) {
       {
         group_id: String(message.group_id),
         message_id: String(message.id),
-        media_kind: String(message.media_kind || "text"),
+        media_kind: String(message.message_type || "text"),
       },
       { group_name: group?.name || undefined },
       String(message.content || ""),
