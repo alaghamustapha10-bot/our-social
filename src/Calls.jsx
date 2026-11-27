@@ -1698,7 +1698,7 @@ export default function Calls({
   const ownSpeakRequestPending =
     mySpeakRequest?.status === "pending";
 
-  return (
+  const callsMarkup = (
     <div
       className="lolz-calls"
       style={{ width: "100%", color: "#ffffff" }}
@@ -2267,6 +2267,56 @@ export default function Calls({
                     {callInviteNotice}
                   </span>
                 )}
+              </div>
+            )}
+
+            {isGroupOrChannel && activeMediaType === "audio" && (
+              <div className="ig-call-voice-stage ig-group-call-voice-stage">
+                <div className="ig-group-call-avatar-stack">
+                  {participants.slice(0, 4).map((participant) => {
+                    const profile = participant.profile || {};
+                    const participantName =
+                      participant.user_id === user?.id
+                        ? "أنت"
+                        : getDisplayName(profile);
+
+                    return (
+                      <div
+                        key={participant.user_id}
+                        className="ig-group-call-avatar"
+                        title={participantName}
+                      >
+                        {profile.avatar_url ? (
+                          <img src={profile.avatar_url} alt={participantName} />
+                        ) : (
+                          <UserRound size={32} />
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {participants.length > 4 && (
+                    <span className="ig-group-call-avatar-more">
+                      +{participants.length - 4}
+                    </span>
+                  )}
+
+                  {participants.length === 0 && (
+                    <div className="ig-group-call-avatar ig-group-call-avatar-empty">
+                      <Users size={36} />
+                    </div>
+                  )}
+                </div>
+
+                <strong>
+                  {callType === "channel"
+                    ? "البث الصوتي المباشر"
+                    : "المكالمة الجماعية"}
+                </strong>
+                <span>
+                  {participantCount} مشارك ·{" "}
+                  {connectedAt ? "المكالمة جارية" : "جارٍ الاتصال..."}
+                </span>
               </div>
             )}
 
@@ -3034,4 +3084,22 @@ export default function Calls({
       )}
     </div>
   );
+
+  const shouldPortalCallWindow =
+    isGroupOrChannel &&
+    (Boolean(incomingCall) || (active && !isMinimized));
+
+  if (shouldPortalCallWindow && typeof document !== "undefined") {
+    const portalTarget =
+      document.querySelector(".app-shell") || document.body;
+
+    return createPortal(
+      <div className="lolz-call-dock lolz-group-channel-call-dock">
+        {callsMarkup}
+      </div>,
+      portalTarget
+    );
+  }
+
+  return callsMarkup;
 }
