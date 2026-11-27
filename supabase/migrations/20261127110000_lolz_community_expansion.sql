@@ -162,7 +162,7 @@ create policy "Group members read polls" on public.lolz_group_polls for select t
   using (exists (select 1 from public.group_members gm where gm.group_id::text = lolz_group_polls.group_id and gm.user_id = auth.uid()));
 drop policy if exists "Group members create polls" on public.lolz_group_polls;
 create policy "Group members create polls" on public.lolz_group_polls for insert to authenticated
-  with check (created_by = auth.uid() and exists (select 1 from public.group_members gm where gm.group_id::text = lolz_group_events.group_id and gm.user_id = auth.uid()));
+  with check (created_by = auth.uid() and exists (select 1 from public.group_members gm where gm.group_id::text = lolz_group_polls.group_id and gm.user_id = auth.uid()));
 drop policy if exists "Group members read poll votes" on public.lolz_group_poll_votes;
 create policy "Group members read poll votes" on public.lolz_group_poll_votes for select to authenticated
   using (exists (select 1 from public.lolz_group_polls p join public.group_members gm on gm.group_id::text = p.group_id where p.id = poll_id and gm.user_id = auth.uid()));
@@ -171,10 +171,10 @@ create policy "Users vote in group polls" on public.lolz_group_poll_votes for in
   with check (voter_id = auth.uid() and exists (select 1 from public.lolz_group_polls p join public.group_members gm on gm.group_id::text = p.group_id where p.id = poll_id and gm.user_id = auth.uid() and (p.ends_at is null or p.ends_at > now())));
 drop policy if exists "Group members read events" on public.lolz_group_events;
 create policy "Group members read events" on public.lolz_group_events for select to authenticated
-  using (exists (select 1 from public.group_members gm where gm.group_id::text = group_id and gm.user_id = auth.uid()));
+  using (exists (select 1 from public.group_members gm where gm.group_id::text = lolz_group_events.group_id and gm.user_id = auth.uid()));
 drop policy if exists "Group members create events" on public.lolz_group_events;
 create policy "Group members create events" on public.lolz_group_events for insert to authenticated
-  with check (created_by = auth.uid() and exists (select 1 from public.group_members gm where gm.group_id::text = group_id and gm.user_id = auth.uid()));
+  with check (created_by = auth.uid() and exists (select 1 from public.group_members gm where gm.group_id::text = lolz_group_events.group_id and gm.user_id = auth.uid()));
 grant select, insert on public.lolz_group_polls to authenticated;
 grant select, insert on public.lolz_group_poll_votes to authenticated;
 grant select, insert on public.lolz_group_events to authenticated;
