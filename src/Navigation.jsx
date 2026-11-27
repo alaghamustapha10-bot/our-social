@@ -19,6 +19,9 @@ import {
   ShieldCheck,
   Ban,
   BookOpenCheck,
+  Compass,
+  BarChart3,
+  FileText,
 } from "lucide-react";
 import { useState } from "react";
 import "./Navigation.css";
@@ -44,6 +47,9 @@ const COPY = {
     moderation: "مراجعة البلاغات",
     blocked: "الحسابات المحظورة",
     communityGuidelines: "قواعد المجتمع",
+    searchAll: "البحث الشامل",
+    creatorStudio: "استوديو المنشئ",
+    drafts: "المسودات",
     logout: "تسجيل الخروج",
     close: "إغلاق",
   },
@@ -67,6 +73,9 @@ const COPY = {
     moderation: "Reports review",
     blocked: "Blocked accounts",
     communityGuidelines: "Community guidelines",
+    searchAll: "Search everything",
+    creatorStudio: "Creator studio",
+    drafts: "Drafts",
     logout: "Log out",
     close: "Close",
   },
@@ -85,7 +94,7 @@ export default function Navigation({ page, setPage, onCreate, onLogout, username
 
   const primaryItems = [
     { id: "home", label: t.home, icon: Home },
-    { id: "discover", label: t.explore, icon: Search },
+    { id: "discover", label: t.explore, icon: Compass },
     { id: "lolz", label: t.reels, icon: Clapperboard },
     { id: "messages", label: t.messages, icon: MessageCircle },
     { id: "activity", label: t.notifications, icon: Heart },
@@ -102,6 +111,9 @@ export default function Navigation({ page, setPage, onCreate, onLogout, username
     { id: "settings", label: t.settings, icon: Settings },
     { id: "blocked", label: t.blocked, icon: Ban },
     { id: "community-guidelines", label: t.communityGuidelines, icon: BookOpenCheck },
+    { id: "search", label: t.searchAll, icon: Search },
+    { id: "creator", label: t.creatorStudio, icon: BarChart3 },
+    { id: "drafts", label: t.drafts, icon: FileText },
     ...(isAdmin ? [{ id: "admin", label: t.admin, icon: ShieldCheck }, { id: "moderation", label: t.moderation, icon: Flag }] : []),
   ];
 
