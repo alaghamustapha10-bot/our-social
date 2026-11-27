@@ -217,3 +217,8 @@
   background: rgba(0,0,0,.32);
   border: 1px solid rgba(255,255,255,.35);
 }
+
+
+.lolz-story-caption[data-position="top"]{top:100px;bottom:auto}
+.lolz-story-caption[data-position="middle"]{top:50%;bottom:auto;transform:translateY(-50%)}
+.lolz-story-caption[data-position="bottom"]{bottom:68px;top:auto;transform:none}
