@@ -2726,6 +2726,7 @@ export default function App() {
 
   async function changeAvatar(file) {
     if (!file || !user) return;
+    if (!(await enforceCommunityRules("", file))) return;
 
     setBusy(true);
 
