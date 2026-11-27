@@ -485,6 +485,8 @@ export default function App() {
   const [activeConversation, setActiveConversation] = useState(null);
   const [conversationMessages, setConversationMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
+  const [otherIsTyping, setOtherIsTyping] = useState(false);
+  const typingTimerRef = useRef(null);
   const [replyingToMessage, setReplyingToMessage] = useState(null);
   const [messageExpiryHours, setMessageExpiryHours] = useState("never");
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -2091,6 +2093,37 @@ export default function App() {
   }, [t, user?.id]);
 
   useEffect(() => {
+    if (!user?.id || activePage !== "messages" || !activeConversation?.id) {
+      setOtherIsTyping(false);
+      return;
+    }
+    let active = true;
+    const conversationId = String(activeConversation.id);
+    const refreshTyping = async () => {
+      const { data, error } = await supabase.from("lolz_typing_status")
+        .select("user_id")
+        .eq("conversation_id", conversationId)
+        .neq("user_id", user.id)
+        .gt("expires_at", new Date().toISOString())
+        .limit(1);
+      if (!active) return;
+      if (error) {
+        console.warn("Could not load typing state:", error.message);
+        return;
+      }
+      setOtherIsTyping(Boolean(data?.length));
+    };
+    void refreshTyping();
+    const poll = window.setInterval(() => { void refreshTyping(); }, 2500);
+    return () => {
+      active = false;
+      window.clearInterval(poll);
+      void supabase.from("lolz_typing_status").delete()
+        .eq("conversation_id", conversationId).eq("user_id", user.id);
+    };
+  }, [user?.id, activePage, activeConversation?.id]);
+
+  useEffect(() => {
     if (!user?.id || activePage !== "messages") return;
 
     const channel = supabase
@@ -2402,6 +2435,25 @@ export default function App() {
 
   function handleVoicePointerCancel() {
     cancelVoiceRecording();
+  }
+
+  function handleMessageTyping(value) {
+    setMessageText(value);
+    if (!user?.id || !activeConversation?.id) return;
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    const conversationId = String(activeConversation.id);
+    if (!value.trim()) {
+      void supabase.from("lolz_typing_status").delete()
+        .eq("conversation_id", conversationId).eq("user_id", user.id);
+      return;
+    }
+    typingTimerRef.current = window.setTimeout(() => {
+      void supabase.from("lolz_typing_status").upsert({
+        conversation_id: conversationId,
+        user_id: user.id,
+        expires_at: new Date(Date.now() + 8000).toISOString(),
+      }, { onConflict: "conversation_id,user_id" });
+    }, 350);
   }
 
   async function sendMessage(event) {
@@ -4002,6 +4054,12 @@ export default function App() {
                         </div>
                       )}
 
+                      {otherIsTyping && (
+                        <div className="ig-dm-typing-indicator" role="status">
+                          <span className="ig-dm-typing-dots"><i /><i /><i /></span>
+                          {isArabic ? "يكتب الآن..." : "Typing..."}
+                        </div>
+                      )}
                       {replyingToMessage && (
                         <div className="ig-dm-replying-to">
                           <span>{isArabic ? "الرد على: " : "Replying to: "}{replyingToMessage.content || (isArabic ? "رسالة صوتية أو مرفق" : "voice message or attachment")}</span>
@@ -4070,7 +4128,7 @@ export default function App() {
                         <input
                           className="ig-dm-composer-input"
                           value={messageText}
-                          onChange={(event) => setMessageText(event.target.value)}
+                          onChange={(event) => handleMessageTyping(event.target.value)}
                           placeholder={isArabic ? "اكتب رسالة..." : "Message..."}
                           disabled={messageSending || isRecording}
                         />
