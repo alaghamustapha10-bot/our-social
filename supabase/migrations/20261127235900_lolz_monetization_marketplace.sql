@@ -30,6 +30,88 @@ create policy "LOLZ users manage own monetization profile"
   with check (user_id = auth.uid());
 grant select, insert, update, delete on public.lolz_monetization_profiles to authenticated;
 
+create or replace function lolz_internal.lolz_guard_offer_review()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $
+declare
+  actor_role text := auth.jwt() -> 'app_metadata' ->> 'role';
+begin
+  if tg_op = 'INSERT' then
+    if auth.uid() is null or new.seller_id <> auth.uid() then
+      raise exception 'Offer owner must match the signed-in user' using errcode = '42501';
+    end if;
+    new.status := 'pending_review';
+    return new;
+  end if;
+
+  if new.seller_id <> old.seller_id or new.id <> old.id then
+    raise exception 'Offer ownership cannot be changed' using errcode = '42501';
+  end if;
+
+  if auth.uid() = old.seller_id and actor_role not in ('admin', 'owner') then
+    if new.status is distinct from old.status
+      and not (
+        (old.status = 'active' and new.status = 'paused')
+        or (old.status = 'paused' and new.status = 'active')
+      ) then
+      raise exception 'Only moderators can approve or reject offers' using errcode = '42501';
+    end if;
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists lolz_guard_offer_review_trigger on public.lolz_commerce_offers;
+create trigger lolz_guard_offer_review_trigger
+before insert or update on public.lolz_commerce_offers
+for each row execute function lolz_internal.lolz_guard_offer_review();
+revoke all on function lolz_internal.lolz_guard_offer_review() from public, anon, authenticated;
+
+create or replace function lolz_internal.lolz_guard_brief_review()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $
+declare
+  actor_role text := auth.jwt() -> 'app_metadata' ->> 'role';
+begin
+  if tg_op = 'INSERT' then
+    if auth.uid() is null or new.advertiser_id <> auth.uid() then
+      raise exception 'Advertiser must match the signed-in user' using errcode = '42501';
+    end if;
+    new.status := 'pending_review';
+    return new;
+  end if;
+
+  if new.advertiser_id <> old.advertiser_id or new.id <> old.id then
+    raise exception 'Collaboration owner cannot be changed' using errcode = '42501';
+  end if;
+
+  if auth.uid() = old.advertiser_id and actor_role not in ('admin', 'owner') then
+    if new.status is distinct from old.status
+      and not (
+        (old.status = 'open' and new.status = 'paused')
+        or (old.status = 'paused' and new.status = 'open')
+      ) then
+      raise exception 'Only moderators can approve or reject collaboration briefs' using errcode = '42501';
+    end if;
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists lolz_guard_brief_review_trigger on public.lolz_sponsorship_briefs;
+create trigger lolz_guard_brief_review_trigger
+before insert or update on public.lolz_sponsorship_briefs
+for each row execute function lolz_internal.lolz_guard_brief_review();
+revoke all on function lolz_internal.lolz_guard_brief_review() from public, anon, authenticated;
+
+
+
 create table if not exists public.lolz_commerce_offers (
   id uuid primary key default gen_random_uuid(),
   seller_id uuid not null references auth.users(id) on delete cascade,
@@ -60,7 +142,7 @@ alter table public.lolz_commerce_offers
   drop constraint if exists lolz_commerce_offers_status_check;
 alter table public.lolz_commerce_offers
   add constraint lolz_commerce_offers_status_check
-  check (status in ('draft', 'pending_review', 'active', 'paused', 'sold_out'));
+  check (status in ('draft', 'pending_review', 'active', 'paused', 'rejected', 'sold_out'));
 
 create policy "LOLZ users browse active offers or own offers"
   on public.lolz_commerce_offers for select to authenticated
@@ -395,6 +477,8 @@ begin
     raise exception 'Payout request owner does not match the signed-in user'
       using errcode = '42501';
   end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(new.seller_id::text, 0));
 
   select coalesce(sum(order_row.seller_net_cents), 0)::bigint
     into earned_cents
