@@ -5,6 +5,7 @@ import {
   EgressClient,
   EncodedFileOutput,
   S3Upload,
+  TrackSource,
 } from "npm:livekit-server-sdk";
 
 const corsHeaders = {
@@ -547,6 +548,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // UPDATE LIVEKIT PERMISSION
     // ==================================================
 
+    async function muteParticipantMicrophone(
+      roomName: string,
+      targetUserId: string,
+    ): Promise<number> {
+      const participant = await roomService.getParticipant(
+        roomName,
+        targetUserId,
+      );
+      const microphoneTracks = (participant.tracks || []).filter(
+        (track) => track.source === TrackSource.MICROPHONE,
+      );
+
+      for (const track of microphoneTracks) {
+        await roomService.mutePublishedTrack(
+          roomName,
+          targetUserId,
+          track.sid,
+          true,
+        );
+      }
+
+      return microphoneTracks.length;
+    }
+
     async function updateLiveKitPermission(
       roomName: string,
       targetUserId: string,
@@ -1075,6 +1100,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
             memberRole === "admin";
 
           try {
+            if (!nextPermission) {
+              await muteParticipantMicrophone(
+                activeCall.room_name,
+                participant.user_id,
+              );
+            }
             await updateLiveKitPermission(
               activeCall.room_name,
               participant.user_id,
@@ -1429,6 +1460,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         success: true,
         recording,
         consents,
+        call_mode: await getCallMode(call),
         can_manage_recording: await isAdmin(call),
       });
     }
@@ -2600,6 +2632,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
 
       try {
+        if (!can_publish) {
+          await muteParticipantMicrophone(
+            call.room_name,
+            target_user_id,
+          );
+        }
         await updateLiveKitPermission(
           call.room_name,
           target_user_id,
@@ -2685,6 +2723,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
         if (participant.user_id === userId) continue;
 
         try {
+          await muteParticipantMicrophone(
+            call.room_name,
+            participant.user_id,
+          );
           await updateLiveKitPermission(
             call.room_name,
             participant.user_id,
