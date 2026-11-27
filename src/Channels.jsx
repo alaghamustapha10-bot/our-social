@@ -30,6 +30,7 @@ import { dispatchLolzPush } from "./pushNotifications";
 
 import "./Channels.css";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
+import VoiceTranscription from "./VoiceTranscription";
 
 export default function Channels({
   user,
@@ -1153,6 +1154,7 @@ export default function Channels({
                         </div>
 
                         <VoiceMessagePlayer src={post.media_url} />
+                        <VoiceTranscription messageId={post.id} sourceType="channel_post" transcript={post.transcript} isArabic={document.documentElement.lang?.startsWith("ar")} />
                       </div>
                     ) : post.message_type === "image" && post.media_url ? (
                       <div className="channel-media-message">
