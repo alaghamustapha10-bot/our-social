@@ -268,7 +268,7 @@ export default function Calls({
       if (track.kind === "audio") {
         element.style.display = "none";
         element.volume = 1;
-      } else {
+      } else if (isGroupOrChannel) {
         element.className = track.source === Track.Source.ScreenShare
           ? "lolz-screen-share-video"
           : "lolz-remote-video";
@@ -278,6 +278,11 @@ export default function Calls({
         element.style.objectFit = track.source === Track.Source.ScreenShare
           ? "contain"
           : "cover";
+      } else {
+        element.style.width = "100%";
+        element.style.maxWidth = "440px";
+        element.style.borderRadius = "14px";
+        element.style.objectFit = "cover";
       }
 
       container.appendChild(element);
@@ -300,7 +305,7 @@ export default function Calls({
     } catch (attachError) {
       console.error("Could not attach remote track:", attachError);
     }
-  }, []);
+  }, [isGroupOrChannel]);
 
   useEffect(() => {
     if (!active || !remoteMediaRef.current) return;
@@ -2086,7 +2091,9 @@ export default function Calls({
         <>
 
           <div
-            className={`lolz-call-active-panel${isMinimized ? " is-minimized" : ""}`}
+            className={
+              `lolz-call-active-panel${isMinimized ? " is-minimized" : ""}${isGroupOrChannel ? " is-group-or-channel" : ""}`
+            }
             style={{
               padding: "18px",
               margin: "8px 0",
