@@ -13,6 +13,9 @@ import {
   RefreshCw,
   X,
   Sparkles,
+  Info,
+  Copy,
+  Shield,
   Mic,
   Square,
   ImagePlus,
@@ -41,6 +44,10 @@ export default function Channels({
   const [role, setRole] = useState(null);
 
   const [search, setSearch] = useState("");
+  const [channelFilter, setChannelFilter] = useState("all");
+  const [subscribedChannelIds, setSubscribedChannelIds] = useState([]);
+  const [showChannelInfo, setShowChannelInfo] = useState(false);
+  const [memberProfiles, setMemberProfiles] = useState({});
   const [content, setContent] = useState("");
   const [showCreate, setShowCreate] = useState(false);
 
@@ -93,10 +100,16 @@ export default function Channels({
   const loadChannels = useCallback(async () => {
     if (!user?.id) return;
 
-    const { data, error: loadError } = await supabase
-      .from("channels")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const [{ data, error: loadError }, { data: membershipRows, error: membershipError }] = await Promise.all([
+      supabase
+        .from("channels")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("channel_members")
+        .select("channel_id")
+        .eq("user_id", user.id),
+    ]);
 
     if (loadError) {
       setError(loadError.message);
@@ -104,6 +117,12 @@ export default function Channels({
     }
 
     setChannels(data || []);
+    if (!membershipError) {
+      setSubscribedChannelIds((membershipRows || []).map((row) => String(row.channel_id)));
+    } else {
+      console.warn("Could not load subscribed channel list:", membershipError.message);
+      setSubscribedChannelIds([]);
+    }
   }, [user?.id]);
 
   const loadPosts = useCallback(
@@ -135,6 +154,20 @@ export default function Channels({
       scrollToBottomRef.current = stickToBottom;
       setPosts(data || []);
       setMembers(memberData || []);
+
+      const memberIds = [...new Set((memberData || []).map((member) => member.user_id).filter(Boolean))];
+      if (memberIds.length) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, display_name, full_name, username, avatar_url, is_verified")
+          .in("id", memberIds);
+
+        if (!profilesError) {
+          setMemberProfiles(Object.fromEntries((profiles || []).map((profile) => [profile.id, profile])));
+        }
+      } else {
+        setMemberProfiles({});
+      }
 
       const membership = (memberData || []).find(
         (member) => member.user_id === user?.id
@@ -534,6 +567,7 @@ export default function Channels({
         });
       }
 
+      await loadChannels();
       await loadPosts(channel);
     } catch (err) {
       setError(err.message || "تعذر الانضمام إلى القناة.");
@@ -575,6 +609,7 @@ export default function Channels({
       if (findError) throw findError;
 
       setSelected(found);
+      setShowChannelInfo(false);
     } catch (err) {
       setError(err.message || "رمز الدعوة غير صحيح.");
     } finally {
@@ -803,6 +838,7 @@ export default function Channels({
 
       cancelRecording();
       setSelected(null);
+      setShowChannelInfo(false);
       await loadChannels();
     } catch (err) {
       setError(err.message || "تعذر مغادرة القناة.");
@@ -811,9 +847,27 @@ export default function Channels({
     }
   };
 
-  const filteredChannels = channels.filter((channel) =>
-    channel.name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredChannels = channels.filter((channel) => {
+    const matchesSearch = channel.name?.toLowerCase().includes(search.toLowerCase()) ||
+      channel.description?.toLowerCase().includes(search.toLowerCase());
+    const isSubscribed = subscribedChannelIds.includes(String(channel.id));
+    const matchesFilter =
+      channelFilter === "all" ||
+      (channelFilter === "subscribed" && isSubscribed) ||
+      (channelFilter === "discover" && channel.is_public && !isSubscribed) ||
+      (channelFilter === "private" && !channel.is_public);
+    return matchesSearch && matchesFilter;
+  });
+
+  const copyChannelInvite = async () => {
+    if (!selected?.invite_code) return;
+    try {
+      await navigator.clipboard.writeText(selected.invite_code);
+      setError("");
+    } catch {
+      setError("تعذر نسخ رمز الدعوة. انسخه يدوياً.");
+    }
+  };
 
   useEffect(() => {
     onCallContextChange?.(null);
@@ -838,7 +892,7 @@ export default function Channels({
   };
 
   return (
-    <section className={`channels-page ${selected ? "channel-chat-open" : ""}`}>
+    <section className={`channels-page ${selected ? "channel-chat-open" : ""} ${selected && showChannelInfo ? "show-channel-info" : ""}`}>
       <aside className={`channels-sidebar ${selected ? "mobile-hidden" : ""}`}>
         <div className="channels-heading">
           <div className="channels-brand">
@@ -883,6 +937,26 @@ export default function Channels({
           )}
         </div>
 
+        <div className="channels-filter-tabs" role="tablist" aria-label="تصفية القنوات">
+          {[
+            ["all", "الكل"],
+            ["subscribed", "مشترك بها"],
+            ["discover", "اكتشف"],
+            ["private", "خاصة"],
+          ].map(([value, label]) => (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={channelFilter === value}
+              className={channelFilter === value ? "active" : ""}
+              key={value}
+              onClick={() => setChannelFilter(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <form className="channels-join-code" onSubmit={joinPrivateChannel}>
           <input
             value={inviteCode}
@@ -902,7 +976,10 @@ export default function Channels({
               className={`channel-list-item ${
                 selected?.id === channel.id ? "active" : ""
               }`}
-              onClick={() => setSelected(channel)}
+              onClick={() => {
+                setSelected(channel);
+                setShowChannelInfo(false);
+              }}
             >
               <div className="channel-avatar">
                 {channel.avatar_url ? (
@@ -915,7 +992,9 @@ export default function Channels({
               <div className="channel-list-details">
                 <strong>{channel.name}</strong>
                 <span>
-                  {channel.is_public ? "قناة عامة" : "قناة خاصة"}
+                  {subscribedChannelIds.includes(String(channel.id))
+                    ? "مشترك · قناة"
+                    : channel.is_public ? "قناة عامة" : "قناة خاصة"}
                 </span>
               </div>
 
@@ -966,6 +1045,16 @@ export default function Channels({
               </div>
 
               <button
+                className="channel-header-info-button"
+                onClick={() => setShowChannelInfo((value) => !value)}
+                title="معلومات القناة"
+                aria-label="معلومات القناة"
+                aria-expanded={showChannelInfo}
+              >
+                <Info size={19} />
+              </button>
+
+              <button
                 className="channel-refresh"
                 onClick={() => loadPosts(selected)}
                 title="تحديث"
@@ -977,10 +1066,14 @@ export default function Channels({
 
             <div className="channel-description">
               {selected.description || "مرحباً بك في هذه القناة."}
+              <span className="channel-description-meta">
+                <Users size={14} /> {members.length} مشترك
+                {selected.is_public ? <Globe size={13} /> : <Lock size={13} />}
+              </span>
             </div>
 
             {role && (
-              <div className="channel-call-section">
+              <div className="channel-call-section" id="channel-call-section">
                 <Calls
                   supabase={supabase}
                   user={user}
@@ -1307,6 +1400,93 @@ export default function Channels({
           </div>
         )}
       </main>
+
+      {selected && showChannelInfo && (
+        <aside className="channel-info-panel">
+          <div className="channel-info-heading">
+            <strong>معلومات القناة</strong>
+            <button
+              type="button"
+              onClick={() => setShowChannelInfo(false)}
+              aria-label="إغلاق معلومات القناة"
+            >
+              <X size={19} />
+            </button>
+          </div>
+
+          <div className="channel-info-profile">
+            <div className="channel-info-avatar">
+              {selected.avatar_url ? (
+                <img src={selected.avatar_url} alt={selected.name} />
+              ) : (
+                <Radio size={30} />
+              )}
+            </div>
+            <h2>{selected.name}</h2>
+            <span>{selected.is_public ? "قناة عامة" : "قناة خاصة"}</span>
+            <p>{selected.description || "لا يوجد وصف لهذه القناة."}</p>
+          </div>
+
+          <div className="channel-info-stats">
+            <div>
+              <strong>{members.length}</strong>
+              <small>مشترك</small>
+            </div>
+            <div>
+              <strong>{role || "زائر"}</strong>
+              <small>صلاحيتك</small>
+            </div>
+          </div>
+
+          {selected.invite_code && role === "owner" && (
+            <div className="channel-info-invite">
+              <strong>رابط / رمز الدعوة</strong>
+              <code>{selected.invite_code}</code>
+              <button type="button" onClick={copyChannelInvite}>
+                <Copy size={15} /> نسخ الرمز
+              </button>
+            </div>
+          )}
+
+          <div className="channel-info-members">
+            <div className="channel-info-members-title">
+              <strong>المشتركون</strong>
+              <span>{members.length}</span>
+            </div>
+            {members.map((member) => {
+              const profile = memberProfiles[member.user_id] || {};
+              const memberName = profile.display_name || profile.full_name || profile.username || "عضو";
+              return (
+                <div className="channel-info-member" key={member.id}>
+                  <div className="channel-info-member-avatar">
+                    {profile.avatar_url ? (
+                      <img src={profile.avatar_url} alt={memberName} />
+                    ) : (
+                      memberName.trim().slice(0, 1).toUpperCase()
+                    )}
+                  </div>
+                  <div>
+                    <strong>{memberName}</strong>
+                    <small>{member.role === "owner" ? "مالك القناة" : member.role === "admin" ? "مشرف" : "مشترك"}</small>
+                  </div>
+                  {member.role === "owner" ? <Shield size={15} /> : null}
+                </div>
+              );
+            })}
+          </div>
+
+          {role && role !== "owner" && (
+            <button
+              type="button"
+              className="channel-info-leave"
+              onClick={leaveChannel}
+              disabled={loading}
+            >
+              <LogOut size={16} /> مغادرة القناة
+            </button>
+          )}
+        </aside>
+      )}
 
       {error && (
         <div className="channels-error" role="alert">
