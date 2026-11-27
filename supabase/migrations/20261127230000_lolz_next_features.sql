@@ -69,7 +69,12 @@ create index if not exists lolz_story_highlight_items_highlight_position_idx
 
 -- Derive the saved media snapshot from the owner's actual story row so a client
 -- cannot change a close-friends story into a public highlight item.
-create or replace function public.lolz_snapshot_story_highlight_item()
+-- These helpers stay outside Supabase's exposed Data API schemas.
+create schema if not exists lolz_internal;
+revoke all on schema lolz_internal from public, anon;
+grant usage on schema lolz_internal to authenticated;
+
+create or replace function lolz_internal.lolz_snapshot_story_highlight_item()
 returns trigger
 language plpgsql
 security definer
@@ -113,9 +118,9 @@ $$;
 drop trigger if exists lolz_snapshot_story_highlight_item_trigger on public.lolz_story_highlight_items;
 create trigger lolz_snapshot_story_highlight_item_trigger
 before insert on public.lolz_story_highlight_items
-for each row execute function public.lolz_snapshot_story_highlight_item();
+for each row execute function lolz_internal.lolz_snapshot_story_highlight_item();
 
-create or replace function public.lolz_can_read_story_highlight_item(
+create or replace function lolz_internal.lolz_can_read_story_highlight_item(
   p_owner_id uuid,
   p_audience text
 )
@@ -158,9 +163,9 @@ as $$
     );
 $$;
 
-revoke all on function public.lolz_snapshot_story_highlight_item() from public;
-revoke all on function public.lolz_can_read_story_highlight_item(uuid, text) from public;
-grant execute on function public.lolz_can_read_story_highlight_item(uuid, text) to authenticated;
+revoke all on function lolz_internal.lolz_snapshot_story_highlight_item() from public, anon, authenticated;
+revoke all on function lolz_internal.lolz_can_read_story_highlight_item(uuid, text) from public, anon, authenticated;
+grant execute on function lolz_internal.lolz_can_read_story_highlight_item(uuid, text) to authenticated;
 
 alter table public.lolz_story_highlights enable row level security;
 alter table public.lolz_story_highlight_items enable row level security;
@@ -180,7 +185,7 @@ create policy "LOLZ users view highlights with visible stories"
       select 1
       from public.lolz_story_highlight_items item
       where item.highlight_id = lolz_story_highlights.id
-        and public.lolz_can_read_story_highlight_item(item.owner_id, item.audience)
+        and lolz_internal.lolz_can_read_story_highlight_item(item.owner_id, item.audience)
     )
   );
 
@@ -199,7 +204,7 @@ create policy "LOLZ owners add their own highlight stories"
 drop policy if exists "LOLZ users view highlight stories they can access" on public.lolz_story_highlight_items;
 create policy "LOLZ users view highlight stories they can access"
   on public.lolz_story_highlight_items for select to authenticated
-  using (public.lolz_can_read_story_highlight_item(owner_id, audience));
+  using (lolz_internal.lolz_can_read_story_highlight_item(owner_id, audience));
 
 grant select, insert, update, delete on public.lolz_story_highlights to authenticated;
 grant select, insert on public.lolz_story_highlight_items to authenticated;
