@@ -24,6 +24,7 @@ import StoryViewer from "./StoryViewer";
 import ModerationDialog from "./ModerationDialog";
 import "./ModerationPage.css";
 import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 import { PushNotifications } from "@capacitor/push-notifications";
 import { dispatchLolzPush } from "./pushNotifications";
 
@@ -249,6 +250,9 @@ export default function App() {
   const pushActionHandlerRef = useRef(null);
   const pendingPushActionRef = useRef(null);
   const notificationReloadRef = useRef(null);
+  const pendingNativeCallUrlRef = useRef(null);
+  const nativeCallUrlHandlerRef = useRef(null);
+  const lastNativeCallUrlRef = useRef(null);
   const [pushGroupTarget, setPushGroupTarget] = useState(null);
   const [pushChannelTarget, setPushChannelTarget] = useState(null);
 
@@ -329,9 +333,13 @@ export default function App() {
           await PushNotifications.addListener("pushNotificationReceived", (notification) => {
             if (!active) return;
             console.info("LOLZ push received:", notification?.data?.type || "notification");
+            const data = notification?.data || {};
             const currentUser = userRef.current;
             if (currentUser?.id) {
               void notificationReloadRef.current?.(currentUser.id);
+            }
+            if (data.type === "incoming_call" && pushActionHandlerRef.current) {
+              void pushActionHandlerRef.current(data);
             }
           })
         );
@@ -437,6 +445,7 @@ export default function App() {
   // CENTRAL CALL CONTEXT
   const [selectedCallContext, setSelectedCallContext] = useState(null);
   const [activeCallContext, setActiveCallContext] = useState(null);
+  const [pendingIncomingCallAction, setPendingIncomingCallAction] = useState(null);
 
   const handleCallContextChange = useCallback((context) => {
     setSelectedCallContext(context);
@@ -2705,12 +2714,96 @@ export default function App() {
     goTo("activity");
   };
 
+  nativeCallUrlHandlerRef.current = async (rawUrl) => {
+    let url;
+    try {
+      url = new URL(rawUrl);
+    } catch {
+      return;
+    }
+
+    if (url.protocol !== "com.oursocial.app:" || url.hostname !== "call") return;
+
+    if (!userRef.current?.id) {
+      pendingNativeCallUrlRef.current = rawUrl;
+      return;
+    }
+
+    if (lastNativeCallUrlRef.current === rawUrl) return;
+    lastNativeCallUrlRef.current = rawUrl;
+
+    const params = url.searchParams;
+    const action = params.get("action") || "open";
+    const callId = params.get("call_id") || "";
+    const conversationId = params.get("conversation_id") || "";
+    const groupId = params.get("group_id") || "";
+    const channelId = params.get("channel_id") || "";
+
+    if (conversationId) {
+      await openConversationById(conversationId);
+    } else if (groupId) {
+      setPushGroupTarget(groupId);
+      setPushChannelTarget(null);
+      goTo("groups");
+    } else if (channelId) {
+      setPushChannelTarget(channelId);
+      setPushGroupTarget(null);
+      goTo("channels");
+    }
+
+    if (callId && (action === "answer" || action === "reject")) {
+      setPendingIncomingCallAction({
+        call_id: callId,
+        action,
+      });
+    }
+  };
+
   useEffect(() => {
     if (!user?.id || !pendingPushActionRef.current) return;
     const pending = pendingPushActionRef.current;
     pendingPushActionRef.current = null;
     void pushActionHandlerRef.current?.(pending);
   }, [user?.id]);
+
+  useEffect(() => {
+    const pendingUrl = pendingNativeCallUrlRef.current;
+    if (!user?.id || !pendingUrl) return;
+    pendingNativeCallUrlRef.current = null;
+    void nativeCallUrlHandlerRef.current?.(pendingUrl);
+  }, [user?.id]);
+
+  useEffect(() => {
+    let active = true;
+    let listener;
+
+    const registerIncomingCallLinks = async () => {
+      try {
+        listener = await CapacitorApp.addListener("appUrlOpen", ({ url }) => {
+          void nativeCallUrlHandlerRef.current?.(url);
+        });
+
+        if (!active) {
+          await listener.remove();
+          return;
+        }
+
+        const launch = await CapacitorApp.getLaunchUrl();
+        if (active && launch?.url) {
+          void nativeCallUrlHandlerRef.current?.(launch.url);
+        }
+      } catch (error) {
+        console.warn("Could not register LOLZ incoming-call links:", error);
+      }
+    };
+
+    void registerIncomingCallLinks();
+
+    return () => {
+      active = false;
+      void listener?.remove();
+    };
+  }, []);
 
   function createPost() {
     goTo("home");
@@ -4232,6 +4325,8 @@ export default function App() {
             onCallStateChange={handleCallStateChange}
             onCallActionsReady={registerPrivateCallActions}
             showIdleControls={showIdleCallControls}
+            incomingCallAction={pendingIncomingCallAction}
+            onIncomingCallActionHandled={() => setPendingIncomingCallAction(null)}
           />
         </div>
       )}
