@@ -5,6 +5,7 @@ import {
   EgressClient,
   EncodedFileOutput,
   S3Upload,
+  TrackSource,
 } from "npm:livekit-server-sdk";
 
 const corsHeaders = {
@@ -547,6 +548,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // UPDATE LIVEKIT PERMISSION
     // ==================================================
 
+    async function muteParticipantMicrophone(
+      roomName: string,
+      targetUserId: string,
+    ): Promise<number> {
+      const participant = await roomService.getParticipant(
+        roomName,
+        targetUserId,
+      );
+      const microphoneTracks = (participant.tracks || []).filter(
+        (track) => track.source === TrackSource.MICROPHONE,
+      );
+
+      for (const track of microphoneTracks) {
+        await roomService.mutePublishedTrack(
+          roomName,
+          targetUserId,
+          track.sid,
+          true,
+        );
+      }
+
+      return microphoneTracks.length;
+    }
+
     async function updateLiveKitPermission(
       roomName: string,
       targetUserId: string,
@@ -919,9 +944,42 @@ Deno.serve(async (req: Request): Promise<Response> => {
         new Date(a.created_at).getTime()
       );
 
+      let participantCounts = new Map<string, number>();
+      if (calls.length > 0) {
+        const callIds = calls.map((item) => item.id);
+        const { data: participantRows, error: participantCountError } =
+          await supabase
+            .from("lolz_call_participants")
+            .select("call_id")
+            .in("call_id", callIds)
+            .is("left_at", null);
+
+        if (participantCountError) {
+          logError(
+            "Load active call participant counts failed",
+            participantCountError,
+            requestId,
+          );
+          throw new HttpError("Could not load active call participant counts");
+        }
+
+        participantCounts = new Map<string, number>();
+        for (const row of participantRows || []) {
+          participantCounts.set(
+            row.call_id,
+            (participantCounts.get(row.call_id) || 0) + 1,
+          );
+        }
+      }
+
+      const callsWithCounts = calls.map((item) => ({
+        ...item,
+        participant_count: participantCounts.get(item.id) || 0,
+      }));
+
       return response({
         success: true,
-        calls,
+        calls: callsWithCounts,
       });
     }
 
@@ -998,6 +1056,102 @@ Deno.serve(async (req: Request): Promise<Response> => {
         throw new HttpError(
           "Could not update call mode",
         );
+      }
+
+      const { data: activeCall, error: activeCallError } = await supabase
+        .from("lolz_calls")
+        .select("id, room_name")
+        .eq(isGroup ? "group_id" : "channel_id", scopeId)
+        .eq("call_type", isGroup ? "group" : "channel")
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (activeCallError) {
+        logError("Load active call for mode change failed", activeCallError, requestId);
+        throw new HttpError("Could not update active call permissions");
+      }
+
+      if (activeCall) {
+        const { data: roleRows, error: roleRowsError } = await supabase
+          .from(table)
+          .select("user_id, role")
+          .eq(idColumn, scopeId);
+
+        if (roleRowsError) {
+          logError("Load member roles for mode change failed", roleRowsError, requestId);
+          throw new HttpError("Could not load member roles");
+        }
+
+        const roleMap = new Map<string, string>(
+          (roleRows || []).map((row: { user_id: string; role: string }) => [
+            row.user_id,
+            row.role,
+          ]),
+        );
+        const activeParticipants = await getActiveParticipants(activeCall.id);
+
+        for (const participant of activeParticipants) {
+          const memberRole = roleMap.get(participant.user_id);
+          const nextPermission =
+            call_mode === "open" ||
+            memberRole === "owner" ||
+            memberRole === "admin";
+
+          try {
+            if (!nextPermission) {
+              await muteParticipantMicrophone(
+                activeCall.room_name,
+                participant.user_id,
+              );
+            }
+            await updateLiveKitPermission(
+              activeCall.room_name,
+              participant.user_id,
+              nextPermission,
+            );
+          } catch (permissionError) {
+            logError(
+              "LiveKit participant permission update during mode change failed",
+              permissionError,
+              requestId,
+            );
+          }
+
+          const { error: savePermissionError } = await supabase
+            .from("lolz_call_participants")
+            .update({ can_publish: nextPermission })
+            .eq("call_id", activeCall.id)
+            .eq("user_id", participant.user_id)
+            .is("left_at", null);
+
+          if (savePermissionError) {
+            logError(
+              "Save participant permission during mode change failed",
+              savePermissionError,
+              requestId,
+            );
+            throw new HttpError("Could not save active call permissions");
+          }
+        }
+
+        if (call_mode === "moderated") {
+          const { error: cancelRequestsError } = await supabase
+            .from("lolz_call_speak_requests")
+            .update({
+              status: "cancelled",
+              responded_at: new Date().toISOString(),
+              responded_by: userId,
+            })
+            .eq("call_id", activeCall.id)
+            .in("status", ["pending", "approved"]);
+
+          if (cancelRequestsError) {
+            logError("Cancel speak requests after mode change failed", cancelRequestsError, requestId);
+            throw new HttpError("Could not reset speaking requests");
+          }
+        }
       }
 
       return response({
@@ -1257,6 +1411,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         token,
         server_url: LIVEKIT_URL,
         can_publish: true,
+        call_mode: call_type === "private" ? "open" : await getCallMode(newCall),
         media_type: selectedMediaType,
       });
     }
@@ -1305,6 +1460,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         success: true,
         recording,
         consents,
+        call_mode: await getCallMode(call),
         can_manage_recording: await isAdmin(call),
       });
     }
@@ -2476,6 +2632,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
 
       try {
+        if (!can_publish) {
+          await muteParticipantMicrophone(
+            call.room_name,
+            target_user_id,
+          );
+        }
         await updateLiveKitPermission(
           call.room_name,
           target_user_id,
@@ -2540,6 +2702,142 @@ Deno.serve(async (req: Request): Promise<Response> => {
         target_user_id,
         can_publish,
       });
+    }
+
+    // ==================================================
+    // MUTE ALL OTHER PARTICIPANTS
+    // ==================================================
+
+    if (action === "mute_all") {
+      if (call.call_type === "private") {
+        throw new HttpError("Group controls are not available in private calls", 400);
+      }
+      if (!(await isAdmin(call))) {
+        throw new HttpError("Only admins can mute participants", 403);
+      }
+
+      const participants = await getActiveParticipants(call.id);
+      let mutedCount = 0;
+
+      for (const participant of participants) {
+        if (participant.user_id === userId) continue;
+
+        try {
+          await muteParticipantMicrophone(
+            call.room_name,
+            participant.user_id,
+          );
+          await updateLiveKitPermission(
+            call.room_name,
+            participant.user_id,
+            false,
+          );
+        } catch (permissionError) {
+          logError("Mute all LiveKit permission update failed", permissionError, requestId);
+        }
+
+        const { error: saveMuteError } = await supabase
+          .from("lolz_call_participants")
+          .update({ can_publish: false })
+          .eq("call_id", call.id)
+          .eq("user_id", participant.user_id)
+          .is("left_at", null);
+
+        if (saveMuteError) {
+          logError("Save mute-all participant state failed", saveMuteError, requestId);
+          throw new HttpError("Could not mute all participants");
+        }
+        mutedCount += 1;
+      }
+
+      const { error: cancelRequestsError } = await supabase
+        .from("lolz_call_speak_requests")
+        .update({
+          status: "cancelled",
+          responded_at: new Date().toISOString(),
+          responded_by: userId,
+        })
+        .eq("call_id", call.id)
+        .in("status", ["pending", "approved"]);
+
+      if (cancelRequestsError) {
+        logError("Cancel speak requests after mute-all failed", cancelRequestsError, requestId);
+        throw new HttpError("Could not clear speaking requests");
+      }
+
+      return response({ success: true, muted_count: mutedCount });
+    }
+
+    // ==================================================
+    // REMOVE PARTICIPANT FROM ACTIVE GROUP / CHANNEL CALL
+    // ==================================================
+
+    if (action === "remove_participant") {
+      if (call.call_type === "private") {
+        throw new HttpError("Participant removal is not available in private calls", 400);
+      }
+      if (!isUuid(target_user_id) || target_user_id === userId) {
+        throw new HttpError("A different valid participant is required", 400);
+      }
+      if (!(await isAdmin(call))) {
+        throw new HttpError("Only admins can remove call participants", 403);
+      }
+      if (!(await checkMembership(call, target_user_id))) {
+        throw new HttpError("Target user is not a group or channel member", 403);
+      }
+
+      const { data: targetParticipant, error: targetParticipantError } = await supabase
+        .from("lolz_call_participants")
+        .select("id")
+        .eq("call_id", call.id)
+        .eq("user_id", target_user_id)
+        .is("left_at", null)
+        .maybeSingle();
+
+      if (targetParticipantError) {
+        logError("Find participant to remove failed", targetParticipantError, requestId);
+        throw new HttpError("Could not verify call participant");
+      }
+      if (!targetParticipant) {
+        throw new HttpError("Participant is not currently in this call", 404);
+      }
+
+      try {
+        await roomService.removeParticipant(call.room_name, target_user_id);
+      } catch (removeError) {
+        logError("LiveKit remove participant failed", removeError, requestId);
+      }
+
+      const now = new Date().toISOString();
+      const { error: markLeftError } = await supabase
+        .from("lolz_call_participants")
+        .update({ left_at: now, can_publish: false })
+        .eq("call_id", call.id)
+        .eq("user_id", target_user_id)
+        .is("left_at", null);
+
+      if (markLeftError) {
+        logError("Mark removed call participant as left failed", markLeftError, requestId);
+        throw new HttpError("Could not remove participant from call");
+      }
+
+      const { error: cancelRequestError } = await supabase
+        .from("lolz_call_speak_requests")
+        .update({
+          status: "cancelled",
+          responded_at: now,
+          responded_by: userId,
+        })
+        .eq("call_id", call.id)
+        .eq("user_id", target_user_id)
+        .in("status", ["pending", "approved"]);
+
+      if (cancelRequestError) {
+        logError("Cancel removed participant speak request failed", cancelRequestError, requestId);
+        throw new HttpError("Could not clear removed participant speaking requests");
+      }
+
+      return response({ success: true, target_user_id });
     }
 
     // ==================================================

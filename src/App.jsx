@@ -253,6 +253,28 @@ export default function App() {
   const [pushChannelTarget, setPushChannelTarget] = useState(null);
 
   useEffect(() => {
+    if (!user?.id) return;
+
+    const inviteUrl = new URL(window.location.href);
+    const callId = inviteUrl.searchParams.get("lolz_call");
+    const callType = inviteUrl.searchParams.get("lolz_call_type");
+    const groupId = inviteUrl.searchParams.get("group_id");
+    const channelId = inviteUrl.searchParams.get("channel_id");
+
+    if (!callId) return;
+
+    if (callType === "group" && groupId) {
+      setPushGroupTarget(groupId);
+      setPushChannelTarget(null);
+      goTo("groups");
+    } else if (callType === "channel" && channelId) {
+      setPushChannelTarget(channelId);
+      setPushGroupTarget(null);
+      goTo("channels");
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
     document.documentElement.lang = isArabic ? "ar" : "en";
     document.documentElement.dir = isArabic ? "rtl" : "ltr";
   }, [isArabic]);

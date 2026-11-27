@@ -565,3 +565,365 @@
     animation-duration: 0.01ms !important;
   }
 }
+
+/* =========================================================
+   LOLZ CALLS — TELEGRAM-STYLE VOICE / VIDEO CONTROLS
+========================================================= */
+.lolz-calls {
+  width: 100%;
+  color: var(--text, #f3f5f7) !important;
+  font-size: 12px;
+}
+.lolz-calls button {
+  min-height: 36px;
+  border-radius: 20px !important;
+  font-weight: 650;
+  transition: background .16s ease, transform .16s ease, opacity .16s ease;
+}
+.lolz-calls button:active:not(:disabled) {
+  transform: scale(.96);
+}
+.lolz-calls .lolz-private-call-actions {
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px !important;
+  padding: 0 !important;
+}
+.lolz-calls .lolz-private-call-actions button {
+  width: 38px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: color-mix(in srgb, #3390ec 12%, var(--panel, #171a21)) !important;
+  color: #3390ec !important;
+}
+.lolz-calls .lolz-private-call-actions button:hover {
+  background: color-mix(in srgb, #3390ec 22%, var(--panel, #171a21)) !important;
+}
+.lolz-calls .lolz-active-call-list {
+  gap: 7px;
+}
+.lolz-calls .lolz-active-call-item {
+  min-height: 47px;
+  padding: 7px 10px !important;
+  border: 1px solid color-mix(in srgb, var(--border, #888) 22%, transparent);
+  border-radius: 12px !important;
+  background: var(--panel, #171a21) !important;
+}
+.lolz-calls .lolz-active-call-label {
+  font-size: 11px;
+  font-weight: 650;
+}
+.lolz-calls .lolz-active-call-join {
+  min-height: 32px !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  background: #2a9d68 !important;
+  font-size: 11px;
+}
+.lolz-calls .lolz-incoming-call {
+  gap: 11px !important;
+  padding: 10px 12px !important;
+  margin: 4px 0 !important;
+  border: 1px solid color-mix(in srgb, #3390ec 28%, transparent) !important;
+  border-radius: 14px !important;
+  background: color-mix(in srgb, #3390ec 9%, var(--panel, #171a21)) !important;
+}
+.lolz-calls .lolz-incoming-call button {
+  width: 38px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  border-radius: 50% !important;
+  border: 0 !important;
+}
+.lolz-calls .lolz-call-active-panel {
+  border-radius: 16px !important;
+  border: 1px solid color-mix(in srgb, var(--border, #888) 25%, transparent) !important;
+  background: var(--panel, #171a21) !important;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 12%);
+}
+.lolz-calls .lolz-call-header {
+  align-items: center;
+}
+.lolz-calls .lolz-call-header strong {
+  font-size: 14px !important;
+}
+.lolz-calls .lolz-call-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.lolz-calls .lolz-call-controls > button {
+  width: 48px;
+  height: 48px;
+  min-height: 48px;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: color-mix(in srgb, #3390ec 14%, var(--panel, #171a21)) !important;
+  color: var(--text, #fff) !important;
+}
+.lolz-calls .lolz-call-controls > .lolz-call-end-button {
+  background: #df4855 !important;
+  color: #fff !important;
+}
+.lolz-calls .lolz-call-mini {
+  border: 1px solid color-mix(in srgb, #3390ec 35%, transparent) !important;
+  border-radius: 22px !important;
+  background: color-mix(in srgb, #3390ec 18%, var(--panel, #171a21)) !important;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 22%);
+}
+.lolz-calls .lolz-call-audio-retry {
+  border-radius: 20px !important;
+}
+@media (max-width: 768px) {
+  .lolz-calls .lolz-call-active-panel {
+    padding: 12px !important;
+    margin: 4px 0 !important;
+  }
+  .lolz-calls .lolz-call-controls {
+    gap: 9px;
+  }
+  .lolz-calls .lolz-call-controls > button {
+    width: 45px;
+    height: 45px;
+    min-height: 45px;
+  }
+}
+
+
+/* =========================================================
+   GROUP / CHANNEL LIVE VOICE ROOM — TELEGRAM-STYLE STAGE
+========================================================= */
+.lolz-calls .lolz-group-call-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--call-border);
+  border-radius: 15px;
+  background: color-mix(in srgb, #3390ec 7%, var(--call-panel));
+}
+.lolz-calls .lolz-group-call-mode {
+  display: flex;
+  flex: 1 1 170px;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.lolz-calls .lolz-group-call-mode strong {
+  color: var(--call-text);
+  font-size: 13px;
+}
+.lolz-calls .lolz-group-call-mode small {
+  color: var(--call-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.lolz-calls .lolz-call-invite-button,
+.lolz-calls .lolz-call-mute-all-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid color-mix(in srgb, #3390ec 28%, var(--call-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, #3390ec 12%, var(--call-panel));
+  color: var(--call-text);
+  font-size: 11px;
+  font-weight: 750;
+}
+.lolz-calls .lolz-call-mute-all-button {
+  border-color: color-mix(in srgb, #df4855 35%, var(--call-border));
+  background: color-mix(in srgb, #df4855 10%, var(--call-panel));
+}
+.lolz-calls .lolz-call-mode-select {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--call-muted);
+  font-size: 11px;
+}
+.lolz-calls .lolz-call-mode-select select {
+  max-width: 190px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--call-border);
+  border-radius: 10px;
+  outline: none;
+  background: var(--call-panel);
+  color: var(--call-text);
+  font: inherit;
+}
+.lolz-calls .lolz-call-invite-notice {
+  flex: 1 0 100%;
+  color: var(--call-success);
+  font-size: 11px;
+}
+.lolz-calls .lolz-call-active-panel.is-group-or-channel .ig-call-remote-media {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  align-items: stretch !important;
+  gap: 10px !important;
+  width: 100%;
+}
+.lolz-calls .lolz-call-active-panel.is-group-or-channel .ig-call-remote-media .lolz-remote-video {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 150px;
+  max-height: 34vh;
+  border-radius: 15px !important;
+  background: #080b11;
+  object-fit: cover !important;
+}
+.lolz-calls .lolz-call-active-panel.is-group-or-channel .ig-call-remote-media .lolz-screen-share-video {
+  grid-column: 1 / -1;
+  width: 100% !important;
+  max-width: none !important;
+  max-height: 48vh;
+  border: 1px solid color-mix(in srgb, #3390ec 36%, transparent);
+  border-radius: 15px !important;
+  background: #080b11;
+  object-fit: contain !important;
+}
+.lolz-calls .lolz-local-screen-share-stage {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, #3390ec 32%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, #3390ec 7%, var(--call-panel));
+}
+.lolz-calls .lolz-local-screen-share-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+  color: #3390ec;
+  font-size: 12px;
+  font-weight: 750;
+}
+.lolz-calls .lolz-local-screen-share-video {
+  display: block;
+  width: 100%;
+  max-height: 48vh;
+  border-radius: 10px;
+  background: #080b11;
+  object-fit: contain;
+}
+.lolz-calls .lolz-call-participant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+  gap: 9px;
+}
+.lolz-calls .lolz-call-participant {
+  display: flex;
+  min-width: 0;
+  min-height: 145px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 9px;
+  border: 1px solid var(--call-border);
+  border-radius: 14px;
+  background: var(--call-soft);
+  text-align: center;
+}
+.lolz-calls .lolz-call-participant.is-speaking {
+  border-color: rgba(42, 180, 119, .65);
+  background: color-mix(in srgb, #22a66f 12%, var(--call-panel));
+  box-shadow: inset 0 0 0 1px rgba(42, 180, 119, .12);
+}
+.lolz-calls .lolz-call-participant-avatar {
+  display: flex;
+  width: 54px;
+  height: 54px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: color-mix(in srgb, #3390ec 22%, var(--call-soft));
+  color: var(--call-text);
+}
+.lolz-calls .lolz-call-participant-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.lolz-calls .lolz-call-participant > strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--call-text);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lolz-calls .lolz-call-participant > small {
+  color: var(--call-muted);
+  font-size: 10px;
+}
+.lolz-calls .lolz-call-speaking-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--call-success);
+  font-size: 10px;
+  font-weight: 750;
+}
+.lolz-calls .lolz-call-participant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  margin-top: 4px;
+}
+.lolz-calls .lolz-call-participant-actions button {
+  display: inline-flex;
+  min-height: 29px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid var(--call-border);
+  border-radius: 999px;
+  background: var(--call-panel);
+  color: var(--call-text);
+  font-size: 10px;
+}
+.lolz-calls .lolz-call-participant-actions button.danger {
+  border-color: rgba(223, 72, 85, .3);
+  color: #df4855;
+}
+@media (max-width: 560px) {
+  .lolz-calls .lolz-group-call-toolbar {
+    align-items: stretch;
+  }
+  .lolz-calls .lolz-group-call-mode {
+    flex-basis: 100%;
+  }
+  .lolz-calls .lolz-call-mode-select {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+  .lolz-calls .lolz-call-mode-select select {
+    flex: 1;
+    max-width: 58%;
+  }
+  .lolz-calls .lolz-call-invite-button,
+  .lolz-calls .lolz-call-mute-all-button {
+    flex: 1 1 auto;
+  }
+  .lolz-calls .lolz-call-active-panel.is-group-or-channel .ig-call-remote-media {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 135px), 1fr));
+  }
+  .lolz-calls .lolz-call-participant-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 125px), 1fr));
+  }
+}

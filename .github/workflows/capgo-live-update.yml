@@ -41,25 +41,18 @@ jobs:
       - name: Build web assets
         run: npm run build
 
-      - name: Register LOLZ app and production channel in Capgo
-        env:
-          CAPGO_TOKEN: ${{ secrets.CAPGO_TOKEN }}
+      - name: Verify the existing LOLZ Capgo app configuration
         run: |
-          if [ -z "$CAPGO_TOKEN" ]; then
-            echo "::error::Missing GitHub Actions secret CAPGO_TOKEN."
-            exit 1
-          fi
-
-          if ! npx @capgo/cli@latest app list --apikey "$CAPGO_TOKEN" | grep -Fq "com.oursocial.app"; then
-            npx @capgo/cli@latest app add com.oursocial.app --name "LOLZ" --apikey "$CAPGO_TOKEN"
-          fi
-
-          if ! npx @capgo/cli@latest channel list com.oursocial.app --apikey "$CAPGO_TOKEN" | grep -Eiq '(^|[^[:alnum:]_])production([^[:alnum:]_]|$)'; then
-            npx @capgo/cli@latest channel add production com.oursocial.app --apikey "$CAPGO_TOKEN"
-          fi
-
-          npx @capgo/cli@latest channel set production com.oursocial.app \
-            --state default --android --prod --device --apikey "$CAPGO_TOKEN"
+          node --input-type=module -e '
+            import fs from "node:fs";
+            const config = JSON.parse(fs.readFileSync("capacitor.config.json", "utf8"));
+            const appId = config.plugins?.CapacitorUpdater?.appId;
+            if (appId !== "com.oursocial.app") {
+              console.error("Capgo updater appId must be com.oursocial.app; found:", appId || "missing");
+              process.exit(1);
+            }
+            console.log("Using existing Capgo app:", appId);
+          '
 
       - name: Upload bundle to Capgo Production
         env:
