@@ -29,6 +29,7 @@ import Calls from "./Calls";
 import { dispatchLolzPush } from "./pushNotifications";
 
 import "./Channels.css";
+import VoiceMessagePlayer from "./VoiceMessagePlayer";
 
 export default function Channels({
   user,
@@ -1143,13 +1144,7 @@ export default function Channels({
                           <span>رسالة صوتية</span>
                         </div>
 
-                        <audio
-                          controls
-                          preload="metadata"
-                          src={post.media_url}
-                        >
-                          متصفحك لا يدعم تشغيل الصوت.
-                        </audio>
+                        <VoiceMessagePlayer src={post.media_url} />
                       </div>
                     ) : post.message_type === "image" && post.media_url ? (
                       <div className="channel-media-message">
