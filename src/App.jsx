@@ -4285,7 +4285,7 @@ export default function App() {
                                       (message.content &&
                                         !["Photo", "Video", "Voice message"].includes(message.content))) && (
                                       <p>{message.content}</p>
-                                    ))}
+                                    )}
                                     {!message.is_deleted && message.reply_to_id && (
                                       <div className="ig-dm-reply-quote">
                                         {isArabic ? "رد على: " : "Reply to: "}
