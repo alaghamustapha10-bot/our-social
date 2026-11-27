@@ -204,7 +204,11 @@ export async function moderateLolzSubmission({
   }
 
   const { data, error } = await supabase.functions.invoke("lolz-moderate", {
-    body: { text: String(text || "").slice(0, 5000), image_data_urls: images },
+    body: {
+      text: String(text || "").slice(0, 5000),
+      image_data_urls: images,
+      language: isArabic ? "ar" : "en",
+    },
   });
 
   if (error || data?.error) {
