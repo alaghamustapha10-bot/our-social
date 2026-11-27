@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   BadgeCheck, BarChart3, BriefcaseBusiness, CalendarDays, Check,
-  ChevronDown, CircleDollarSign, Clock3, Crown, GraduationCap, Heart,
+  CircleDollarSign, Clock3, Crown, GraduationCap, Heart,
   Megaphone, Package, Plus, RefreshCw, ShoppingBag, Sparkles, Store,
   Ticket, Users, Wallet, X,
 } from "lucide-react";
@@ -169,8 +169,8 @@ export default function MonetizationHub({ user, isArabic = false }) {
     return () => { active = false; };
   }, [user?.id, load, isArabic]);
 
-  const myOffers = useMemo(() => offers.filter((offer) => offer.seller_id === user?.id), [offers, user?.id]);
-  const publicOffers = useMemo(() => offers.filter((offer) => offer.status === "active" && offer.seller_id !== user?.id), [offers, user?.id]);
+  const myOffers = offers.filter((offer) => offer.seller_id === user?.id);
+  const publicOffers = offers.filter((offer) => offer.status === "active" && offer.seller_id !== user?.id);
   const paidOrders = orders.filter((order) => order.status === "paid");
   const sellerPaid = paidOrders.filter((order) => order.seller_id === user?.id);
   const grossEarned = sellerPaid.reduce((total, order) => total + Number(order.seller_net_cents || 0), 0);
@@ -369,10 +369,10 @@ export default function MonetizationHub({ user, isArabic = false }) {
     if (!error) { setPayoutAmount(""); setPayoutNote(""); await load(); }
   }
 
-  const creatorChoices = useMemo(() => {
-    const ids = [...new Set(offers.filter((offer) => offer.seller_id !== user?.id).map((offer) => offer.seller_id))];
-    return ids.map((id) => ({ id, name: profiles[id]?.display_name || profiles[id]?.username || id.slice(0, 8) }));
-  }, [offers, profiles, user?.id]);
+  const creatorIds = [...new Set(offers.filter((offer) => offer.seller_id !== user?.id).map((offer) => offer.seller_id))];
+  const creatorChoices = creatorIds.map((id) => ({
+    id, name: profiles[id]?.display_name || profiles[id]?.username || id.slice(0, 8),
+  }));
 
   const tabs = [
     ["explore", t("Overview", "نظرة عامة")],
