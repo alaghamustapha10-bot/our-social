@@ -98,6 +98,15 @@ export default function StoryViewer({
   const author = story.author || {};
   const name = author.display_name || author.username || (isArabic ? "عضو" : "Member");
   const isVideo = /\.(mp4|webm|mov|m4v)(\?.*)?$/i.test(story.media_url || "");
+  const mediaFilterStyles = {
+    none: "none",
+    warm: "sepia(.25) saturate(1.25)",
+    mono: "grayscale(1)",
+    vivid: "saturate(1.6) contrast(1.1)",
+    cool: "hue-rotate(15deg) saturate(1.15)",
+    soft: "contrast(.88) brightness(1.08)",
+  };
+  const mediaFilter = mediaFilterStyles[story.media_filter] || "none";
 
   return (
     <div className="lolz-story-overlay" role="dialog" aria-modal="true" aria-label={isArabic ? "عارض القصص" : "Stories"}>
@@ -111,9 +120,10 @@ export default function StoryViewer({
               playsInline
               onEnded={next}
               onError={next}
+              style={{ filter: mediaFilter }}
             />
           ) : (
-            <img src={story.media_url} alt={story.caption || name} />
+            <img src={story.media_url} alt={story.caption || name} style={{ filter: mediaFilter }} />
           )}
         </div>
 
@@ -162,7 +172,7 @@ export default function StoryViewer({
         <button className="lolz-story-hit lolz-story-hit-left" type="button" onClick={previous} aria-label={isArabic ? "القصة السابقة" : "Previous story"} />
         <button className="lolz-story-hit lolz-story-hit-right" type="button" onClick={next} aria-label={isArabic ? "القصة التالية" : "Next story"} />
 
-        {story.caption && <p className="lolz-story-caption">{story.caption}</p>}
+        {story.caption && <p className="lolz-story-caption" data-position={["top", "middle", "bottom"].includes(story.caption_position) ? story.caption_position : "bottom"}>{story.caption}</p>}
 
         {story.user_id === currentUserId ? (
           <div className="lolz-story-views">
