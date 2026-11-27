@@ -5,6 +5,10 @@ import AccountCenter from "./AccountCenter";
 import GlobalSearch from "./GlobalSearch";
 import CreatorStudio from "./CreatorStudio";
 import DraftsCenter from "./DraftsCenter";
+import NotificationPreferences from "./NotificationPreferences";
+import StoryHighlights from "./StoryHighlights";
+import VoiceTranscription from "./VoiceTranscription";
+import "./NextFeatures.css";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import MessageActions from "./MessageActions";
 import Memories from "./Memories";
@@ -549,6 +553,7 @@ export default function App() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messageSending, setMessageSending] = useState(false);
   const [messageSearch, setMessageSearch] = useState("");
+  const [messageContentSearch, setMessageContentSearch] = useState("");
 
   // CENTRAL CALL CONTEXT
   const [selectedCallContext, setSelectedCallContext] = useState(null);
@@ -622,6 +627,10 @@ export default function App() {
   const messageMediaInput = useRef(null);
   const messagesEndRef = useRef(null);
   const shouldAutoScrollRef = useRef(true);
+
+  useEffect(() => {
+    setMessageContentSearch("");
+  }, [activeConversation?.id]);
 
   useEffect(() => {
     if (activePage === "messages" && activeConversation?.id) {
@@ -2269,7 +2278,7 @@ export default function App() {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "messages",
         },
@@ -2920,6 +2929,12 @@ export default function App() {
     : visiblePosts;
 
   const unreadCount = notifications.filter((item) => !item.is_read).length;
+  const filteredConversationMessages = conversationMessages.filter((message) => {
+    const term = messageContentSearch.trim().toLocaleLowerCase();
+    if (!term) return true;
+    return [message.content, message.file_name, message.transcript]
+      .some((value) => String(value || "").toLocaleLowerCase().includes(term));
+  });
 
   function goTo(page) {
     setActivePage(page);
@@ -3657,6 +3672,13 @@ export default function App() {
                     </div>
                   </div>
 
+                  <StoryHighlights
+                    ownerId={selectedProfile.id}
+                    currentUserId={user.id}
+                    ownerProfile={selectedProfile}
+                    isArabic={isArabic}
+                  />
+
                   <div className="section-heading profile-post-heading">
                     <h2>{t("Posts")}</h2>
                   </div>
@@ -3902,6 +3924,14 @@ export default function App() {
                 </div>
               </div>
 
+              <StoryHighlights
+                ownerId={user.id}
+                currentUserId={user.id}
+                ownerProfile={profile}
+                availableStories={stories.filter((story) => story.user_id === user.id)}
+                isArabic={isArabic}
+              />
+
               <div className="section-heading profile-post-heading">
                 <h2>{t("Your posts")}</h2>
               </div>
@@ -4146,6 +4176,20 @@ export default function App() {
                         </div>
                       </header>
 
+                      <div className="lolz-conversation-search">
+                        <Search size={17} />
+                        <input
+                          type="search"
+                          value={messageContentSearch}
+                          onChange={(event) => setMessageContentSearch(event.target.value)}
+                          placeholder={isArabic ? "ابحث داخل هذه المحادثة..." : "Search in this conversation..."}
+                          aria-label={isArabic ? "البحث داخل الرسائل" : "Search messages"}
+                        />
+                        {messageContentSearch && (
+                          <button type="button" onClick={() => setMessageContentSearch("")} aria-label={isArabic ? "مسح البحث" : "Clear search"}><X size={15} /></button>
+                        )}
+                        <small>{filteredConversationMessages.length}</small>
+                      </div>
                       <div
                         className="ig-dm-message-feed"
                         onScroll={(event) => {
@@ -4157,7 +4201,7 @@ export default function App() {
                           shouldAutoScrollRef.current = distanceFromBottom < 150;
                         }}
                       >
-                        {conversationMessages.length === 0 && !messagesLoading && (
+                        {filteredConversationMessages.length === 0 && !messagesLoading && (
                           <div className="ig-dm-profile-intro">
                             <div className="ig-dm-profile-avatar">
                               <Avatar
@@ -4191,7 +4235,7 @@ export default function App() {
                             <span className="ig-dm-loader" />
                             <p>{isArabic ? "جارٍ تحميل الرسائل..." : "Loading messages..."}</p>
                           </div>
-                        ) : conversationMessages.length === 0 ? (
+                        ) : filteredConversationMessages.length === 0 ? (
                           <div className="ig-dm-first-message">
                             <MessageCircle size={24} />
                             <strong>{isArabic ? "ابدأ المحادثة" : "Start a conversation"}</strong>
@@ -4199,7 +4243,7 @@ export default function App() {
                           </div>
                         ) : (
                           <div className="ig-dm-message-list">
-                            {conversationMessages.map((message) => {
+                            {filteredConversationMessages.map((message) => {
                               const mine = message.sender_id === user.id;
                               const isImage =
                                 message.message_type === "image" && message.media_url;
@@ -4232,12 +4276,16 @@ export default function App() {
                                         preload="metadata"
                                       />
                                     )}
-                                    {isAudio && <VoiceMessagePlayer src={message.media_url} />}
-                                    {(!isMedia ||
+                                    {isAudio && <>
+                                      <VoiceMessagePlayer src={message.media_url} />
+                                      <VoiceTranscription messageId={message.id} sourceType="message" transcript={message.transcript} isArabic={isArabic} />
+                                    </>}
+                                    {message.is_deleted && <p className="ig-dm-deleted">{isArabic ? "تم حذف هذه الرسالة" : "This message was deleted"}</p>}
+                                    {!message.is_deleted && (!isMedia ||
                                       (message.content &&
                                         !["Photo", "Video", "Voice message"].includes(message.content))) && (
                                       <p>{message.content}</p>
-                                    )}
+                                    ))}
                                     {message.reply_to_id && (
                                       <div className="ig-dm-reply-quote">
                                         {isArabic ? "رد على: " : "Reply to: "}
@@ -4441,6 +4489,8 @@ export default function App() {
                   </button>
                 )}
               </div>
+
+              <NotificationPreferences user={user} isArabic={isArabic} />
 
               {notificationLoading ? (
                 <p>{t("Loading notifications...")}</p>
