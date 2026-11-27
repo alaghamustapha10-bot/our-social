@@ -441,6 +441,24 @@ export default function MonetizationHub({ user, isArabic = false }) {
                 <div><Heart size={25} /><div><h3>{t("Support the development of LOLZ", "ادعم تطوير LOLZ")}</h3><p>{t("A voluntary contribution goes to the platform owner. It does not buy Premium or any extra privileges.", "المساهمة الطوعية تذهب إلى صاحب المنصة، ولا تشتري Premium أو امتيازات إضافية.")}</p></div></div>
                 <form onSubmit={supportProject}><label>{t("Amount (€)", "المبلغ (€)")}<input name="amount" type="number" min="1" max="250" step="0.01" defaultValue="5" required /></label><button className="lolz-money-primary" disabled={busy === "support"}>{busy === "support" ? t("Opening PayPal…", "جارٍ فتح PayPal…") : t("Support LOLZ", "ادعم LOLZ")}</button></form>
               </section>
+
+              <section className="lolz-money-panel lolz-money-tip-panel">
+                <span className="lolz-money-eyebrow">{t("SUPPORT CREATORS", "ادعم المبدعين")}</span>
+                <h2>{t("Send a creator tip", "أرسل دعماً لصانع محتوى")}</h2>
+                <p>{t("Tips are optional. The creator receives the net amount after the disclosed 10% platform fee.", "الدعم اختياري. يحصل صانع المحتوى على صافي المبلغ بعد عمولة المنصة المعلنة 10%.")}</p>
+                <form className="lolz-money-form" onSubmit={sendTip}>
+                  <label>{t("Creator", "صانع المحتوى")}
+                    <select required value={tipForm.creator_id} onChange={(event) => setTipForm((current) => ({ ...current, creator_id: event.target.value }))}>
+                      <option value="">{t("Choose a creator", "اختر صانع محتوى")}</option>
+                      {creatorChoices.map((creator) => <option key={creator.id} value={creator.id}>{creator.name}</option>)}
+                    </select>
+                  </label>
+                  <label>{t("Tip amount (€)", "مبلغ الدعم (€)")}
+                    <input type="number" min="1" max="250" step="0.01" value={tipForm.amount} onChange={(event) => setTipForm((current) => ({ ...current, amount: event.target.value }))} />
+                  </label>
+                  <button className="lolz-money-primary" disabled={busy === "tip" || creatorChoices.length === 0}>{busy === "tip" ? t("Opening PayPal…", "جارٍ فتح PayPal…") : t("Send with PayPal", "إرسال عبر PayPal")}</button>
+                </form>
+              </section>
             </>
           )}
 
