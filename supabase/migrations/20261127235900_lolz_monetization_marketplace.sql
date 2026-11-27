@@ -56,9 +56,19 @@ create index if not exists lolz_commerce_offers_seller_idx
 
 alter table public.lolz_commerce_offers enable row level security;
 drop policy if exists "LOLZ users browse active offers or own offers" on public.lolz_commerce_offers;
+alter table public.lolz_commerce_offers
+  drop constraint if exists lolz_commerce_offers_status_check;
+alter table public.lolz_commerce_offers
+  add constraint lolz_commerce_offers_status_check
+  check (status in ('draft', 'pending_review', 'active', 'paused', 'sold_out'));
+
 create policy "LOLZ users browse active offers or own offers"
   on public.lolz_commerce_offers for select to authenticated
-  using (status = 'active' or seller_id = auth.uid());
+  using (
+    status = 'active'
+    or seller_id = auth.uid()
+    or (auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'owner')
+  );
 drop policy if exists "LOLZ sellers create own offers" on public.lolz_commerce_offers;
 create policy "LOLZ sellers create own offers"
   on public.lolz_commerce_offers for insert to authenticated
@@ -72,6 +82,11 @@ drop policy if exists "LOLZ sellers delete own offers" on public.lolz_commerce_o
 create policy "LOLZ sellers delete own offers"
   on public.lolz_commerce_offers for delete to authenticated
   using (seller_id = auth.uid());
+drop policy if exists "LOLZ admins review offers" on public.lolz_commerce_offers;
+create policy "LOLZ admins review offers"
+  on public.lolz_commerce_offers for update to authenticated
+  using ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'owner'))
+  with check ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'owner'));
 grant select, insert, update, delete on public.lolz_commerce_offers to authenticated;
 
 create table if not exists public.lolz_commerce_orders (
@@ -226,14 +241,29 @@ create index if not exists lolz_sponsorship_briefs_open_idx
   on public.lolz_sponsorship_briefs(status, created_at desc);
 alter table public.lolz_sponsorship_briefs enable row level security;
 drop policy if exists "LOLZ creators view open sponsorship briefs" on public.lolz_sponsorship_briefs;
+alter table public.lolz_sponsorship_briefs
+  drop constraint if exists lolz_sponsorship_briefs_status_check;
+alter table public.lolz_sponsorship_briefs
+  add constraint lolz_sponsorship_briefs_status_check
+  check (status in ('pending_review', 'open', 'paused', 'closed'));
+
 create policy "LOLZ creators view open sponsorship briefs"
   on public.lolz_sponsorship_briefs for select to authenticated
-  using (status = 'open' or advertiser_id = auth.uid());
+  using (
+    status = 'open'
+    or advertiser_id = auth.uid()
+    or (auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'owner')
+  );
 drop policy if exists "LOLZ businesses manage own sponsorship briefs" on public.lolz_sponsorship_briefs;
 create policy "LOLZ businesses manage own sponsorship briefs"
   on public.lolz_sponsorship_briefs for all to authenticated
   using (advertiser_id = auth.uid())
   with check (advertiser_id = auth.uid());
+drop policy if exists "LOLZ admins review sponsorship briefs" on public.lolz_sponsorship_briefs;
+create policy "LOLZ admins review sponsorship briefs"
+  on public.lolz_sponsorship_briefs for update to authenticated
+  using ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'owner'))
+  with check ((auth.jwt() -> 'app_metadata' ->> 'role') in ('admin', 'owner'));
 grant select, insert, update, delete on public.lolz_sponsorship_briefs to authenticated;
 
 create table if not exists public.lolz_sponsorship_applications (
