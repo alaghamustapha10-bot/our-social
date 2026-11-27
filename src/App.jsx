@@ -5,6 +5,8 @@ import AccountCenter from "./AccountCenter";
 import VoiceMessagePlayer from "./VoiceMessagePlayer";
 import MessageActions from "./MessageActions";
 import Memories from "./Memories";
+import CommunityGuidelines from "./CommunityGuidelines";
+import { moderateLolzSubmission } from "./contentSafety";
 import "./Memories.css";
 import "./MessageActions.css";
 import "./VoiceMessagePlayer.css";
@@ -1243,6 +1245,8 @@ export default function App() {
       return;
     }
 
+    if (!(await enforceCommunityRules(newPost, postFile))) return;
+
     setBusy(true);
     setNotice("");
 
@@ -1417,6 +1421,7 @@ export default function App() {
     if (!trimmed) return;
 
     const post = findPost(postId);
+    if (!(await enforceCommunityRules(trimmed, null))) return;
     setCommentText("");
 
     const { error } = await supabase.from("comments").insert({
@@ -1450,6 +1455,8 @@ export default function App() {
       setNotice(t("Please sign in first."));
       return;
     }
+
+    if (!(await enforceCommunityRules("", storyFile))) return;
 
     setBusy(true);
 
@@ -1736,6 +1743,8 @@ export default function App() {
       return false;
     }
 
+    if (!(await enforceCommunityRules(text, null))) return false;
+
     const firstUser = [user.id, story.user_id].sort()[0];
     const secondUser = [user.id, story.user_id].sort()[1];
 
@@ -1799,6 +1808,22 @@ export default function App() {
       );
       return false;
     }
+  }
+
+  async function enforceCommunityRules(text = "", file = null) {
+    const result = await moderateLolzSubmission({
+      supabase,
+      text,
+      file,
+      isArabic,
+    });
+    if (!result.allowed) {
+      setNotice(result.reason || (isArabic
+        ? "هذا المحتوى لا يتوافق مع قواعد مجتمع LOLZ."
+        : "This content does not comply with LOLZ community guidelines."));
+      return false;
+    }
+    return true;
   }
 
   async function reportContent(report) {
@@ -2485,6 +2510,9 @@ export default function App() {
       return;
     }
 
+    const mediaForReview = file && (file.type.startsWith("image/") || file.type.startsWith("video/")) ? file : null;
+    if (!(await enforceCommunityRules(content, mediaForReview))) return;
+
     setMessageSending(true);
     setNotice("");
     shouldAutoScrollRef.current = true;
@@ -2998,6 +3026,7 @@ export default function App() {
             >
               <Channels
                 user={user}
+                onModerate={enforceCommunityRules}
                 initialChannelId={pushChannelTarget}
                 onInitialChannelOpened={() => setPushChannelTarget(null)}
                 onCallContextChange={handleCallContextChange}
@@ -3010,6 +3039,7 @@ export default function App() {
             <section className="other-page groups-outer-page">
               <Groups
                 user={user}
+                onModerate={enforceCommunityRules}
                 initialGroupId={pushGroupTarget}
                 onInitialGroupOpened={() => setPushGroupTarget(null)}
                 onCallContextChange={handleCallContextChange}
@@ -3482,6 +3512,7 @@ export default function App() {
           {activePage === "lolz" && (
             <Lolz
               user={user}
+              onModerate={enforceCommunityRules}
               blockedUserIds={blockedUserIds}
               onReport={(target) => setModerationTarget(target)}
             />
