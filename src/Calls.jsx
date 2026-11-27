@@ -7,6 +7,9 @@ import {
 } from "react";
 
 import { Room, RoomEvent, Track } from "livekit-client";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+
+const NativeCallBackground = registerPlugin("CallBackground");
 import { createPortal } from "react-dom";
 import { dispatchLolzPush } from "./pushNotifications";
 
@@ -51,6 +54,7 @@ export default function Calls({
   onCallStateChange = null,
   onCallActionsReady = null,
   showIdleControls = true,
+  backgroundCallsEnabled = false,
   incomingCallAction = null,
   onIncomingCallActionHandled = null,
 }) {
@@ -120,6 +124,39 @@ export default function Calls({
 
   activeRef.current = active;
   connectingRef.current = connecting;
+
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== "android") return undefined;
+    let cancelled = false;
+
+    const syncBackgroundCallService = async () => {
+      try {
+        if (active && backgroundCallsEnabled) {
+          await NativeCallBackground.startCall({
+            video: Boolean(videoEnabled),
+            title: "LOLZ",
+            text: document.documentElement.lang === "ar" ? "مكالمة نشطة في الخلفية" : "Active call running in background",
+          });
+          if (cancelled) await NativeCallBackground.stopCall();
+        } else {
+          await NativeCallBackground.stopCall();
+        }
+      } catch (nativeError) {
+        console.warn("LOLZ background call service could not be synchronized:", nativeError);
+      }
+    };
+
+    void syncBackgroundCallService();
+    return () => { cancelled = true; };
+  }, [active, videoEnabled, backgroundCallsEnabled]);
+
+  useEffect(() => () => {
+    if (Capacitor.getPlatform() === "android") {
+      void NativeCallBackground.stopCall().catch((nativeError) => {
+        console.warn("Could not stop LOLZ background call service:", nativeError);
+      });
+    }
+  }, []);
 
   const reportCallState = useCallback(
     (status) => {
