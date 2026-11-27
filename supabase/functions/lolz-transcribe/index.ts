@@ -31,6 +31,7 @@ async function downloadAudio(
   supabaseUrl: string,
   sourceType: SourceType,
   mediaUrl: string,
+  senderId: string,
 ): Promise<{ blob: Blob; filename: string }> {
   const isLegacyPublicMessageMedia =
     sourceType === "message" && /^https?:\/\//i.test(mediaUrl);
@@ -94,7 +95,7 @@ Deno.serve(async (req: Request) => {
     const body = await req.json().catch(() => ({}));
     const sourceType = String(body?.source_type || "") as SourceType;
     const messageId = cleanId(body?.message_id);
-    const language = body?.language === "ar" ? "ar" : body?.language === "en" ? "en" : "";
+
 
     if (!["message", "group_message", "channel_post"].includes(sourceType) || !messageId) {
       return json({ error: "A valid audio message and source type are required." }, 400);
@@ -154,8 +155,7 @@ Deno.serve(async (req: Request) => {
       type: blob.type || (filename.toLowerCase().endsWith(".mp3") ? "audio/mpeg" : "audio/webm"),
     });
     form.append("file", audioFile);
-    form.append("model", "whisper-1");
-    if (language) form.append("language", language);
+    form.append("model", "gpt-transcribe");
 
     const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
