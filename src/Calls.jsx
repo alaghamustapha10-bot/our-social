@@ -675,6 +675,9 @@ export default function Calls({
 
         setRecording(recordingData.recording || null);
         setRecordingConsents(recordingData.consents || []);
+        if (recordingData.call_mode === "open" || recordingData.call_mode === "moderated") {
+          setCallMode(recordingData.call_mode);
+        }
         setCanManageRecording(canManage);
         setIsCallAdmin(canManage);
 
@@ -697,26 +700,8 @@ export default function Calls({
           publishPermissionRef.current = nextPermission;
           setCanPublish(nextPermission);
 
-          if (
-            previousPermission === false &&
-            nextPermission === true &&
-            roomRef.current &&
-            callIdRef.current === id
-          ) {
-            try {
-              await roomRef.current.localParticipant.setMicrophoneEnabled(true);
-
-              if (mountedRef.current && callIdRef.current === id) {
-                setAudioEnabled(true);
-              }
-            } catch (permissionError) {
-              console.warn(
-                "Could not enable approved microphone:",
-                permissionError
-              );
-            }
-          }
-
+          // A newly granted speaking permission never turns on the microphone
+          // automatically. The participant chooses when to unmute.
           if (
             previousPermission === true &&
             nextPermission === false &&
@@ -1849,6 +1834,9 @@ export default function Calls({
                     {call.media_type === "video"
                       ? "مكالمة فيديو جارية"
                       : "مكالمة صوتية جارية"}
+                    {Number.isFinite(call.participant_count)
+                      ? ` · ${call.participant_count} مشارك`
+                      : ""}
                   </span>
 
                   <button
