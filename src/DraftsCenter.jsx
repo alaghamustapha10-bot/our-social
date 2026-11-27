@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FileText, Plus, Save, Trash2, Cloud, CloudOff, RefreshCw } from "lucide-react";
+import { FileText, Save, Trash2, Cloud, CloudOff, RefreshCw } from "lucide-react";
 import { supabase } from "./supabase";
 import "./DraftsCenter.css";
 
