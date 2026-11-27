@@ -1,6 +1,7 @@
 import Groups from "./Groups";
 import Channels from "./Channels";
 import PreferencesSettings from "./PreferencesSettings";
+import AccountCenter from "./AccountCenter";
 import {
   useCallback,
   useEffect,
@@ -422,6 +423,7 @@ export default function App() {
   const [newPost, setNewPost] = useState("");
   const [postFile, setPostFile] = useState(null);
   const [storyFile, setStoryFile] = useState(null);
+  const [storyAudience, setStoryAudience] = useState("everyone");
 
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
@@ -1422,6 +1424,7 @@ export default function App() {
         user_id: user.id,
         media_url: mediaUrl,
         caption: "",
+        audience: storyAudience,
       });
 
       if (error) throw error;
@@ -2969,6 +2972,13 @@ export default function App() {
                   </div>
 
                   <form className="story-upload" onSubmit={publishStory}>
+                    <label className="story-audience-control" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, color: "var(--muted)", fontSize: 13 }}>
+                      {isArabic ? "من يمكنه مشاهدة القصة؟" : "Story audience"}
+                      <select value={storyAudience} onChange={(event) => setStoryAudience(event.target.value)}>
+                        <option value="everyone">{isArabic ? "الجميع" : "Everyone"}</option>
+                        <option value="close_friends">{isArabic ? "الأصدقاء المقرّبون" : "Close friends"}</option>
+                      </select>
+                    </label>
                     <input
                       ref={storyInput}
                       type="file"
@@ -4251,6 +4261,7 @@ export default function App() {
                 {t("PERSONALIZE YOUR EXPERIENCE")}
               </span>
               <PreferencesSettings />
+              <AccountCenter user={user} isArabic={isArabic} />
             </section>
           )}
         </div>
