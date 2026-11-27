@@ -26,7 +26,7 @@ function formatDate(date) {
   );
 }
 
-export default function Lolz({ user, blockedUserIds = [], onReport, onModerate }) {
+export default function Lolz({ user, blockedUserIds = [], onReport, onModerate, initialVideoId = null, onInitialVideoOpened }) {
   const fileRef = useRef(null);
   const videoRefs = useRef({});
   const viewedVideosRef = useRef(new Set());
@@ -252,6 +252,16 @@ export default function Lolz({ user, blockedUserIds = [], onReport, onModerate }
   useEffect(() => {
     void loadVideos();
   }, [loadVideos]);
+
+  useEffect(() => {
+    if (!initialVideoId || !videos.length) return;
+    const target = videoRefs.current[String(initialVideoId)];
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.play().catch(() => {});
+    }
+    onInitialVideoOpened?.();
+  }, [initialVideoId, videos, onInitialVideoOpened]);
 
   async function publishVideo(e) {
     e.preventDefault();
