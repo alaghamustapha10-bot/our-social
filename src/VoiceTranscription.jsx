@@ -20,7 +20,6 @@ export default function VoiceTranscription({ messageId, sourceType, transcript: 
         body: {
           source_type: sourceType,
           message_id: String(messageId),
-          language: isArabic ? "ar" : "en",
         },
       });
       if (invokeError) {
