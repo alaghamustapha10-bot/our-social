@@ -81,14 +81,20 @@ export default function MonetizationHub({ user, isArabic = false }) {
     setNotice("");
     try {
       const [activeResult, ownResult, buyerResult, sellerResult, bookingBuyer, bookingSeller, profileResult, briefsResult, campaignsResult, payoutResult, applicationsResult] = await Promise.all([
-        supabase.from("lolz_commerce_offers").select("*").eq("status", "active").order("created_at", { ascending: false }).limit(80),
+        (isAdmin
+          ? supabase.from("lolz_commerce_offers").select("*")
+          : supabase.from("lolz_commerce_offers").select("*").eq("status", "active"))
+          .order("created_at", { ascending: false }).limit(100),
         supabase.from("lolz_commerce_offers").select("*").eq("seller_id", user.id).order("created_at", { ascending: false }).limit(80),
         supabase.from("lolz_commerce_orders").select("*").eq("buyer_id", user.id).order("created_at", { ascending: false }).limit(100),
         supabase.from("lolz_commerce_orders").select("*").eq("seller_id", user.id).order("created_at", { ascending: false }).limit(100),
         supabase.from("lolz_booking_requests").select("*").eq("customer_id", user.id).order("requested_at", { ascending: false }).limit(50),
         supabase.from("lolz_booking_requests").select("*").eq("seller_id", user.id).order("requested_at", { ascending: false }).limit(50),
         supabase.from("lolz_monetization_profiles").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("lolz_sponsorship_briefs").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(50),
+        (isAdmin
+          ? supabase.from("lolz_sponsorship_briefs").select("*")
+          : supabase.from("lolz_sponsorship_briefs").select("*").eq("status", "open"))
+          .order("created_at", { ascending: false }).limit(100),
         (isAdmin
           ? supabase.from("lolz_ad_campaigns").select("*")
           : supabase.from("lolz_ad_campaigns").select("*").eq("advertiser_id", user.id))
@@ -235,16 +241,32 @@ export default function MonetizationHub({ user, isArabic = false }) {
         ? Math.max(1, Math.min(3650, Number(offerForm.duration_days) || 30)) : null,
       starts_at: offerForm.starts_at ? new Date(offerForm.starts_at).toISOString() : null,
       location: offerForm.location.trim() || null,
-      status: "active",
+      status: "pending_review",
     });
     setBusy("");
     if (error) setNotice(error.message);
     else {
       setOfferForm({ offer_type: "digital_product", title: "", description: "", price: "9.99", duration_days: "30", starts_at: "", location: "" });
-      setNotice(t("Your offer is now listed.", "تم نشر العرض الخاص بك."));
+      setNotice(t("Your offer was submitted for safety review before listing.", "تم إرسال عرضك لمراجعة السلامة قبل نشره."));
       setTab("offers");
       await load();
     }
+  }
+
+  async function reviewOffer(offer, status) {
+    setBusy(offer.id);
+    const { error } = await supabase.from("lolz_commerce_offers").update({ status, updated_at: new Date().toISOString() }).eq("id", offer.id);
+    setBusy("");
+    setNotice(error?.message || t("Offer review decision saved.", "تم حفظ قرار مراجعة العرض."));
+    if (!error) await load();
+  }
+
+  async function reviewBrief(brief, status) {
+    setBusy(brief.id);
+    const { error } = await supabase.from("lolz_sponsorship_briefs").update({ status, updated_at: new Date().toISOString() }).eq("id", brief.id);
+    setBusy("");
+    setNotice(error?.message || t("Collaboration brief review decision saved.", "تم حفظ قرار مراجعة طلب التعاون."));
+    if (!error) await load();
   }
 
   async function setOfferStatus(offer, status) {
@@ -327,10 +349,10 @@ export default function MonetizationHub({ user, isArabic = false }) {
     setBusy("brief");
     const { error } = await supabase.from("lolz_sponsorship_briefs").insert({
       advertiser_id: user.id, title: briefForm.title.trim(), description: briefForm.description.trim(),
-      budget_min_cents: min, budget_max_cents: max, status: "open",
+      budget_min_cents: min, budget_max_cents: max, status: "pending_review",
     });
     setBusy("");
-    setNotice(error?.message || t("Your collaboration brief is open to creators.", "أصبح طلب التعاون متاحاً لصناع المحتوى."));
+    setNotice(error?.message || t("Your collaboration brief was submitted for review.", "تم إرسال طلب التعاون للمراجعة."));
     if (!error) await load();
   }
 
@@ -524,7 +546,7 @@ export default function MonetizationHub({ user, isArabic = false }) {
                   })}
                 </div>
               )}
-              <div className="lolz-money-subsection"><h3>{t("Your listings", "عروضك")}</h3>{myOffers.length === 0 ? <Empty text={t("You have not published an offer yet.", "لم تنشر أي عرض بعد.")} /> : myOffers.map((offer) => <div className="lolz-money-row" key={offer.id}><div><strong>{offer.title}</strong><small>{money(offer.price_cents, isArabic ? "ar" : "en")} · {statusLabel(offer.status)}</small></div><button type="button" onClick={() => void setOfferStatus(offer, offer.status === "active" ? "paused" : "active")} disabled={busy === offer.id}>{offer.status === "active" ? t("Pause", "إيقاف") : t("Activate", "تفعيل")}</button></div>)}</div>
+              <div className="lolz-money-subsection"><h3>{t("Your listings", "عروضك")}</h3>{myOffers.length === 0 ? <Empty text={t("You have not published an offer yet.", "لم تنشر أي عرض بعد.")} /> : offers.filter((offer) => offer.seller_id === user.id || (isAdmin && offer.status === "pending_review")).map((offer) => <div className="lolz-money-row" key={offer.id}><div><strong>{offer.title}</strong><small>{money(offer.price_cents, isArabic ? "ar" : "en")} · {statusLabel(offer.status)}{offer.seller_id !== user.id ? t(" · Seller listing", " · عرض بائع") : ""}</small></div><div className="lolz-money-order-end"><div className="lolz-money-admin-actions">{isAdmin && offer.status === "pending_review" ? <><button type="button" disabled={busy === offer.id} onClick={() => void reviewOffer(offer, "active")}>{t("Approve", "موافقة")}</button><button type="button" disabled={busy === offer.id} onClick={() => void reviewOffer(offer, "paused")}>{t("Reject", "رفض")}</button></> : offer.seller_id === user.id && offer.status !== "pending_review" ? <button type="button" onClick={() => void setOfferStatus(offer, offer.status === "active" ? "paused" : "active")} disabled={busy === offer.id}>{offer.status === "active" ? t("Pause", "إيقاف") : t("Activate", "تفعيل")}</button> : null}</div></div></div>)}</div>
             </section>
           )}
 
@@ -575,7 +597,7 @@ export default function MonetizationHub({ user, isArabic = false }) {
               <section className="lolz-money-panel">
                 <span className="lolz-money-eyebrow">{t("FOR CREATORS", "لصناع المحتوى")}</span><h2>{t("Open opportunities", "فرص التعاون المتاحة")}</h2>
                 <label className="lolz-money-full-label">{t("Your pitch", "رسالتك للشركة")}<textarea rows={3} minLength={10} maxLength={2000} value={applicationPitch} onChange={(event) => setApplicationPitch(event.target.value)} placeholder={t("Explain why you are a good fit…", "اشرح لماذا أنت مناسب لهذا التعاون…")} /></label>
-                {briefs.length === 0 ? <Empty text={t("No open briefs at the moment.", "لا توجد طلبات تعاون مفتوحة حالياً.")} /> : briefs.map((brief) => <article className="lolz-money-brief" key={brief.id}><h3>{brief.title}</h3><p>{brief.description}</p><strong>{money(brief.budget_min_cents, isArabic ? "ar" : "en")} – {money(brief.budget_max_cents, isArabic ? "ar" : "en")}</strong>{brief.advertiser_id !== user.id && <button type="button" onClick={() => void applyToBrief(brief)} disabled={busy === brief.id}>{t("Apply", "تقديم")}</button>}</article>)}
+                {briefs.length === 0 ? <Empty text={t("No open briefs at the moment.", "لا توجد طلبات تعاون مفتوحة حالياً.")} /> : briefs.map((brief) => <article className="lolz-money-brief" key={brief.id}><h3>{brief.title}</h3><p>{brief.description}</p><strong>{money(brief.budget_min_cents, isArabic ? "ar" : "en")} – {money(brief.budget_max_cents, isArabic ? "ar" : "en")}</strong>{isAdmin && brief.status === "pending_review" ? <div className="lolz-money-admin-actions"><button type="button" disabled={busy === brief.id} onClick={() => void reviewBrief(brief, "open")}>{t("Approve", "موافقة")}</button><button type="button" disabled={busy === brief.id} onClick={() => void reviewBrief(brief, "closed")}>{t("Reject", "رفض")}</button></div> : brief.status === "open" && brief.advertiser_id !== user.id ? <button type="button" onClick={() => void applyToBrief(brief)} disabled={busy === brief.id}>{t("Apply", "تقديم")}</button> : <small>{statusLabel(brief.status)}</small>}</article>)}
                 {applications.length > 0 && <div className="lolz-money-subsection"><h3>{t("Your applications", "طلباتك")}</h3>{applications.map((item) => <div className="lolz-money-row" key={item.id}><span>{t("Application", "طلب تعاون")} · {statusLabel(item.status)}</span><small>{friendlyDate(item.created_at, isArabic ? "ar" : "en")}</small></div>)}</div>}
               </section>
             </div>
