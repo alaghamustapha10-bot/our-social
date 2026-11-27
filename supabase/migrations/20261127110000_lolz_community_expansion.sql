@@ -182,7 +182,7 @@ grant select, insert on public.lolz_group_events to authenticated;
 
 -- Apply the privacy controls saved by the Account Center at the data boundary.
 create or replace function public.lolz_can_message(p_sender uuid, p_recipient uuid)
-returns boolean language sql stable security definer set search_path = public, pg_temp as $
+returns boolean language sql stable security definer set search_path = public, pg_temp as $lolz$
   select case coalesce((
     select s.allow_messages_from from public.lolz_account_settings s
     where s.user_id = p_recipient
@@ -197,7 +197,7 @@ returns boolean language sql stable security definer set search_path = public, p
 $lolz$;
 
 create or replace function public.lolz_can_comment(p_actor uuid, p_owner uuid)
-returns boolean language sql stable security definer set search_path = public, pg_temp as $
+returns boolean language sql stable security definer set search_path = public, pg_temp as $lolz$
   select case coalesce((
     select s.allow_comments_from from public.lolz_account_settings s
     where s.user_id = p_owner
