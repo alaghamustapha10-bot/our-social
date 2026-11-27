@@ -12,7 +12,7 @@ const FILTERS = [
   ["channels", "القنوات", "Channels"],
 ];
 
-export default function GlobalSearch({ user, isArabic = false, onOpenProfile, onOpenPage }) {
+export default function GlobalSearch({ user, isArabic = false, onOpenProfile, onOpenPage, onOpenGroup, onOpenChannel }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [results, setResults] = useState({ people: [], posts: [], videos: [], groups: [], channels: [] });
@@ -85,9 +85,10 @@ export default function GlobalSearch({ user, isArabic = false, onOpenProfile, on
 
   function resultAction(kind, item) {
     if (kind === "people") return onOpenProfile?.(item.id);
+    if (kind === "posts") return onOpenProfile?.(item.user_id);
     if (kind === "videos") return onOpenPage?.("lolz");
-    if (kind === "groups") return onOpenPage?.("groups");
-    if (kind === "channels") return onOpenPage?.("channels");
+    if (kind === "groups") return onOpenGroup?.(item.id);
+    if (kind === "channels") return onOpenChannel?.(item.id);
     return onOpenPage?.("home");
   }
 
@@ -125,7 +126,7 @@ export default function GlobalSearch({ user, isArabic = false, onOpenProfile, on
             <div className="lolz-search-results">
               {items.map((item) => {
                 const title = kind === "people" ? (item.display_name || item.full_name || item.username || "LOLZ member") : (item.name || item.caption || item.content || resultLabel(kind));
-                const subtitle = kind === "people" ? (item.username ? `@${item.username}` : "") : kind === "posts" || kind === "videos" ? new Date(item.created_at).toLocaleDateString(isArabic ? "ar" : "en") : (item.description || (item.is_public ? labels.public : ""));
+                const subtitle = kind === "people" ? (item.username ? `@${item.username}` : "") : kind === "posts" || kind === "videos" ? new Date(item.created_at).toLocaleDateString(isArabic ? "ar" : "en") : (item.is_public ? labels.public : (isArabic ? "خاص" : "Private"));
                 const detail = kind === "posts" || kind === "videos" ? (item.content || item.caption || "") : kind === "people" ? "" : (item.description || "");
                 return (
                   <button className="lolz-search-result" type="button" key={item.id} onClick={() => resultAction(kind, item)}>
