@@ -86,7 +86,7 @@ async function paypalRequest(
   return data as JsonObject;
 }
 
-async function authenticateUser(request: Request, admin: ReturnType<typeof createClient>) {
+async function authenticateUser(request: Request, admin: any) {
   const authorization = request.headers.get("Authorization") || "";
   const token = authorization.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) throw new HttpError("Authentication required", 401);
@@ -122,7 +122,7 @@ function checkoutBase(request: Request): string {
 
 async function createPayPalOrder(
   request: Request,
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   userId: string,
   order: JsonObject,
 ): Promise<JsonObject> {
@@ -192,7 +192,7 @@ async function createPayPalOrder(
 
 async function createOfferCheckout(
   request: Request,
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   userId: string,
   offerId: string,
 ) {
@@ -236,7 +236,7 @@ async function createOfferCheckout(
 
 async function createTip(
   request: Request,
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   userId: string,
   creatorId: string,
   amountCents: number,
@@ -286,7 +286,7 @@ async function createTip(
 
 async function createProjectSupport(
   request: Request,
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   userId: string,
   amountCents: number,
 ) {
@@ -334,7 +334,7 @@ function capturedAmount(paypalOrder: JsonObject): { amount: string; currency: st
 }
 
 async function captureOrder(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   userId: string,
   orderId: string,
   paypalOrderId: string,
@@ -349,12 +349,15 @@ async function captureOrder(
     .maybeSingle();
   if (error) throw new HttpError("Could not verify the order owner", 500);
   if (!order) throw new HttpError("Order not found", 404);
-  if (order.status === "paid") return { status: "paid", order_id: order.id, already_paid: true };
-  if (order.status !== "pending") throw new HttpError("This order is not awaiting payment", 409);
-  if (!order.paypal_order_id || order.paypal_order_id !== paypalOrderId) {
+  const alreadyPaid = order.status === "paid";
+  if (!alreadyPaid && order.status !== "pending") {
+    throw new HttpError("This order is not awaiting payment", 409);
+  }
+  if (!alreadyPaid && (!order.paypal_order_id || order.paypal_order_id !== paypalOrderId)) {
     throw new HttpError("PayPal order does not match this LOLZ order", 403);
   }
 
+  if (!alreadyPaid) {
   const token = await getPayPalAccessToken();
   const paypalOrder = await paypalRequest(
     token,
@@ -366,7 +369,7 @@ async function captureOrder(
   const purchaseUnit = units[0] || {};
   if (
     String(purchaseUnit.custom_id || "") !== order.id ||
-    String(purchaseUnit.invoice_id || "") !== order.id
+    (purchaseUnit.invoice_id && String(purchaseUnit.invoice_id) !== order.id)
   ) {
     throw new HttpError("The PayPal order metadata does not match this purchase", 403);
   }
@@ -404,6 +407,7 @@ async function captureOrder(
     .eq("buyer_id", userId)
     .eq("status", "pending");
   if (updateError) throw new HttpError("Payment succeeded but the order status could not be saved", 500);
+  }
 
   if (order.order_type === "offer_purchase" && order.offer_id) {
     const expiresAt = order.duration_days
@@ -427,7 +431,7 @@ async function captureOrder(
 }
 
 async function cancelOrder(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   userId: string,
   orderId: string,
 ) {
