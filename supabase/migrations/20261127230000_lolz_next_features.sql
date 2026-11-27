@@ -77,16 +77,16 @@ grant usage on schema lolz_internal to authenticated;
 create or replace function lolz_internal.lolz_clear_story_highlight_cover()
 returns trigger
 language plpgsql
-security definer
+security invoker
 set search_path = public, pg_temp
-as $
+as $$
 begin
   -- The cover is derived from the first item the current viewer is allowed to see.
   -- Never persist an arbitrary URL here: it could point at a close-friends story.
   new.cover_url := null;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists lolz_clear_story_highlight_cover_trigger on public.lolz_story_highlights;
 create trigger lolz_clear_story_highlight_cover_trigger
