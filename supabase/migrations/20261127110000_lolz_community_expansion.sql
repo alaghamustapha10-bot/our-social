@@ -194,7 +194,7 @@ returns boolean language sql stable security definer set search_path = public, p
     )
     else false
   end;
-$;
+$lolz$;
 
 create or replace function public.lolz_can_comment(p_actor uuid, p_owner uuid)
 returns boolean language sql stable security definer set search_path = public, pg_temp as $
@@ -209,7 +209,7 @@ returns boolean language sql stable security definer set search_path = public, p
     )
     else false
   end;
-$;
+$lolz$;
 
 revoke all on function public.lolz_can_message(uuid, uuid) from public;
 revoke all on function public.lolz_can_comment(uuid, uuid) from public;
