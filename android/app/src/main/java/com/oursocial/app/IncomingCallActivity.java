@@ -144,11 +144,14 @@ public class IncomingCallActivity extends Activity {
                 IncomingCallNotification.launchMainActivity(this, getIntent(), "answer")
         );
 
-        LinearLayout.LayoutParams actionParams =
+        LinearLayout.LayoutParams declineParams =
                 new LinearLayout.LayoutParams(0, dp(58), 1f);
-        actionParams.setMargins(dp(6), 0, dp(6), 0);
-        actions.addView(decline, actionParams);
-        actions.addView(answer, actionParams);
+        declineParams.setMargins(dp(6), 0, dp(6), 0);
+        LinearLayout.LayoutParams answerParams =
+                new LinearLayout.LayoutParams(0, dp(58), 1f);
+        answerParams.setMargins(dp(6), 0, dp(6), 0);
+        actions.addView(decline, declineParams);
+        actions.addView(answer, answerParams);
         root.addView(actions);
 
         setContentView(root);
