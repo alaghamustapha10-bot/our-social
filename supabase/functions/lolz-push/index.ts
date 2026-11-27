@@ -208,7 +208,64 @@ function toFcmData(event: PushEvent, notificationId?: string): Record<string, st
   return data;
 }
 
+async function pushAllowedByPreferences(recipientId: string, event: PushEvent): Promise<boolean> {
+  const type = event.type;
+  const preferenceColumn = ["like", "lolz_like"].includes(type) ? "likes_enabled"
+    : ["comment", "lolz_comment", "story_reply"].includes(type) ? "comments_enabled"
+    : type === "follow" ? "follows_enabled"
+    : type === "message" ? "messages_enabled"
+    : ["group_message", "channel_post", "group_join", "channel_join"].includes(type) ? "community_enabled"
+    : ["incoming_call", "missed_call"].includes(type) ? "calls_enabled"
+    : null;
+
+  const { data: preferences, error } = await admin
+    .from("lolz_notification_preferences")
+    .select("*")
+    .eq("user_id", recipientId)
+    .maybeSingle();
+
+  // Fail open for delivery if the optional preference row cannot be read.
+  // The notification itself is already stored in the in-app inbox.
+  if (error) {
+    console.warn("Could not read LOLZ notification preferences; allowing push:", error.message);
+    return true;
+  }
+  if (!preferences) return true;
+  if (preferenceColumn && preferences[preferenceColumn] === false) return false;
+
+  if (!preferences.quiet_hours_enabled || type === "incoming_call" || type === "missed_call") return true;
+
+  const timezone = String(preferences.timezone || "Europe/Amsterdam");
+  const timeParts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timezone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date());
+  const hour = Number(timeParts.find((part) => part.type === "hour")?.value || "0");
+  const minute = Number(timeParts.find((part) => part.type === "minute")?.value || "0");
+  const currentMinutes = hour * 60 + minute;
+  const parseMinutes = (value: string) => {
+    const match = /^(\\d{2}):(\\d{2})/.exec(String(value || ""));
+    if (!match) return null;
+    const h = Number(match[1]);
+    const m = Number(match[2]);
+    return h < 24 && m < 60 ? h * 60 + m : null;
+  };
+  const start = parseMinutes(preferences.quiet_hours_start);
+  const end = parseMinutes(preferences.quiet_hours_end);
+  if (start === null || end === null || start === end) return true;
+  const inQuietHours = start < end
+    ? currentMinutes >= start && currentMinutes < end
+    : currentMinutes >= start || currentMinutes < end;
+  return !inQuietHours;
+}
+
 async function sendToUser(recipientId: string, event: PushEvent, notificationId?: string) {
+  if (!(await pushAllowedByPreferences(recipientId, event))) {
+    return { sent: 0, failed: 0 };
+  }
+
   const { data: devices, error } = await admin
     .from("push_tokens")
     .select("token, language")
