@@ -11,6 +11,7 @@ export default function StoryViewer({
   onView,
   onReport,
   onReply,
+  readOnly = false,
 }) {
   const orderedStories = useMemo(() => {
     const groups = new Map();
@@ -179,7 +180,7 @@ export default function StoryViewer({
             <Eye size={16} />
             <span>{story.view_count || 0} {isArabic ? "مشاهدة" : "views"}</span>
           </div>
-        ) : (
+        ) : readOnly ? null : (
           <form
             className="lolz-story-reply"
             onSubmit={async (event) => {
