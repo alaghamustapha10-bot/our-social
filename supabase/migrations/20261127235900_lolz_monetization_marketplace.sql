@@ -405,7 +405,7 @@ returns trigger
 language plpgsql
 security invoker
 set search_path = public, pg_temp
-as $
+as $$
 begin
   if auth.uid() is null
     or new.id <> old.id
@@ -432,7 +432,7 @@ begin
   new.proposed_rate_cents := old.proposed_rate_cents;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists lolz_guard_sponsorship_application_update_trigger on public.lolz_sponsorship_applications;
 create trigger lolz_guard_sponsorship_application_update_trigger
