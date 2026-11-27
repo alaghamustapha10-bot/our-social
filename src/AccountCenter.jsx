@@ -19,7 +19,6 @@ export default function AccountCenter({ user, isArabic = false }) {
   const [busyId, setBusyId] = useState("");
   const [notice, setNotice] = useState("");
   const [factors, setFactors] = useState([]);
-  const [mfaLoading, setMfaLoading] = useState(false);
   const [enrollment, setEnrollment] = useState(null);
   const [otp, setOtp] = useState("");
   const [factorBusy, setFactorBusy] = useState(false);
