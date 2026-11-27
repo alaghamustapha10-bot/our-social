@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "./supabase";
-import { ShieldCheck, UserPlus, UserMinus, Lock, Search, LoaderCircle, CheckCircle2 } from "lucide-react";
+import "./AccountCenter.css";
+import { ShieldCheck, UserPlus, UserMinus, Search, LoaderCircle } from "lucide-react";
 
 export default function AccountCenter({ user, isArabic = false }) {
   const [settings, setSettings] = useState({
@@ -215,7 +216,7 @@ export default function AccountCenter({ user, isArabic = false }) {
 
   if (loading) return <section style={panel}>{copy.loading}</section>;
 
-  return <section dir={isArabic ? "rtl" : "ltr"} style={{ maxWidth: 820, margin: "18px auto", color: "var(--text)" }}>
+  return <section className="lolz-account-center" dir={isArabic ? "rtl" : "ltr"} style={{ maxWidth: 820, margin: "18px auto", color: "var(--text)" }}>
     <header style={{ ...panel, marginTop: 0, background: "linear-gradient(130deg,rgba(139,92,246,.2),rgba(59,130,246,.08))" }}>
       <div style={{ color: "#a78bfa", fontSize: 12, fontWeight: 800, letterSpacing: 1.4 }}>LOLZ · CONTROL CENTER</div>
       <h2 style={{ margin: "9px 0 5px" }}>{copy.title}</h2><p style={{ margin: 0, color: "var(--muted)" }}>{copy.desc}</p>
