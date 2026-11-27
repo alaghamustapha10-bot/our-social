@@ -220,6 +220,7 @@ async function sendToUser(recipientId: string, event: PushEvent, notificationId?
   const account = getServiceAccount();
   const accessToken = await getFcmAccessToken();
   const isCall = event.type === "incoming_call";
+  const isUrgent = isCall || ["message", "group_message", "missed_call"].includes(event.type);
   const channelId = isCall
     ? "lolz_calls"
     : ["message", "group_message"].includes(event.type)
@@ -249,13 +250,13 @@ async function sendToUser(recipientId: string, event: PushEvent, notificationId?
             notification: copy,
             data,
             android: {
-              priority: isCall ? "HIGH" : "NORMAL",
+              priority: isUrgent ? "HIGH" : "NORMAL",
               ttl: isCall ? "45s" : "604800s",
               notification: {
                 channel_id: channelId,
                 sound: "default",
                 visibility: "PRIVATE",
-                priority: isCall ? "PRIORITY_MAX" : "PRIORITY_HIGH",
+                notification_priority: isCall ? "PRIORITY_MAX" : "PRIORITY_HIGH",
                 tag,
               },
             },
