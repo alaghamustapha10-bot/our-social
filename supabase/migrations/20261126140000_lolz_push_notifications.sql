@@ -51,7 +51,7 @@ returns void
 language plpgsql
 security definer
 set search_path = public, pg_temp
-as $
+as $$
 begin
   if auth.uid() is null then
     raise exception 'Authentication required'
