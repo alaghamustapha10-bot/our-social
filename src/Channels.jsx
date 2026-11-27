@@ -33,6 +33,7 @@ import VoiceMessagePlayer from "./VoiceMessagePlayer";
 
 export default function Channels({
   user,
+  backgroundCallsEnabled = false,
   onCallContextChange,
   onReport,
   onModerate,
@@ -1089,6 +1090,7 @@ export default function Channels({
                   channelId={selected.id}
                   canStart={isAdmin}
                   canEnd={isAdmin}
+                  backgroundCallsEnabled={backgroundCallsEnabled}
                 />
               </div>
             )}
