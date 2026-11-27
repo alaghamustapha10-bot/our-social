@@ -288,6 +288,7 @@ async function sendToUser(recipientId: string, event: PushEvent, notificationId?
               ttl: isCall ? "45s" : "604800s",
               notification: {
                 channel_id: channelId,
+                color: "#7770FF",
                 sound: "default",
                 visibility: "PRIVATE",
                 notification_priority: isCall ? "PRIORITY_MAX" : "PRIORITY_HIGH",
