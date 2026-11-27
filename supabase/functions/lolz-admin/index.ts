@@ -220,6 +220,25 @@ async function moderateReport(db: any, user: any, role: string, body: any) {
       .eq("id", report.target_id)
       .maybeSingle();
     if (rowError || !row) throw new HttpError("The reported content could not be found.", 404);
+    // Remove dependent activity rows that intentionally do not use foreign keys.
+    if (report.target_type === "message") {
+      const messageId = String(report.target_id);
+      const [reactions, pins] = await Promise.all([
+        db.from("lolz_message_reactions").delete().eq("message_id", messageId),
+        db.from("lolz_message_pins").delete().eq("message_id", messageId),
+      ]);
+      if (reactions.error || pins.error) {
+        throw new HttpError("Could not clean up message reactions or pins.", 500);
+      }
+    }
+    if (report.target_type === "video") {
+      const { error: viewsError } = await db
+        .from("lolz_video_views")
+        .delete()
+        .eq("video_id", String(report.target_id));
+      if (viewsError) throw new HttpError("Could not clean up video views: " + viewsError.message, 500);
+    }
+
     const { error: deleteError } = await db.from(resource.table).delete().eq("id", report.target_id);
     if (deleteError) throw new HttpError("Content removal failed: " + deleteError.message, 500);
     if (resource.mediaColumn && row[resource.mediaColumn]) {
