@@ -17,6 +17,45 @@ create policy "Users manage their own LOLZ account settings"
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 grant select, insert, update, delete on public.lolz_account_settings to authenticated;
 
+-- Presence values are shared only through a privacy-aware RPC.
+create table if not exists public.lolz_presence (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  is_online boolean not null default false,
+  last_seen_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.lolz_presence enable row level security;
+drop policy if exists "Users update their own presence" on public.lolz_presence;
+create policy "Users update their own presence" on public.lolz_presence
+  for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+grant select, insert, update on public.lolz_presence to authenticated;
+
+create or replace function public.get_lolz_presence(p_user_ids uuid[])
+returns table(user_id uuid, is_online boolean, last_seen_at timestamptz)
+language sql stable security definer set search_path = public, pg_temp as $lolz$
+  select
+    p.user_id,
+    case when coalesce(s.show_activity, true) then p.is_online else false end,
+    case when coalesce(s.show_last_seen, true) then p.last_seen_at else null end
+  from public.lolz_presence p
+  left join public.lolz_account_settings s on s.user_id = p.user_id
+  where p.user_id = any(coalesce(p_user_ids, array[]::uuid[]))
+    and (
+      p.user_id = auth.uid()
+      or coalesce(s.show_activity, true)
+      or coalesce(s.show_last_seen, true)
+    );
+$lolz$;
+revoke all on function public.get_lolz_presence(uuid[]) from public;
+grant execute on function public.get_lolz_presence(uuid[]) to authenticated;
+
+drop policy if exists "Close-friends can confirm membership for story visibility" on public.lolz_close_friends;
+create policy "Close-friends can confirm membership for story visibility"
+  on public.lolz_close_friends for select to authenticated
+  using (friend_id = auth.uid());
+
+
+
 create table if not exists public.lolz_close_friends (
   owner_id uuid not null references auth.users(id) on delete cascade,
   friend_id uuid not null references auth.users(id) on delete cascade,
@@ -56,6 +95,11 @@ create policy "LOLZ users edit their own messages"
   on public.messages for update to authenticated
   using (sender_id = auth.uid() and public.lolz_conversation_is_allowed(conversation_id::text))
   with check (sender_id = auth.uid() and public.lolz_conversation_is_allowed(conversation_id::text));
+
+drop policy if exists "LOLZ hide expired direct messages" on public.messages;
+create policy "LOLZ hide expired direct messages"
+  on public.messages as restrictive for select to authenticated
+  using (expires_at is null or expires_at > now());
 
 create table if not exists public.lolz_message_reactions (
   message_id text not null,
