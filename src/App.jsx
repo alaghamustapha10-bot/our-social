@@ -486,6 +486,7 @@ export default function App() {
   const [conversationMessages, setConversationMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
   const [otherIsTyping, setOtherIsTyping] = useState(false);
+  const [otherReadAt, setOtherReadAt] = useState(null);
   const typingTimerRef = useRef(null);
   const [replyingToMessage, setReplyingToMessage] = useState(null);
   const [messageExpiryHours, setMessageExpiryHours] = useState("never");
@@ -2099,19 +2100,22 @@ export default function App() {
     }
     let active = true;
     const conversationId = String(activeConversation.id);
+    const otherUserId = activeConversation.user_one === user.id
+      ? activeConversation.user_two
+      : activeConversation.user_one;
     const refreshTyping = async () => {
-      const { data, error } = await supabase.from("lolz_typing_status")
-        .select("user_id")
-        .eq("conversation_id", conversationId)
-        .neq("user_id", user.id)
-        .gt("expires_at", new Date().toISOString())
-        .limit(1);
+      const [typingResult, readResult] = await Promise.all([
+        supabase.from("lolz_typing_status").select("user_id")
+          .eq("conversation_id", conversationId).neq("user_id", user.id)
+          .gt("expires_at", new Date().toISOString()).limit(1),
+        supabase.from("lolz_conversation_reads").select("last_read_at")
+          .eq("conversation_id", conversationId).eq("user_id", otherUserId).maybeSingle(),
+      ]);
       if (!active) return;
-      if (error) {
-        console.warn("Could not load typing state:", error.message);
-        return;
-      }
-      setOtherIsTyping(Boolean(data?.length));
+      if (typingResult.error) console.warn("Could not load typing state:", typingResult.error.message);
+      else setOtherIsTyping(Boolean(typingResult.data?.length));
+      if (readResult.error) console.warn("Could not load read receipt:", readResult.error.message);
+      else setOtherReadAt(readResult.data?.last_read_at || null);
     };
     void refreshTyping();
     const poll = window.setInterval(() => { void refreshTyping(); }, 2500);
@@ -4005,6 +4009,12 @@ export default function App() {
                                       </div>
                                     )}
                                     <time>{timeAgo(message.created_at, isArabic)}</time>
+                                    {mine &&
+                                      message.id === conversationMessages.filter((item) => item.sender_id === user.id).slice(-1)[0]?.id &&
+                                      otherReadAt &&
+                                      new Date(otherReadAt).getTime() >= new Date(message.created_at).getTime() && (
+                                        <small className="ig-dm-read-receipt">{isArabic ? "تمت القراءة" : "Seen"}</small>
+                                      )}
                                     {!mine && (
                                       <button
                                         type="button"
