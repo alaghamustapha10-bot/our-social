@@ -12,7 +12,7 @@ const FILTERS = [
   ["channels", "القنوات", "Channels"],
 ];
 
-export default function GlobalSearch({ user, isArabic = false, onOpenProfile, onOpenPage, onOpenGroup, onOpenChannel }) {
+export default function GlobalSearch({ user, isArabic = false, onOpenProfile, onOpenPage, onOpenGroup, onOpenChannel, onOpenVideo }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [results, setResults] = useState({ people: [], posts: [], videos: [], groups: [], channels: [] });
@@ -86,7 +86,7 @@ export default function GlobalSearch({ user, isArabic = false, onOpenProfile, on
   function resultAction(kind, item) {
     if (kind === "people") return onOpenProfile?.(item.id);
     if (kind === "posts") return onOpenProfile?.(item.user_id);
-    if (kind === "videos") return onOpenPage?.("lolz");
+    if (kind === "videos") return onOpenVideo?.(item.id);
     if (kind === "groups") return onOpenGroup?.(item.id);
     if (kind === "channels") return onOpenChannel?.(item.id);
     return onOpenPage?.("home");
