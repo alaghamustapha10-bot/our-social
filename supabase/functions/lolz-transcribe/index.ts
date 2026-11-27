@@ -113,10 +113,6 @@ Deno.serve(async (req: Request) => {
     if (message.message_type !== "audio" || !message.media_url) {
       return json({ error: "This item is not an available voice message." }, 400);
     }
-    if (message.transcript && String(message.transcript).trim()) {
-      return json({ transcript: message.transcript, cached: true });
-    }
-
     if (sourceType === "message") {
       const { data: conversation, error } = await admin
         .from("conversations")
@@ -137,11 +133,16 @@ Deno.serve(async (req: Request) => {
     } else {
       const [{ data: membership }, { data: channel }] = await Promise.all([
         admin.from("channel_members").select("user_id").eq("channel_id", message.channel_id).eq("user_id", user.id).maybeSingle(),
-        admin.from("channels").select("created_by").eq("id", message.channel_id).maybeSingle(),
+        admin.from("channels").select("created_by,is_public").eq("id", message.channel_id).maybeSingle(),
       ]);
-      if (!membership && channel?.created_by !== user.id) {
+      if (!membership && channel?.is_public !== true && channel?.created_by !== user.id) {
         return json({ error: "You are not allowed to view this channel voice message." }, 403);
       }
+    }
+
+    // Only return a cached transcript after the caller has passed membership checks.
+    if (message.transcript && String(message.transcript).trim()) {
+      return json({ transcript: message.transcript, cached: true });
     }
 
     const { blob, filename } = await downloadAudio(admin, supabaseUrl, sourceType, String(message.media_url), String(message.sender_id || ""));
