@@ -279,6 +279,22 @@ create policy "LOLZ enforce recipient message preferences"
     or (user_two = auth.uid() and public.lolz_can_message(auth.uid(), user_one))
   );
 
+drop policy if exists "LOLZ enforce recipient message preferences" on public.messages;
+create policy "LOLZ enforce recipient message preferences"
+  on public.messages as restrictive for insert to authenticated
+  with check (
+    sender_id = auth.uid()
+    and exists (
+      select 1
+      from public.conversations c
+      where c.id::text = messages.conversation_id::text
+        and public.lolz_can_message(
+          auth.uid(),
+          case when c.user_one = auth.uid() then c.user_two else c.user_one end
+        )
+    )
+  );
+
 drop policy if exists "LOLZ enforce comment preferences" on public.comments;
 create policy "LOLZ enforce comment preferences"
   on public.comments as restrictive for insert to authenticated
@@ -288,6 +304,18 @@ create policy "LOLZ enforce comment preferences"
       select 1 from public.posts p
       where p.id::text = comments.post_id::text
         and public.lolz_can_comment(auth.uid(), p.user_id)
+    )
+  );
+
+drop policy if exists "LOLZ enforce video comment preferences" on public.lolz_comments;
+create policy "LOLZ enforce video comment preferences"
+  on public.lolz_comments as restrictive for insert to authenticated
+  with check (
+    user_id = auth.uid()
+    and exists (
+      select 1 from public.lolz_videos v
+      where v.id::text = lolz_comments.video_id::text
+        and public.lolz_can_comment(auth.uid(), v.user_id)
     )
   );
 
