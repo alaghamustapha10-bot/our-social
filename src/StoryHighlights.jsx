@@ -114,7 +114,7 @@ export default function StoryHighlights({
       .insert({
         owner_id: ownerId,
         title: cleanTitle,
-        cover_url: chosen[0].media_url,
+        cover_url: null,
       })
       .select("id,owner_id,title,cover_url,created_at")
       .single();
@@ -197,7 +197,7 @@ export default function StoryHighlights({
             <div className="lolz-story-highlight-card" key={highlight.id}>
               <button type="button" className="lolz-story-highlight-open" onClick={() => setViewing(highlight)}>
                 <span className="lolz-story-highlight-cover">
-                  {highlight.cover_url ? <img src={highlight.cover_url} alt="" loading="lazy" /> : <Sparkles size={24} />}
+                  {highlight.items[0]?.media_url ? <img src={highlight.items[0].media_url} alt="" loading="lazy" /> : <Sparkles size={24} />}
                   <i><Play size={12} fill="currentColor" /></i>
                 </span>
                 <strong>{highlight.title}</strong>
@@ -255,6 +255,7 @@ export default function StoryHighlights({
           currentUserId={currentUserId}
           isArabic={isArabic}
           onClose={() => setViewing(null)}
+          readOnly
         />
       )}
     </section>
