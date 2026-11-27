@@ -34,6 +34,7 @@ const COPY = {
     more: "المزيد",
     people: "الأشخاص",
     saved: "المحفوظات",
+    memories: "ذكرياتي",
     groups: "المجموعات",
     channels: "القنوات",
     premium: "LOLZ Premium",
@@ -55,6 +56,7 @@ const COPY = {
     more: "More",
     people: "People",
     saved: "Saved",
+    memories: "Memories",
     groups: "Groups",
     channels: "Channels",
     premium: "LOLZ Premium",
@@ -90,6 +92,7 @@ export default function Navigation({ page, setPage, onCreate, onLogout, username
   const secondaryItems = [
     { id: "people", label: t.people, icon: Users },
     { id: "saved", label: t.saved, icon: Bookmark },
+    { id: "memories", label: t.memories, icon: Bookmark },
     { id: "groups", label: t.groups, icon: UsersRound },
     { id: "channels", label: t.channels, icon: Radio },
     { id: "premium", label: t.premium, icon: Crown },
