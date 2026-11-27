@@ -18,7 +18,7 @@ create or replace function public.lolz_protect_verified_profile_insert()
 returns trigger
 language plpgsql
 set search_path = public, pg_temp
-as $
+as $$
 declare caller_role text;
 begin
   caller_role := coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '');
