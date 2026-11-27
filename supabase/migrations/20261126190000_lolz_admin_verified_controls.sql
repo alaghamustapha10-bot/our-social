@@ -29,7 +29,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists lolz_protect_verified_profile_insert_trigger on public.profiles;
 create trigger lolz_protect_verified_profile_insert_trigger
