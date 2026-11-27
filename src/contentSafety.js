@@ -110,10 +110,11 @@ async function videoToImageDataUrls(file) {
   video.preload = "metadata";
   video.muted = true;
   video.playsInline = true;
-  video.src = objectUrl;
 
   try {
-    await waitForVideoEvent(video, "loadedmetadata");
+    const metadataReady = waitForVideoEvent(video, "loadedmetadata");
+    video.src = objectUrl;
+    await metadataReady;
     if (!Number.isFinite(video.duration) || video.duration <= 0) {
       throw new Error("Video duration could not be read.");
     }
@@ -131,8 +132,9 @@ async function videoToImageDataUrls(file) {
     const frames = [];
 
     for (const point of samplePoints) {
+      const seekReady = waitForVideoEvent(video, "seeked");
       video.currentTime = point;
-      await waitForVideoEvent(video, "seeked");
+      await seekReady;
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       frames.push(canvas.toDataURL("image/jpeg", 0.68));
     }
