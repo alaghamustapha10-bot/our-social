@@ -55,3 +55,6 @@ jobs:
       - name: Check LOLZ LiveKit Calls Edge Function
         working-directory: supabase/functions
         run: deno check livekit-token/index.ts
+      - name: Check LOLZ voice transcription Edge Function
+        working-directory: supabase/functions
+        run: deno check lolz-transcribe/index.ts
