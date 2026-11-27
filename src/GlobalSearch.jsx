@@ -57,8 +57,8 @@ export default function GlobalSearch({ user, isArabic = false, onOpenProfile, on
       people: supabase.from("profiles").select("id,username,display_name,full_name,avatar_url,is_verified").or(`username.ilike.${pattern},display_name.ilike.${pattern},full_name.ilike.${pattern}`).neq("id", user?.id || "00000000-0000-0000-0000-000000000000").limit(15),
       posts: supabase.from("posts").select("id,user_id,content,image_url,created_at").ilike("content", pattern).order("created_at", { ascending: false }).limit(15),
       videos: supabase.from("lolz_videos").select("id,user_id,caption,video_url,created_at").ilike("caption", pattern).order("created_at", { ascending: false }).limit(15),
-      groups: supabase.from("groups").select("id,name,description,avatar_url,is_public,created_by").ilike("name", pattern).limit(15),
-      channels: supabase.from("channels").select("id,name,description,avatar_url,is_public,created_by").ilike("name", pattern).limit(15),
+      groups: supabase.from("groups").select("id,name,description,avatar_url,is_public,created_by").or(`name.ilike.${pattern},description.ilike.${pattern}`).limit(15),
+      channels: supabase.from("channels").select("id,name,description,avatar_url,is_public,created_by").or(`name.ilike.${pattern},description.ilike.${pattern}`).limit(15),
     };
     const entries = Object.entries(tasks);
     const responses = await Promise.all(entries.map(([, task]) => task));
