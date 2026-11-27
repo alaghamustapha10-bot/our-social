@@ -4449,6 +4449,21 @@ export default function App() {
                             {isArabic ? "قيد المراجعة" : "Reviewing"}
                           </button>
                         )}
+                        {!["resolved", "rejected"].includes(report.status) && report.target_type !== "other" && (
+                          <button type="button" className="secondary-button" onClick={() => void runModerationAction(report, "warning")}>
+                            {isArabic ? "إرسال تحذير" : "Send warning"}
+                          </button>
+                        )}
+                        {!["resolved", "rejected"].includes(report.status) && ["post", "video", "comment", "lolz_comment", "story", "message", "group_message", "channel_post"].includes(report.target_type) && (
+                          <button type="button" className="lolz-moderation-remove-button" onClick={() => void runModerationAction(report, "remove_content")}>
+                            {isArabic ? "حذف المحتوى" : "Remove content"}
+                          </button>
+                        )}
+                        {!["resolved", "rejected"].includes(report.status) && report.target_type !== "other" && (
+                          <button type="button" className="lolz-moderation-suspend-button" onClick={() => void runModerationAction(report, "suspend", 24)}>
+                            {isArabic ? "تعليق 24 ساعة" : "Suspend 24h"}
+                          </button>
+                        )}
                         {report.status !== "resolved" && (
                           <button type="button" className="primary-button" onClick={() => void updateReportStatus(report.id, "resolved")}>
                             {isArabic ? "تمت المعالجة" : "Resolve"}
