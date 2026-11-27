@@ -2166,3 +2166,11 @@ button:active:not(:disabled) {
 .ig-dm-replying-to span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ig-dm-replying-to button{border:0;background:transparent;color:var(--muted);cursor:pointer}
 .ig-dm-expiry-select{max-width:84px;min-width:0;border:1px solid var(--border);border-radius:10px;background:var(--panel-2);color:var(--text);font-size:11px;padding:5px}
+
+
+.ig-dm-typing-indicator{display:flex;align-items:center;gap:8px;padding:5px 12px;color:var(--muted);font-size:12px}
+.ig-dm-typing-dots{display:inline-flex;align-items:center;gap:3px}
+.ig-dm-typing-dots i{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:lolz-typing-bounce 1s infinite ease-in-out}
+.ig-dm-typing-dots i:nth-child(2){animation-delay:.15s}.ig-dm-typing-dots i:nth-child(3){animation-delay:.3s}
+@keyframes lolz-typing-bounce{0%,60%,100%{transform:translateY(0);opacity:.45}30%{transform:translateY(-3px);opacity:1}}
+.profile-presence{color:#22c55e;font-size:12px;font-weight:650;margin:4px 0}
