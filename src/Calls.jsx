@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 
-import { Room, RoomEvent } from "livekit-client";
+import { Room, RoomEvent, Track } from "livekit-client";
 import { createPortal } from "react-dom";
 import { dispatchLolzPush } from "./pushNotifications";
 
@@ -32,6 +32,11 @@ import {
   UserRound,
   Loader2,
   Minimize2,
+  ScreenShare,
+  ScreenShareOff,
+  Copy,
+  UserX,
+  VolumeX,
 } from "lucide-react";
 
 export default function Calls({
@@ -46,6 +51,8 @@ export default function Calls({
   onCallStateChange = null,
   onCallActionsReady = null,
   showIdleControls = true,
+  incomingCallAction = null,
+  onIncomingCallActionHandled = null,
 }) {
   const [incomingCall, setIncomingCall] = useState(null);
   const [incomingProfile, setIncomingProfile] = useState(null);
@@ -84,12 +91,17 @@ export default function Calls({
   const [recordingMessage, setRecordingMessage] = useState("");
 
   const [joinConsent, setJoinConsent] = useState(null);
+  const [screenSharing, setScreenSharing] = useState(false);
+  const [callModeBusy, setCallModeBusy] = useState(false);
+  const [participantBusy, setParticipantBusy] = useState("");
+  const [callInviteNotice, setCallInviteNotice] = useState("");
 
   const roomRef = useRef(null);
   const callIdRef = useRef(null);
   const publishPermissionRef = useRef(null);
   const refreshingRef = useRef(false);
   const localVideoRef = useRef(null);
+  const screenSharePreviewRef = useRef(null);
   const remoteMediaRef = useRef(null);
   const mountedRef = useRef(false);
   const activeRef = useRef(false);
@@ -98,6 +110,9 @@ export default function Calls({
   const endingRef = useRef(false);
   const remoteTracksRef = useRef(new Map());
   const startCallRef = useRef(null);
+  const joinCallRef = useRef(null);
+  const autoJoinInviteRef = useRef("");
+  const handledNativeCallActionRef = useRef("");
 
   const isPrivate = callType === "private";
   const isGroupOrChannel =
@@ -253,6 +268,16 @@ export default function Calls({
       if (track.kind === "audio") {
         element.style.display = "none";
         element.volume = 1;
+      } else if (isGroupOrChannel) {
+        element.className = track.source === Track.Source.ScreenShare
+          ? "lolz-screen-share-video"
+          : "lolz-remote-video";
+        element.style.width = "100%";
+        element.style.maxWidth = "100%";
+        element.style.borderRadius = "14px";
+        element.style.objectFit = track.source === Track.Source.ScreenShare
+          ? "contain"
+          : "cover";
       } else {
         element.style.width = "100%";
         element.style.maxWidth = "440px";
@@ -280,7 +305,7 @@ export default function Calls({
     } catch (attachError) {
       console.error("Could not attach remote track:", attachError);
     }
-  }, []);
+  }, [isGroupOrChannel]);
 
   useEffect(() => {
     if (!active || !remoteMediaRef.current) return;
@@ -343,6 +368,10 @@ export default function Calls({
       remoteMediaRef.current.innerHTML = "";
     }
 
+    if (screenSharePreviewRef.current) {
+      screenSharePreviewRef.current.innerHTML = "";
+    }
+
     if (!mountedRef.current) {
       if (room) room.disconnect();
       return;
@@ -356,7 +385,10 @@ export default function Calls({
     setActiveMediaType("audio");
     setCameraFacing("user");
     setSwitchingCamera(false);
+    setScreenSharing(false);
     setAudioPlaybackBlocked(false);
+    setCallInviteNotice("");
+    setParticipantBusy("");
     setConnectedAt(null);
     setCallDuration(0);
 
@@ -420,6 +452,15 @@ export default function Calls({
         setActiveSpeakers(
           speakers.map((participant) => participant.identity)
         );
+      });
+
+      room.on(RoomEvent.LocalTrackUnpublished, (publication) => {
+        if (
+          publication?.source === Track.Source.ScreenShare &&
+          mountedRef.current
+        ) {
+          setScreenSharing(false);
+        }
       });
 
       room.on(RoomEvent.Disconnected, () => {
@@ -561,6 +602,35 @@ export default function Calls({
   }, [active, videoEnabled]);
 
   useEffect(() => {
+    if (!active || !screenSharing || !screenSharePreviewRef.current) return;
+
+    const room = roomRef.current;
+    if (!room) return;
+
+    const publication = room.localParticipant.getTrackPublication(
+      Track.Source.ScreenShare
+    );
+    if (!publication?.track) return;
+
+    const container = screenSharePreviewRef.current;
+    container.innerHTML = "";
+    const element = publication.track.attach();
+    element.autoplay = true;
+    element.muted = true;
+    element.playsInline = true;
+    element.className = "lolz-local-screen-share-video";
+    element.style.width = "100%";
+    element.style.maxHeight = "48vh";
+    element.style.objectFit = "contain";
+    container.appendChild(element);
+
+    return () => {
+      publication.track.detach().forEach((item) => item.remove());
+      container.innerHTML = "";
+    };
+  }, [active, screenSharing]);
+
+  useEffect(() => {
     if (!connectedAt) {
       setCallDuration(0);
       return;
@@ -610,6 +680,9 @@ export default function Calls({
 
         setRecording(recordingData.recording || null);
         setRecordingConsents(recordingData.consents || []);
+        if (recordingData.call_mode === "open" || recordingData.call_mode === "moderated") {
+          setCallMode(recordingData.call_mode);
+        }
         setCanManageRecording(canManage);
         setIsCallAdmin(canManage);
 
@@ -632,26 +705,8 @@ export default function Calls({
           publishPermissionRef.current = nextPermission;
           setCanPublish(nextPermission);
 
-          if (
-            previousPermission === false &&
-            nextPermission === true &&
-            roomRef.current &&
-            callIdRef.current === id
-          ) {
-            try {
-              await roomRef.current.localParticipant.setMicrophoneEnabled(true);
-
-              if (mountedRef.current && callIdRef.current === id) {
-                setAudioEnabled(true);
-              }
-            } catch (permissionError) {
-              console.warn(
-                "Could not enable approved microphone:",
-                permissionError
-              );
-            }
-          }
-
+          // A newly granted speaking permission never turns on the microphone
+          // automatically. The participant chooses when to unmute.
           if (
             previousPermission === true &&
             nextPermission === false &&
@@ -777,7 +832,7 @@ export default function Calls({
         data.call.id,
         data.media_type === "video",
         data.can_publish !== false,
-        "open",
+        data.call_mode || "open",
         admin
       );
 
@@ -970,7 +1025,7 @@ export default function Calls({
   }, [active, isGroupOrChannel, refreshCallData]);
 
   const joinCall = async (call) => {
-    if (!call?.id || connecting || active || roomRef.current) return;
+    if (!call?.id || connecting || active || roomRef.current) return false;
 
     reportCallState("connecting");
     setConnecting(true);
@@ -1008,6 +1063,18 @@ export default function Calls({
       if (isGroupOrChannel) {
         await refreshCallData(call.id);
       }
+
+      if (typeof window !== "undefined") {
+        const inviteUrl = new URL(window.location.href);
+        if (inviteUrl.searchParams.get("lolz_call") === String(call.id)) {
+          ["lolz_call", "lolz_call_type", "group_id", "channel_id"].forEach(
+            (key) => inviteUrl.searchParams.delete(key)
+          );
+          window.history.replaceState(window.history.state, "", inviteUrl.toString());
+        }
+      }
+
+      return true;
     } catch (err) {
       reportCallState("ended");
 
@@ -1024,6 +1091,7 @@ export default function Calls({
       } else {
         setError(err.message || "تعذر الانضمام للمكالمة");
       }
+      return false;
     } finally {
       if (mountedRef.current) {
         setConnecting(false);
@@ -1031,6 +1099,33 @@ export default function Calls({
       }
     }
   };
+
+  joinCallRef.current = joinCall;
+
+  useEffect(() => {
+    if (!isGroupOrChannel || active || connecting || !activeCalls.length) return;
+
+    const inviteUrl = new URL(window.location.href);
+    const inviteCallId = inviteUrl.searchParams.get("lolz_call");
+    const inviteType = inviteUrl.searchParams.get("lolz_call_type");
+    const inviteGroupId = inviteUrl.searchParams.get("group_id");
+    const inviteChannelId = inviteUrl.searchParams.get("channel_id");
+
+    if (!inviteCallId || inviteType !== callType) return;
+    if (callType === "group" && String(inviteGroupId) !== String(groupId)) return;
+    if (callType === "channel" && String(inviteChannelId) !== String(channelId)) return;
+    if (autoJoinInviteRef.current === inviteCallId) return;
+
+    const invitedCall = activeCalls.find(
+      (item) => String(item.id) === String(inviteCallId)
+    );
+    if (!invitedCall) return;
+
+    autoJoinInviteRef.current = inviteCallId;
+    void joinCallRef.current?.(invitedCall).then((joined) => {
+      if (!joined) autoJoinInviteRef.current = "";
+    });
+  }, [isGroupOrChannel, active, connecting, activeCalls, callType, groupId, channelId]);
 
   const acceptCall = async () => {
     if (!incomingCall) return;
@@ -1228,6 +1323,167 @@ export default function Calls({
     }
   };
 
+  const updateCallMode = async (nextMode) => {
+    if (!isGroupOrChannel || !isCallAdmin || callModeBusy || !["open", "moderated"].includes(nextMode)) return;
+    if (nextMode === callMode) return;
+
+    setCallModeBusy(true);
+    setError("");
+    try {
+      const body = {
+        action: "update_call_mode",
+        call_type: callType,
+        call_mode: nextMode,
+      };
+      if (callType === "group") body.group_id = groupId;
+      if (callType === "channel") body.channel_id = channelId;
+
+      await invokeCallAction(body);
+      setCallMode(nextMode);
+      await refreshCallData();
+    } catch (err) {
+      console.error("Update call mode error:", err);
+      setError(err.message || "تعذر تغيير وضع المكالمة");
+    } finally {
+      if (mountedRef.current) setCallModeBusy(false);
+    }
+  };
+
+  const setParticipantPublish = async (targetUserId, nextPermission) => {
+    const id = callIdRef.current;
+    if (!id || !isCallAdmin || !targetUserId || targetUserId === user?.id || participantBusy) return;
+
+    setParticipantBusy(targetUserId);
+    setError("");
+    try {
+      await invokeCallAction({
+        action: "set_publish",
+        call_id: id,
+        target_user_id: targetUserId,
+        can_publish: nextPermission,
+      });
+      await refreshCallData();
+    } catch (err) {
+      console.error("Set participant microphone permission error:", err);
+      setError(err.message || "تعذر تحديث صلاحية الميكروفون");
+    } finally {
+      if (mountedRef.current) setParticipantBusy("");
+    }
+  };
+
+  const removeCallParticipant = async (targetUserId, targetName) => {
+    const id = callIdRef.current;
+    if (!id || !isCallAdmin || !targetUserId || targetUserId === user?.id || participantBusy) return;
+
+    const confirmed = window.confirm(
+      `إزالة ${targetName || "هذا العضو"} من المكالمة الحالية؟`
+    );
+    if (!confirmed) return;
+
+    setParticipantBusy(targetUserId);
+    setError("");
+    try {
+      await invokeCallAction({
+        action: "remove_participant",
+        call_id: id,
+        target_user_id: targetUserId,
+      });
+      await refreshCallData();
+    } catch (err) {
+      console.error("Remove call participant error:", err);
+      setError(err.message || "تعذر إزالة العضو من المكالمة");
+    } finally {
+      if (mountedRef.current) setParticipantBusy("");
+    }
+  };
+
+  const muteAllParticipants = async () => {
+    const id = callIdRef.current;
+    if (!id || !isCallAdmin || participantBusy) return;
+
+    const confirmed = window.confirm(
+      "كتم جميع المشاركين الآخرين في هذه المكالمة؟"
+    );
+    if (!confirmed) return;
+
+    setParticipantBusy("all");
+    setError("");
+    try {
+      const result = await invokeCallAction({
+        action: "mute_all",
+        call_id: id,
+      });
+      setCallInviteNotice(`تم كتم ${result.muted_count || 0} مشارك.`);
+      await refreshCallData();
+    } catch (err) {
+      console.error("Mute all participants error:", err);
+      setError(err.message || "تعذر كتم المشاركين");
+    } finally {
+      if (mountedRef.current) setParticipantBusy("");
+    }
+  };
+
+  const shareCallInvite = async () => {
+    const id = callIdRef.current;
+    if (!id || !isGroupOrChannel) return;
+
+    const inviteUrl = new URL("/", window.location.origin);
+    inviteUrl.searchParams.set("lolz_call", id);
+    inviteUrl.searchParams.set("lolz_call_type", callType);
+    if (callType === "group") inviteUrl.searchParams.set("group_id", groupId);
+    if (callType === "channel") inviteUrl.searchParams.set("channel_id", channelId);
+
+    const shareData = {
+      title: callType === "channel" ? "مكالمة قناة LOLZ" : "مكالمة قروب LOLZ",
+      text: "انضم إلى المكالمة الجارية على LOLZ",
+      url: inviteUrl.toString(),
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        setCallInviteNotice("تمت مشاركة رابط المكالمة.");
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(inviteUrl.toString());
+        setCallInviteNotice("تم نسخ رابط المكالمة.");
+      } else {
+        const input = document.createElement("textarea");
+        input.value = inviteUrl.toString();
+        input.style.position = "fixed";
+        input.style.opacity = "0";
+        document.body.appendChild(input);
+        input.select();
+        const copied = document.execCommand("copy");
+        input.remove();
+        if (!copied) throw new Error("تعذر نسخ الرابط");
+        setCallInviteNotice("تم نسخ رابط المكالمة.");
+      }
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        console.error("Share call invite error:", err);
+        setError(err.message || "تعذرت مشاركة رابط المكالمة");
+      }
+    }
+  };
+
+  const toggleScreenSharing = async () => {
+    const room = roomRef.current;
+    if (!room || !isGroupOrChannel || !canPublish) return;
+
+    const next = !screenSharing;
+    try {
+      await room.localParticipant.setScreenShareEnabled(next, { audio: false });
+      setScreenSharing(next);
+      setError("");
+    } catch (err) {
+      console.error("Screen sharing error:", err);
+      setError(
+        err.message ||
+          "تعذرت مشاركة الشاشة. تحقق من دعم المتصفح وصلاحية مشاركة الشاشة."
+      );
+    }
+  };
+
   const rejectCall = async () => {
     if (!incomingCall) return;
 
@@ -1251,6 +1507,41 @@ export default function Calls({
       setError(err.message || "تعذر رفض المكالمة");
     }
   };
+
+  useEffect(() => {
+    if (!incomingCallAction?.call_id) return;
+    if (incomingCallAction.action !== "answer" && incomingCallAction.action !== "reject") return;
+
+    const targetCall = isPrivate
+      ? incomingCall
+      : activeCalls.find((call) => String(call.id) === String(incomingCallAction.call_id));
+
+    if (!targetCall?.id || String(targetCall.id) !== String(incomingCallAction.call_id)) {
+      return;
+    }
+
+    const actionKey = `${incomingCallAction.call_id}:${incomingCallAction.action}`;
+    if (handledNativeCallActionRef.current === actionKey) return;
+
+    handledNativeCallActionRef.current = actionKey;
+
+    const complete = () => onIncomingCallActionHandled?.();
+    const actionPromise = incomingCallAction.action === "answer"
+      ? (isPrivate ? acceptCall() : joinCall(targetCall))
+      : (isPrivate ? rejectCall() : Promise.resolve());
+
+    Promise.resolve(actionPromise).finally(complete);
+  }, [
+    isPrivate,
+    incomingCall?.id,
+    activeCalls,
+    incomingCallAction?.call_id,
+    incomingCallAction?.action,
+    acceptCall,
+    rejectCall,
+    joinCall,
+    onIncomingCallActionHandled,
+  ]);
 
   const endCall = async () => {
     const room = roomRef.current;
@@ -1548,6 +1839,9 @@ export default function Calls({
                     {call.media_type === "video"
                       ? "مكالمة فيديو جارية"
                       : "مكالمة صوتية جارية"}
+                    {Number.isFinite(call.participant_count)
+                      ? ` · ${call.participant_count} مشارك`
+                      : ""}
                   </span>
 
                   <button
@@ -1797,7 +2091,9 @@ export default function Calls({
         <>
 
           <div
-            className={`lolz-call-active-panel${isMinimized ? " is-minimized" : ""}`}
+            className={
+              `lolz-call-active-panel${isMinimized ? " is-minimized" : ""}${isGroupOrChannel ? " is-group-or-channel" : ""}`
+            }
             style={{
               padding: "18px",
               margin: "8px 0",
@@ -1917,6 +2213,63 @@ export default function Calls({
               </div>
             )}
 
+            {isGroupOrChannel && (
+              <div className="lolz-group-call-toolbar">
+                <div className="lolz-group-call-mode">
+                  <strong>المحادثة الصوتية المباشرة</strong>
+                  <small>
+                    {callMode === "moderated"
+                      ? "وضع المستمعين — التحدث بموافقة المشرف"
+                      : "وضع مفتوح — يمكن للأعضاء التحدث"}
+                  </small>
+                </div>
+
+                <button
+                  type="button"
+                  className="lolz-call-invite-button"
+                  onClick={shareCallInvite}
+                >
+                  <Copy size={16} />
+                  دعوة
+                </button>
+
+                {isCallAdmin && (
+                  <>
+                    <label className="lolz-call-mode-select">
+                      <span>الصلاحيات</span>
+                      <select
+                        value={callMode}
+                        disabled={callModeBusy}
+                        onChange={(event) => updateCallMode(event.target.value)}
+                      >
+                        <option value="open">مفتوح للجميع</option>
+                        <option value="moderated">مستمعون وطلبات تحدث</option>
+                      </select>
+                    </label>
+
+                    <button
+                      type="button"
+                      className="lolz-call-mute-all-button"
+                      onClick={muteAllParticipants}
+                      disabled={participantBusy === "all" || participantCount <= 1}
+                    >
+                      {participantBusy === "all" ? (
+                        <Loader2 size={16} />
+                      ) : (
+                        <VolumeX size={16} />
+                      )}
+                      كتم الجميع
+                    </button>
+                  </>
+                )}
+                {callInviteNotice && (
+                  <span className="lolz-call-invite-notice" role="status">
+                    {callInviteNotice}
+                  </span>
+                )}
+              </div>
+            )}
+
             <div
               className="ig-call-remote-media"
               ref={remoteMediaRef}
@@ -1928,6 +2281,16 @@ export default function Calls({
                 minHeight: "30px",
               }}
             />
+
+            {isGroupOrChannel && screenSharing && (
+              <div className="lolz-local-screen-share-stage">
+                <div className="lolz-local-screen-share-heading">
+                  <ScreenShare size={15} />
+                  أنت تشارك شاشتك
+                </div>
+                <div ref={screenSharePreviewRef} />
+              </div>
+            )}
 
             <div
               className="ig-call-local-media"
@@ -2015,88 +2378,84 @@ export default function Calls({
                 </div>
 
                 {participants.length > 0 ? (
-                  <div style={{ display: "grid", gap: "8px" }}>
+                  <div className="lolz-call-participant-grid">
                     {participants.map((participant) => {
                       const profile = participant.profile;
                       const name =
                         participant.user_id === user?.id
                           ? "أنت"
                           : getDisplayName(profile);
-
                       const isSpeaking = activeSpeakers.includes(
                         participant.user_id
                       );
+                      const isSelf = participant.user_id === user?.id;
+                      const isBusy = participantBusy === participant.user_id;
 
                       return (
-                        <div
+                        <article
                           key={participant.user_id}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "9px",
-                            padding: "7px 9px",
-                            borderRadius: "9px",
-                            background: isSpeaking
-                              ? "rgba(38,155,105,0.16)"
-                              : "#303541",
-                            border: isSpeaking
-                              ? "1px solid rgba(72,213,151,0.35)"
-                              : "1px solid transparent",
-                          }}
+                          className={"lolz-call-participant " +
+                            (isSpeaking ? "is-speaking " : "") +
+                            (participant.can_publish ? "can-speak" : "listener")}
                         >
-                          <div
-                            style={{
-                              width: "32px",
-                              height: "32px",
-                              borderRadius: "50%",
-                              overflow: "hidden",
-                              background: "#46516a",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              flexShrink: 0,
-                            }}
-                          >
+                          <div className="lolz-call-participant-avatar">
                             {profile?.avatar_url ? (
-                              <img
-                                src={profile.avatar_url}
-                                alt={name}
-                                style={{
-                                  width: "100%",
-                                  height: "100%",
-                                  objectFit: "cover",
-                                }}
-                              />
+                              <img src={profile.avatar_url} alt={name} />
                             ) : (
-                              <UserRound size={17} />
+                              <UserRound size={22} />
                             )}
                           </div>
-
-                          <span style={{ flex: 1, minWidth: 0 }}>
-                            <span
-                              style={{
-                                display: "block",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                                fontSize: "13px",
-                              }}
-                            >
-                              {name}
-                            </span>
-
-                            <small style={{ color: "#aeb5c2" }}>
-                              {participant.can_publish
-                                ? "يمكنه التحدث"
+                          <strong>{name}</strong>
+                          <small>
+                            {isSpeaking
+                              ? "يتحدث الآن"
+                              : participant.can_publish
+                                ? "متحدث"
                                 : "مستمع"}
-                              {isSpeaking ? " · يتحدث الآن" : ""}
-                            </small>
-                          </span>
-
+                          </small>
                           {isSpeaking && (
-                            <Radio size={16} color="#48d597" />
+                            <span className="lolz-call-speaking-indicator">
+                              <Radio size={14} />
+                              مباشر
+                            </span>
                           )}
-                        </div>
+                          {isCallAdmin && !isSelf && (
+                            <div className="lolz-call-participant-actions">
+                              <button
+                                type="button"
+                                disabled={Boolean(participantBusy)}
+                                onClick={() =>
+                                  setParticipantPublish(
+                                    participant.user_id,
+                                    !participant.can_publish
+                                  )
+                                }
+                                title={participant.can_publish ? "كتم الميكروفون" : "السماح بالتحدث"}
+                              >
+                                {isBusy ? (
+                                  <Loader2 size={14} />
+                                ) : participant.can_publish ? (
+                                  <MicOff size={14} />
+                                ) : (
+                                  <Mic size={14} />
+                                )}
+                                {participant.can_publish ? "كتم" : "السماح"}
+                              </button>
+                              <button
+                                type="button"
+                                className="danger"
+                                disabled={Boolean(participantBusy)}
+                                onClick={() =>
+                                  removeCallParticipant(participant.user_id, name)
+                                }
+                                title="إزالة من المكالمة"
+                              >
+                                <UserX size={14} />
+                                إزالة
+                              </button>
+                            </div>
+                          )}
+                        </article>
                       );
                     })}
                   </div>
@@ -2555,6 +2914,27 @@ export default function Calls({
               >
                 {audioEnabled ? <Mic size={20} /> : <MicOff size={20} />}
               </button>
+
+              {isGroupOrChannel && (
+                <button
+                  type="button"
+                  onClick={toggleScreenSharing}
+                  disabled={!canPublish}
+                  title={screenSharing ? "إيقاف مشاركة الشاشة" : "مشاركة الشاشة"}
+                  aria-label={screenSharing ? "إيقاف مشاركة الشاشة" : "مشاركة الشاشة"}
+                  style={{
+                    ...buttonStyle,
+                    background: screenSharing ? "#3157a4" : "#2c313d",
+                    opacity: canPublish ? 1 : 0.45,
+                  }}
+                >
+                  {screenSharing ? (
+                    <ScreenShareOff size={20} />
+                  ) : (
+                    <ScreenShare size={20} />
+                  )}
+                </button>
+              )}
 
               <button
                 type="button"
